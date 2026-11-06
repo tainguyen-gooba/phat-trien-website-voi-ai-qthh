@@ -10,6 +10,12 @@ const UIComponents = {
     return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
   },
 
+  escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, (char) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+    })[char]);
+  },
+
   // Hiển thị Toast thông báo
   showToast(message, type = 'info', duration = 3000) {
     let container = document.getElementById('toast-container');
@@ -95,6 +101,7 @@ const UIComponents = {
               <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini" style="object-fit:cover;">
               <span>${user.fullName ? user.fullName.split(' ').slice(-1)[0] : 'Tài Khoản'}</span>
             </a>
+            ${user.role === 'admin' ? '<a href="./admin/dashboard.html" class="btn btn-primary btn-sm">Quản trị</a>' : ''}
           ` : `
             <a href="./login.html" class="btn btn-outline btn-sm">Đăng Nhập</a>
             <a href="./register.html" class="btn btn-primary btn-sm">Đăng Ký</a>
@@ -105,6 +112,7 @@ const UIComponents = {
         </div>
       </div>
     `;
+    this.initRealtime(user);
 
     // Search input enter event
     const searchInput = document.getElementById('header-search-input');
@@ -128,6 +136,33 @@ const UIComponents = {
         badge.style.display = count > 0 ? 'flex' : 'none';
       }
     });
+  },
+
+  initRealtime(user) {
+    if (window.initFastfoodRealtime) {
+      window.initFastfoodRealtime(user);
+      return;
+    }
+
+    if (window.fastfoodRealtimeScriptLoading) return;
+    window.fastfoodRealtimeScriptLoading = true;
+    const script = document.createElement('script');
+    script.src = '../js/realtime.js';
+    script.onload = () => window.initFastfoodRealtime?.(user);
+    script.onerror = () => {
+      window.fastfoodRealtimeScriptLoading = false;
+      console.error('Không thể tải mô-đun realtime.');
+    };
+    document.body.appendChild(script);
+  },
+
+  requireLogin() {
+    const user = window.StorageManager?.getUser();
+    if (user?.isLoggedIn) return true;
+
+    const next = `${window.location.pathname}${window.location.search}`;
+    window.location.replace(`/pages/login.html?next=${encodeURIComponent(next)}`);
+    return false;
   },
 
   // Toggle mobile navigation
@@ -246,14 +281,14 @@ const UIComponents = {
     overlay.innerHTML = `
       <div class="modal-card">
         <div style="position:relative; height:240px; background:#F4F4F6;">
-          <img src="${product.image}" alt="${product.name}" style="width:100%; height:100%; object-fit:cover;">
+          <img src="${product.image}" alt="${this.escapeHtml(product.name)}" style="width:100%; height:100%; object-fit:cover;">
           <button style="position:absolute; top:15px; right:15px; background:rgba(0,0,0,0.6); color:#fff; width:34px; height:34px; border-radius:50%; font-size:1rem; cursor:pointer;" onclick="UIComponents.closeFoodModal()">✕</button>
         </div>
 
         <div style="padding:1.5rem;">
-          <div style="font-size:0.8rem; color:var(--primary-color); font-weight:700; text-transform:uppercase;">${product.restaurantName}</div>
-          <h3 style="font-size:1.35rem; font-weight:800; color:var(--text-main); margin:0.35rem 0 0.5rem;">${product.name}</h3>
-          <p style="font-size:0.875rem; color:var(--text-secondary); line-height:1.5;">${product.description}</p>
+          <div style="font-size:0.8rem; color:var(--primary-color); font-weight:700; text-transform:uppercase;">${this.escapeHtml(product.restaurantName)}</div>
+          <h3 style="font-size:1.35rem; font-weight:800; color:var(--text-main); margin:0.35rem 0 0.5rem;">${this.escapeHtml(product.name)}</h3>
+          <p style="font-size:0.875rem; color:var(--text-secondary); line-height:1.5;">${this.escapeHtml(product.description)}</p>
           
           <div style="display:flex; align-items:baseline; gap:0.75rem; margin:1rem 0;">
             <span style="font-size:1.6rem; font-weight:900; color:var(--primary-color);">${UIComponents.formatVND(product.price)}</span>
@@ -268,7 +303,7 @@ const UIComponents = {
                 <label style="display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0; font-size:0.85rem; cursor:pointer;">
                   <span style="display:flex; align-items:center; gap:0.5rem;">
                     <input type="checkbox" class="modal-topping-cb" data-name="${t.name}" data-price="${t.price}" style="accent-color:var(--primary-color);">
-                    <span>${t.name}</span>
+                    <span>${this.escapeHtml(t.name)}</span>
                   </span>
                   <span style="font-weight:700; color:var(--primary-color);">+${UIComponents.formatVND(t.price)}</span>
                 </label>
@@ -330,4 +365,3 @@ const UIComponents = {
 };
 
 window.UIComponents = UIComponents;
-

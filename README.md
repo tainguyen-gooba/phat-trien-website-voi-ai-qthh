@@ -7,7 +7,7 @@
 ## 1. CÔNG NGHỆ SỬ DỤNG
 - **Frontend**: HTML5, CSS3, JavaScript thuần (Vanilla JS), Modular CSS Design System.
 - **Backend**: Node.js & Express.js (RESTful API).
-- **Database**: MySQL (Chuẩn 16 bảng 3NF với Engine InnoDB).
+- **Database**: MySQL (16 bảng nghiệp vụ và 3 bảng realtime trên Engine InnoDB).
 - **Authentication**: JWT (JSON Web Tokens).
 - **Password Security**: bcryptjs (Mã hóa một chiều an toàn).
 - **Package Manager**: npm.
@@ -125,6 +125,9 @@ fastfood-qtnhhh/
 | 14 | `reviews` | Đánh giá sao (1-5) và nhận xét của khách sau khi giao |
 | 15 | `notifications`| Thông báo hệ thống, đơn hàng, khuyến mãi |
 | 16 | `staff_assignments`| Phân quyền nhân viên thuộc quán (quản lý, bếp, phục vụ) |
+| 17 | `website_content` | Nội dung danh mục và sản phẩm đồng bộ tức thời |
+| 18 | `chat_messages` | Lịch sử chat hỗ trợ khách hàng |
+| 19 | `realtime_orders` | Đơn đặt hàng và trạng thái theo dõi realtime |
 
 ---
 
@@ -152,15 +155,21 @@ DB_NAME=fastfood_db
 ---
 
 ### Bước 3: Khởi tạo Cơ sở dữ liệu tự động
-Dự án được trang bị sẵn script tự động kết nối, tạo database `fastfood_db`, sinh 16 bảng và nạp dữ liệu mẫu:
+Dự án được trang bị sẵn script tự động kết nối, tạo database `fastfood_db`, sinh 19 bảng và nạp dữ liệu mẫu:
 ```bash
 npm run db:init
 ```
-*Script sẽ tự động chạy `schema.sql` và `seeds.sql` và thông báo danh sách 16 bảng đã được tạo.*
+*Script sẽ tự động chạy `schema.sql` và `seeds.sql`, tạo 16 bảng nghiệp vụ cùng 3 bảng realtime.*
 
 Nếu muốn kiểm tra kết nối database độc lập bất kỳ lúc nào:
 ```bash
 npm run db:test
+```
+
+### Bước 3.1: Cập nhật các bảng realtime
+Nếu database đã được khởi tạo trước đó, tạo các bảng nội dung website, chat và đơn hàng realtime mà không xóa dữ liệu hiện có:
+```bash
+npm --prefix backend run db:migrate:realtime
 ```
 
 ---
@@ -191,9 +200,10 @@ npm run dev
 Tất cả tài khoản đều có mật khẩu mặc định: **`Admin@123456`**
 - **Quản trị viên (Admin)**: `admin@fastfood.vn`
 
-Để đăng nhập admin, hãy bật MySQL và chạy backend, sau đó mở `http://localhost:5000/pages/login.html`.
-Nếu database đã được khởi tạo trước khi sửa hash seed, chạy `npm --prefix backend run db:reset-demo-admin`
-để chỉ đặt lại mật khẩu tài khoản admin mà không xóa dữ liệu khác. Không cần chạy `db:init` để sửa mật khẩu.
+Để đăng nhập admin, hãy bật dịch vụ MySQL, chạy `npm run db:init` (nếu chưa khởi tạo database), rồi chạy backend và mở `http://localhost:5000/pages/login.html`.
+Nếu database đã có sẵn nhưng tài khoản admin bị thiếu hoặc sai thông tin, chạy `npm --prefix backend run db:reset-demo-admin`.
+Lệnh này đồng bộ vai trò và tài khoản admin `admin@fastfood.vn` với mật khẩu mặc định `Admin@123456`, không xóa dữ liệu khác. MySQL vẫn phải đang chạy để lệnh hoạt động.
+Lưu ý: `db:init` tạo lại các bảng, nên chỉ chạy trên database mới hoặc sao lưu dữ liệu trước.
 - **Chủ quán ăn (Restaurant Owner)**: `owner@fastfood.vn`
 - **Khách hàng (Customer)**: `customer@fastfood.vn`
 - **Tài xế giao hàng (Shipper)**: `shipper@fastfood.vn`

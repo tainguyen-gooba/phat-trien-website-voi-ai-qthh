@@ -3,6 +3,8 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (!UIComponents.requireLogin()) return;
+
   UIComponents.renderHeader('orders');
   UIComponents.renderFooter();
 
@@ -71,11 +73,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailInput = document.getElementById('prof-email');
     const phoneInput = document.getElementById('prof-phone');
     const addressInput = document.getElementById('prof-address');
+    const displayName = document.getElementById('profile-display-name');
 
     if (nameInput) nameInput.value = user.fullName || '';
     if (emailInput) emailInput.value = user.email || '';
     if (phoneInput) phoneInput.value = user.phone || '';
     if (addressInput) addressInput.value = user.address || '';
+    if (displayName) displayName.textContent = user.fullName || 'Tài khoản';
 
     profileForm.addEventListener('submit', (e) => {
       e.preventDefault();
@@ -85,6 +89,7 @@ document.addEventListener('DOMContentLoaded', () => {
       user.address = addressInput.value.trim();
 
       StorageManager.setUser(user);
+      if (displayName) displayName.textContent = user.fullName;
       UIComponents.showToast('Cập nhật thông tin hồ sơ thành công!', 'success');
     });
   }
@@ -111,4 +116,3 @@ function reOrder(orderId) {
     window.location.href = './cart.html';
   }, 600);
 }
-

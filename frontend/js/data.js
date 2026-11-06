@@ -340,4 +340,62 @@ const FASTFOOD_DATA = {
   ],
 };
 
+function applySavedWebsiteContent() {
+  let content;
+  try {
+    content = JSON.parse(localStorage.getItem('fastfood-live-content-v1') || '{}');
+  } catch (error) {
+    console.error('Không thể đọc nội dung cập nhật realtime:', error);
+    return;
+  }
+
+  if (Array.isArray(content.categories)) {
+    const originalCategories = FASTFOOD_DATA.categories;
+    const categories = content.categories
+      .filter((category) => !String(category.status || '').toLocaleLowerCase('vi').includes('ẩn'))
+      .map((category, index) => {
+        const existing = originalCategories.find((item) => item.name.toLocaleLowerCase('vi') === String(category.name).toLocaleLowerCase('vi'));
+        return {
+          ...existing,
+          id: existing?.id || `live-category-${category.id || index}`,
+          name: String(category.name || 'Danh mục mới'),
+          image: existing?.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=240&auto=format&fit=crop&q=80',
+          count: Number(category.itemCount) || existing?.count || 0,
+        };
+      });
+    FASTFOOD_DATA.categories = [
+      originalCategories.find((category) => category.id === 'all'),
+      ...categories,
+    ];
+  }
+
+  if (Array.isArray(content.products)) {
+    const originalProducts = FASTFOOD_DATA.products;
+    const categories = FASTFOOD_DATA.categories;
+    FASTFOOD_DATA.products = content.products
+      .filter((product) => !String(product.status || '').toLocaleLowerCase('vi').includes('tạm hết'))
+      .map((product, index) => {
+        const name = String(product.name || 'Món ăn mới');
+        const existing = originalProducts.find((item) => item.name.toLocaleLowerCase('vi') === name.toLocaleLowerCase('vi'))
+          || originalProducts.find((item) => String(item.id).replace('prod-', '') === String(product.id).replace(/^prd-/, ''));
+        const category = categories.find((item) => item.name.toLocaleLowerCase('vi') === String(product.category || '').toLocaleLowerCase('vi'));
+        return {
+          ...existing,
+          id: existing?.id || `live-product-${product.id || index}`,
+          name,
+          slug: existing?.slug || name.toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
+          category: category?.id || existing?.category || 'all',
+          restaurantName: String(product.restaurant || existing?.restaurantName || 'FASTFOOD'),
+          price: Number(product.price) || existing?.price || 0,
+          image: existing?.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80',
+          isBestSeller: existing?.isBestSeller ?? true,
+          isFlashDeal: existing?.isFlashDeal || false,
+          description: existing?.description || '',
+          toppings: existing?.toppings || [],
+        };
+      });
+  }
+}
+
+applySavedWebsiteContent();
 window.FASTFOOD_DATA = FASTFOOD_DATA;

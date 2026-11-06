@@ -82,19 +82,19 @@ document.addEventListener('DOMContentLoaded', () => {
       return `
         <div class="product-card">
           <div class="product-thumb-wrap">
-            <img src="${product.image}" alt="${product.name}" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80';">
+            <img src="${product.image}" alt="${UIComponents.escapeHtml(product.name)}" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80';">
             ${discountPercent > 0 ? `<span class="product-tag-discount">-${discountPercent}%</span>` : ''}
             <span class="product-tag-time">⏱️ ${product.time}</span>
           </div>
 
           <div class="product-info">
             <div class="product-meta-row">
-              <span class="product-category-name">${product.restaurantName}</span>
+              <span class="product-category-name">${UIComponents.escapeHtml(product.restaurantName)}</span>
               <span class="product-rating">★ ${product.rating}</span>
             </div>
 
-            <a href="./food-detail.html?id=${product.id}" class="product-title" title="${product.name}">
-              ${product.name}
+            <a href="./food-detail.html?id=${encodeURIComponent(product.id)}" class="product-title" title="${UIComponents.escapeHtml(product.name)}">
+              ${UIComponents.escapeHtml(product.name)}
             </a>
 
             <div class="product-bottom-row">
@@ -147,4 +147,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderList();
 });
-

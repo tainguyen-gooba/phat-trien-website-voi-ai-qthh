@@ -36,7 +36,7 @@
       <div style="display:flex; align-items:center; gap:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:1.5rem; margin-bottom:1.5rem;">
         <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80" alt="Avatar" style="width:76px; height:76px; border-radius:50%; object-fit:cover; border:3px solid var(--primary-color); box-shadow:var(--shadow-md);">
         <div>
-          <h2 style="font-size:1.35rem; font-weight:800; color:var(--text-main);">Trần Văn FastFood</h2>
+          <h2 id="profile-display-name" style="font-size:1.35rem; font-weight:800; color:var(--text-main);">Tài khoản</h2>
           <span class="badge badge-success">Thành viên Thân Thiết</span>
         </div>
       </div>
@@ -64,7 +64,7 @@
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2rem; border-top:1px solid var(--border-color); padding-top:1.25rem;">
-          <button type="button" class="btn btn-outline text-danger" onclick="StorageManager.remove(StorageManager.KEYS.USER); window.location.href='./login.html';">
+          <button type="button" class="btn btn-outline text-danger" onclick="StorageManager.clearAuth(); window.location.href='./home.html';">
             Đăng Xuất
           </button>
 
@@ -85,4 +85,3 @@
   <script src="../js/profile.js"></script>
 </body>
 </html>
-

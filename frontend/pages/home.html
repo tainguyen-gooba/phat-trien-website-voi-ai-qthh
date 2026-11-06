@@ -21,10 +21,57 @@
 
   <main class="container">
     
-    <!-- 1. COMPACT HERO SECTION WITH AUTO-SLIDING BANNER -->
+    <!-- 1. FULL-BLEED HERO BANNER WITH AUTO-SLIDING IMAGES -->
     <section class="hero-section">
+      <!-- Auto Horizontal Sliding Carousel -->
+      <div class="hero-slider-container" aria-label="Món ăn nổi bật">
+        <div class="hero-slider-track" id="hero-slider-track">
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-1'">
+            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1600&auto=format&fit=crop&q=85" alt="Burger Bò Nướng Phô Mai" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🔥 ƯU ĐÃI GIẢM 50%</span>
+              <h3 class="hero-slide-title">Burger Bò Nướng Phô Mai</h3>
+              <p class="hero-slide-sub">Burger King Station • Nóng hổi giao 15 phút</p>
+            </div>
+          </div>
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-5'">
+            <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1600&auto=format&fit=crop&q=85" alt="Pizza Hải Sản Pesto" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🍕 MUA 1 TẶNG 1 HÔM NAY</span>
+              <h3 class="hero-slide-title">Pizza Hải Sản Pesto Ý</h3>
+              <p class="hero-slide-sub">Pizza Hut Italia • Phô mai kéo sợi thơm lừng</p>
+            </div>
+          </div>
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-2'">
+            <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=1600&auto=format&fit=crop&q=85" alt="Cơm Tấm Sườn Bì Chả" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🍚 FREESHIP 0Đ ĐƠN TỪ 50K</span>
+              <h3 class="hero-slide-title">Cơm Tấm Sườn Bì Chả</h3>
+              <p class="hero-slide-sub">Cơm Tấm Sài Gòn Xưa • Chuẩn vị truyền thống</p>
+            </div>
+          </div>
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-3'">
+            <img src="https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=1600&auto=format&fit=crop&q=85" alt="Trà Sữa GongCha Hoàng Gia" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🧋 GIẢM 30K GIỜ VÀNG</span>
+              <h3 class="hero-slide-title">Trà Sữa Trân Châu Hoàng Gia</h3>
+              <p class="hero-slide-sub">GongCha Tea • Trân châu đường đen dẻo dai</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="hero-slider-btn prev" id="slider-prev-btn" aria-label="Slide trước">‹</button>
+        <button class="hero-slider-btn next" id="slider-next-btn" aria-label="Slide tiếp">›</button>
+        <div class="hero-slider-dots" id="hero-slider-dots">
+          <span class="dot active" data-index="0"></span>
+          <span class="dot" data-index="1"></span>
+          <span class="dot" data-index="2"></span>
+          <span class="dot" data-index="3"></span>
+        </div>
+      </div>
+
       <div class="hero-grid">
-        <div>
+        <div class="hero-copy">
           <span class="hero-badge-tag">
             🛵 GIAO HÀNG HỎA TỐC 20 PHÚT
           </span>
@@ -38,81 +85,12 @@
             Khám phá hàng ngàn món ăn nóng hổi từ các thương hiệu hàng đầu với ưu đãi freeship ngập tràn mỗi ngày.
           </p>
 
-          <!-- Search Box in Hero -->
-          <div class="hero-search-box">
-            <svg class="search-real-svg" viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="#F28A24" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;">
-              <circle cx="11" cy="11" r="8"></circle>
-              <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-            <input type="text" id="hero-search-input" placeholder="Nhập tên món ăn, quán ăn, trà sữa...">
-            <button class="btn btn-primary" id="hero-search-btn">Tìm Kiếm</button>
-          </div>
-
-          <!-- Quick Suggested Tags -->
           <div class="hero-tags">
-            <span>Gợi ý:</span>
             <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Burger'">Burger Bò</span>
             <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Cơm tấm'">Cơm Tấm</span>
             <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Trà sữa'">Trà Sữa</span>
             <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Gà rán'">Gà Rán</span>
             <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Pizza'">Pizza Ý</span>
-          </div>
-        </div>
-
-        <!-- Auto Horizontal Sliding Carousel -->
-        <div class="hero-slider-container">
-          <div class="hero-slider-track" id="hero-slider-track">
-            <!-- Slide 1 -->
-            <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-1'">
-              <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=800&auto=format&fit=crop&q=80" alt="Burger Bò Nướng Phô Mai" class="hero-slide-img">
-              <div class="hero-slide-overlay">
-                <span class="hero-slide-badge">🔥 ƯU ĐÃI GIẢM 50%</span>
-                <h3 class="hero-slide-title">Burger Bò Nướng Phô Mai</h3>
-                <p class="hero-slide-sub">Burger King Station • Nóng hổi giao 15 phút</p>
-              </div>
-            </div>
-
-            <!-- Slide 2 -->
-            <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-5'">
-              <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80" alt="Pizza Hải Sản Pesto" class="hero-slide-img">
-              <div class="hero-slide-overlay">
-                <span class="hero-slide-badge">🍕 MUA 1 TẶNG 1 HÔM NAY</span>
-                <h3 class="hero-slide-title">Pizza Hải Sản Pesto Ý</h3>
-                <p class="hero-slide-sub">Pizza Hut Italia • Phô mai kéo sợi thơm lừng</p>
-              </div>
-            </div>
-
-            <!-- Slide 3 -->
-            <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-2'">
-              <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80" alt="Cơm Tấm Sườn Bì Chả" class="hero-slide-img">
-              <div class="hero-slide-overlay">
-                <span class="hero-slide-badge">🍚 FREESHIP 0Đ ĐƠN TỪ 50K</span>
-                <h3 class="hero-slide-title">Cơm Tấm Sườn Bì Chả</h3>
-                <p class="hero-slide-sub">Cơm Tấm Sài Gòn Xưa • Chuẩn vị truyền thống</p>
-              </div>
-            </div>
-
-            <!-- Slide 4 -->
-            <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-3'">
-              <img src="https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=800&auto=format&fit=crop&q=80" alt="Trà Sữa GongCha Hoàng Gia" class="hero-slide-img">
-              <div class="hero-slide-overlay">
-                <span class="hero-slide-badge">🧋 GIẢM 30K GIỜ VÀNG</span>
-                <h3 class="hero-slide-title">Trà Sữa Trân Châu Hoàng Gia</h3>
-                <p class="hero-slide-sub">GongCha Tea • Trân châu đường đen dẻo dai</p>
-              </div>
-            </div>
-          </div>
-
-          <!-- Slider Controls -->
-          <button class="hero-slider-btn prev" id="slider-prev-btn" aria-label="Slide trước">‹</button>
-          <button class="hero-slider-btn next" id="slider-next-btn" aria-label="Slide tiếp">›</button>
-
-          <!-- Slider Dots -->
-          <div class="hero-slider-dots" id="hero-slider-dots">
-            <span class="dot active" data-index="0"></span>
-            <span class="dot" data-index="1"></span>
-            <span class="dot" data-index="2"></span>
-            <span class="dot" data-index="3"></span>
           </div>
         </div>
       </div>
@@ -228,4 +206,3 @@
   <script src="../js/home.js"></script>
 </body>
 </html>
-

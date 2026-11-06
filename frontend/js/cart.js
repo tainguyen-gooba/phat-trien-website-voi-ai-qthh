@@ -110,13 +110,13 @@ const CartController = {
     // Render items list
     container.innerHTML = cart.map(item => `
       <div class="cart-item-row">
-        <img src="${item.image}" alt="${item.name}" class="cart-item-thumb">
+        <img src="${item.image}" alt="${UIComponents.escapeHtml(item.name)}" class="cart-item-thumb">
         <div class="cart-item-info">
-          <div style="font-size:0.75rem; color:var(--primary-color); font-weight:700;">${item.restaurantName}</div>
-          <h4 class="cart-item-title">${item.name}</h4>
+          <div style="font-size:0.75rem; color:var(--primary-color); font-weight:700;">${UIComponents.escapeHtml(item.restaurantName)}</div>
+          <h4 class="cart-item-title">${UIComponents.escapeHtml(item.name)}</h4>
           ${item.selectedToppings && item.selectedToppings.length ? `
             <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.35rem;">
-              + ${item.selectedToppings.map(t => t.name).join(', ')}
+              + ${item.selectedToppings.map(t => UIComponents.escapeHtml(t.name)).join(', ')}
             </div>
           ` : ''}
           <div class="cart-item-price">${UIComponents.formatVND(item.price)}</div>

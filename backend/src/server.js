@@ -1,14 +1,18 @@
 const app = require('./app');
+const http = require('http');
+const { createRealtimeServer } = require('./realtime');
 const config = require('./config/app.config');
 const { testConnection, closePool } = require('./config/db.config');
 const logger = require('./utils/logger');
 
 const PORT = config.port;
+const httpServer = http.createServer(app);
+app.set('io', createRealtimeServer(httpServer));
 
 /**
  * Khởi động máy chủ FASTFOOD Express
  */
-const server = app.listen(PORT, async () => {
+const server = httpServer.listen(PORT, async () => {
   logger.info(`=======================================================`);
   logger.info(`   FASTFOOD E-Commerce API Server Started Successfully `);
   logger.info(`   Môi trường : ${config.env.toUpperCase()}            `);
@@ -54,4 +58,3 @@ process.on('SIGINT', () => shutdown('SIGINT'));
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 
 module.exports = server;
-

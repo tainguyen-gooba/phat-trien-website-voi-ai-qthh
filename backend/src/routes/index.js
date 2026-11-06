@@ -3,6 +3,7 @@ const router = express.Router();
 
 const authRoutes = require('./auth.routes');
 const healthRoutes = require('./health.routes');
+const realtimeRoutes = require('./realtime.routes');
 
 /**
  * Root API Router - Version 1 (/api/v1)
@@ -32,6 +33,7 @@ router.get('/', (req, res) => {
 // Đăng ký các module routes
 router.use('/auth', authRoutes);
 router.use('/health', healthRoutes);
+router.use('/realtime', realtimeRoutes);
 
 // Các routes nghiệp vụ sẽ được phát triển tiếp ở các Prompt sau:
 // router.use('/users', userRoutes);

@@ -45,14 +45,12 @@ const StorageManager = {
   },
 
   getUser() {
-    return this.get(this.KEYS.USER, {
-      id: 'usr-1',
-      fullName: 'Trần Văn FastFood',
-      email: 'customer@fastfood.vn',
-      phone: '0903000003',
-      address: '72 Lê Thánh Tôn, Bến Nghé, Quận 1, TP. HCM',
-      isLoggedIn: true,
-    });
+    const hasToken = Boolean(
+      localStorage.getItem('fastfood_auth_token')
+      || sessionStorage.getItem('fastfood_auth_token')
+    );
+    const user = this.get(this.KEYS.USER);
+    return hasToken && user?.isLoggedIn ? user : null;
   },
 
   setUser(user) {
@@ -60,21 +58,15 @@ const StorageManager = {
     window.dispatchEvent(new CustomEvent('userUpdated', { detail: user }));
   },
 
+  clearAuth() {
+    localStorage.removeItem('fastfood_auth_token');
+    sessionStorage.removeItem('fastfood_auth_token');
+    this.remove(this.KEYS.USER);
+    window.dispatchEvent(new CustomEvent('userUpdated', { detail: null }));
+  },
+
   getOrders() {
-    return this.get(this.KEYS.ORDERS, [
-      {
-        id: 'ORD-98213',
-        createdAt: '2026-11-04 18:45',
-        restaurantName: 'Burger King Station',
-        items: [
-          { name: 'Burger Bò Nướng Phô Mai', qty: 2, price: 69000 },
-          { name: 'Khoai Tây Chiên Lắc Phô Mai', qty: 1, price: 35000 },
-        ],
-        total: 173000,
-        status: 'delivered',
-        statusText: 'Đã giao thành công',
-      },
-    ]);
+    return this.get(this.KEYS.ORDERS, []);
   },
 
   addOrder(order) {
@@ -90,4 +82,3 @@ const StorageManager = {
 };
 
 window.StorageManager = StorageManager;
-

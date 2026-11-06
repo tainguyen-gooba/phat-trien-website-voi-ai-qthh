@@ -27,7 +27,16 @@ function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-va
   if (err.code === 'ECONNREFUSED' || err.code === 'PROTOCOL_CONNECTION_LOST') {
     return ApiResponse.error(
       res,
-      'Không thể kết nối đến cơ sở dữ liệu MySQL',
+      'Không thể kết nối MySQL. Hãy bật dịch vụ MySQL và kiểm tra cấu hình backend/.env.',
+      HTTP_STATUS.SERVICE_UNAVAILABLE,
+      config.isDevelopment ? { detail: err.message } : null
+    );
+  }
+
+  if (err.code === 'ER_BAD_DB_ERROR') {
+    return ApiResponse.error(
+      res,
+      `Database '${config.db.database}' chưa được tạo. Hãy chạy 'npm run db:init' sau khi bật MySQL.`,
       HTTP_STATUS.SERVICE_UNAVAILABLE,
       config.isDevelopment ? { detail: err.message } : null
     );
@@ -63,4 +72,3 @@ function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-va
 }
 
 module.exports = errorHandler;
-

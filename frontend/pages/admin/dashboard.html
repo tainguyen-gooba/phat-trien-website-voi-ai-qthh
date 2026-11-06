@@ -351,6 +351,8 @@
   </dialog>
   <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/realtime.js"></script>
   <script>
     (async () => {
       if (window.location.protocol === 'file:') {
@@ -416,11 +418,28 @@
         return;
       }
 
+      const liveSocket = await window.initFastfoodRealtime(authenticatedUser);
+      let publishedContent = {};
+      try {
+        const contentResponse = await fetch('/api/v1/realtime/content', {
+          headers: { Accept: 'application/json' },
+        });
+        const contentResult = await contentResponse.json();
+        if (!contentResponse.ok || !contentResult.success) {
+          throw new Error(contentResult.message || 'Không thể tải nội dung realtime.');
+        }
+        publishedContent = contentResult.data;
+      } catch (error) {
+        showAccessMessage('Không thể tải nội dung website', error.message);
+        return;
+      }
+
       document.querySelector('.profile-copy strong').textContent = authenticatedUser.fullName;
       document.querySelector('.profile-copy span').textContent = authenticatedUser.email;
       document.getElementById('logout-button').addEventListener('click', () => {
         localStorage.removeItem(tokenKey);
         sessionStorage.removeItem(tokenKey);
+        localStorage.removeItem('fastfood_user');
         window.location.replace('../login.html');
       });
 
@@ -487,15 +506,7 @@
           { id: 'prd-7', name: 'Mỳ Ý Sốt Bò Bằm', category: 'Pizza & Mỳ Ý', restaurant: 'Pizza Hut Italia', price: 99000, status: 'Đang bán' },
           { id: 'prd-8', name: 'Khoai Tây Lắc Phô Mai', category: 'Ăn vặt & Tráng miệng', restaurant: 'Burger King Station', price: 35000, status: 'Tạm hết' },
         ],
-        orders: [
-          { id: 'ord-1', orderNo: '#FF-24081', customer: 'Nguyễn Minh Anh', restaurant: 'Burger King Station', total: 138000, date: '06/11/2026', status: 'Đang chuẩn bị' },
-          { id: 'ord-2', orderNo: '#FF-24080', customer: 'Trần Hoàng Nam', restaurant: 'Cơm Tấm Sài Gòn Xưa', total: 110000, date: '06/11/2026', status: 'Đang giao' },
-          { id: 'ord-3', orderNo: '#FF-24079', customer: 'Lê Thu Hà', restaurant: 'GongCha Tea & Coffee', total: 90000, date: '05/11/2026', status: 'Đã giao' },
-          { id: 'ord-4', orderNo: '#FF-24078', customer: 'Phạm Quốc Bảo', restaurant: 'Pizza Hut Italia', total: 318000, date: '05/11/2026', status: 'Chờ xác nhận' },
-          { id: 'ord-5', orderNo: '#FF-24077', customer: 'Võ Ngọc Linh', restaurant: 'Green Bowl Kitchen', total: 89000, date: '04/11/2026', status: 'Đã giao' },
-          { id: 'ord-6', orderNo: '#FF-24076', customer: 'Đặng Tuấn Kiệt', restaurant: 'Burger King Station', total: 75000, date: '04/11/2026', status: 'Đã hủy' },
-          { id: 'ord-7', orderNo: '#FF-24075', customer: 'Bùi Khánh Vy', restaurant: 'Cơm Tấm Sài Gòn Xưa', total: 165000, date: '03/11/2026', status: 'Đã giao' },
-        ],
+        orders: [],
         users: [
           { id: 'usr-1', name: 'Nguyễn Minh Anh', email: 'minhanh@gmail.com', phone: '0901 234 567', role: 'Khách hàng', status: 'Đang hoạt động' },
           { id: 'usr-2', name: 'Trần Hoàng Nam', email: 'hoangnam@gmail.com', phone: '0902 345 678', role: 'Khách hàng', status: 'Đang hoạt động' },
@@ -516,6 +527,32 @@
         }
       } catch (error) {
         showToast('Không thể đọc dữ liệu đã lưu trên trình duyệt.', true);
+      }
+      if (Array.isArray(publishedContent.categories)) data.categories = publishedContent.categories;
+      if (Array.isArray(publishedContent.products)) data.products = publishedContent.products;
+      data.orders = [];
+      try {
+        const apiUrl = window.location.port === '5000'
+          ? `${window.location.origin}/api/v1`
+          : 'http://localhost:5000/api/v1';
+        const ordersResponse = await fetch(`${apiUrl}/realtime/orders`, {
+          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        });
+        const ordersResult = await ordersResponse.json();
+        if (!ordersResponse.ok || !ordersResult.success) {
+          throw new Error(ordersResult.message || 'Không thể tải đơn hàng realtime.');
+        }
+        data.orders = ordersResult.data.map((order) => ({
+          ...order,
+          orderNo: `#${order.id}`,
+          customer: order.recipient?.name || 'Khách hàng',
+          restaurant: order.restaurantName || 'FASTFOOD Partner',
+          total: order.total,
+          date: String(order.createdAt || '').slice(0, 10),
+          status: order.statusText,
+        }));
+      } catch (error) {
+        showToast(error.message || 'Không thể tải đơn hàng.', true);
       }
 
       let activeSection = 'dashboard';
@@ -544,12 +581,57 @@
         window.setTimeout(() => toast.remove(), 3400);
       }
 
-      function persist() {
+      async function persist(collection) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          if (collection === 'categories' || collection === 'products') {
+            if (!liveSocket) throw new Error('Không thể kết nối dịch vụ realtime.');
+            const result = await new Promise((resolve, reject) => {
+              liveSocket.timeout(5000).emit(
+                'admin:content:publish',
+                { collection, records: data[collection] },
+                (error, response) => error ? reject(error) : resolve(response)
+              );
+            });
+            if (!result?.success) throw new Error(result?.message || 'Không thể đồng bộ dữ liệu website.');
+          } else if (collection === 'orders') {
+            const currentRecord = data.orders.find((order) => order.id === editingId);
+            if (currentRecord && liveSocket) {
+              const result = await new Promise((resolve, reject) => {
+                liveSocket.timeout(5000).emit('admin:order:status', currentRecord, (error, response) => (
+                  error ? reject(error) : resolve(response)
+                ));
+              });
+              if (!result?.success) throw new Error(result?.message || 'Không thể đồng bộ trạng thái đơn hàng.');
+            }
+
+            liveSocket?.on('order:new', ({ order }) => {
+              if (!order?.id) return;
+              const record = {
+                ...order,
+                orderNo: `#${order.id}`,
+                customer: order.recipient?.name || 'Khách hàng',
+                restaurant: order.restaurantName || 'FASTFOOD Partner',
+                total: order.total,
+                date: String(order.createdAt || '').slice(0, 10),
+                status: order.statusText || 'Chờ xác nhận',
+              };
+              data.orders = [record, ...data.orders.filter((item) => item.id !== record.id)];
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              renderAll();
+              showToast('Có đơn hàng mới.');
+            });
+            liveSocket?.on('order:updated', (update) => {
+              const record = data.orders.find((item) => String(item.id).replace(/^#/, '') === update.orderCode);
+              if (!record) return;
+              record.status = update.displayStatus;
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+              renderAll();
+            });
+          }
           return true;
         } catch (error) {
-          showToast('Không thể lưu thay đổi. Hãy kiểm tra dung lượng lưu trữ của trình duyệt.', true);
+          showToast(`Không thể đồng bộ thay đổi: ${error.message}`, true);
           return false;
         }
       }
@@ -728,7 +810,7 @@
         renderTable();
       });
       document.getElementById('add-button').addEventListener('click', () => openForm(null));
-      tableBody.addEventListener('click', (event) => {
+      tableBody.addEventListener('click', async (event) => {
         const button = event.target.closest('[data-action]');
         if (!button) return;
         const collection = sections[activeSection].collection;
@@ -741,7 +823,7 @@
         if (window.confirm(`Bạn có chắc muốn xóa ${schemas[collection].singular} này không?`)) {
           const previous = data[collection];
           data[collection] = previous.filter((item) => item.id !== record.id);
-          if (!persist()) {
+          if (!await persist(collection)) {
             data[collection] = previous;
             return;
           }
@@ -755,7 +837,7 @@
         currentPage = Number(button.dataset.page);
         renderTable();
       });
-      form.addEventListener('submit', (event) => {
+      form.addEventListener('submit', async (event) => {
         event.preventDefault();
         if (!form.reportValidity()) return;
         const collection = sections[activeSection].collection;
@@ -771,7 +853,7 @@
         } else {
           data[collection] = [{ id: `${collection.slice(0, 3)}-${Date.now()}`, ...values }, ...previous];
         }
-        if (!persist()) {
+        if (!await persist(collection)) {
           data[collection] = previous;
           return;
         }

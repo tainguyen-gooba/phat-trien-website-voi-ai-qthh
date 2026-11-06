@@ -31,25 +31,6 @@ document.addEventListener('DOMContentLoaded', () => {
   // 7. Render đánh giá khách hàng
   renderReviews();
 
-  // 8. Hero Search Box
-  const heroSearchInput = document.getElementById('hero-search-input');
-  const heroSearchBtn = document.getElementById('hero-search-btn');
-
-  function handleHeroSearch() {
-    const query = heroSearchInput ? heroSearchInput.value.trim() : '';
-    if (query) {
-      window.location.href = `./foods.html?search=${encodeURIComponent(query)}`;
-    } else {
-      window.location.href = './foods.html';
-    }
-  }
-
-  if (heroSearchBtn) heroSearchBtn.addEventListener('click', handleHeroSearch);
-  if (heroSearchInput) {
-    heroSearchInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') handleHeroSearch();
-    });
-  }
 });
 
 // Đồng hồ Flash Deals
@@ -83,9 +64,9 @@ function renderCategories() {
   container.innerHTML = cats.map(cat => `
     <div class="category-item ${cat.id === 'all' ? 'active' : ''}" onclick="window.location.href='./foods.html?category=${cat.id}'">
       <div class="category-icon-circle">
-        <img src="${cat.image}" alt="${cat.name}" class="category-icon-img" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=240&auto=format&fit=crop&q=80';">
+        <img src="${cat.image}" alt="${UIComponents.escapeHtml(cat.name)}" class="category-icon-img" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=240&auto=format&fit=crop&q=80';">
       </div>
-      <span class="category-label">${cat.name}</span>
+      <span class="category-label">${UIComponents.escapeHtml(cat.name)}</span>
     </div>
   `).join('');
 }
@@ -117,19 +98,19 @@ function createProductCardHtml(product) {
   return `
     <div class="product-card">
       <div class="product-thumb-wrap">
-        <img src="${product.image}" alt="${product.name}" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80';">
+        <img src="${product.image}" alt="${UIComponents.escapeHtml(product.name)}" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80';">
         ${discountPercent > 0 ? `<span class="product-tag-discount">-${discountPercent}%</span>` : ''}
         <span class="product-tag-time">⏱️ ${product.time}</span>
       </div>
 
       <div class="product-info">
         <div class="product-meta-row">
-          <span class="product-category-name">${product.restaurantName}</span>
+          <span class="product-category-name">${UIComponents.escapeHtml(product.restaurantName)}</span>
           <span class="product-rating">★ ${product.rating}</span>
         </div>
 
-        <a href="./food-detail.html?id=${product.id}" class="product-title" title="${product.name}">
-          ${product.name}
+        <a href="./food-detail.html?id=${encodeURIComponent(product.id)}" class="product-title" title="${UIComponents.escapeHtml(product.name)}">
+          ${UIComponents.escapeHtml(product.name)}
         </a>
 
         <div class="product-bottom-row">
@@ -189,6 +170,25 @@ function renderCoupons() {
         </div>
       </div>
     </div>
+  `).join('');
+}
+
+function renderReviews() {
+  const container = document.getElementById('reviews-container');
+  if (!container) return;
+
+  container.innerHTML = FASTFOOD_DATA.reviews.map(review => `
+    <article class="review-card">
+      <div class="review-header">
+        <img src="${review.avatar}" alt="${review.author}" class="review-avatar-img" loading="lazy">
+        <strong>${review.author}</strong>
+      </div>
+      <div class="review-stars" aria-label="${review.rating} trên 5 sao">
+        ${'★'.repeat(Math.max(0, Math.min(5, Number(review.rating) || 0)))}
+      </div>
+      <p class="review-text">“${review.comment}”</p>
+      <span class="review-order-tag">${review.orderInfo} · ${review.date}</span>
+    </article>
   `).join('');
 }
 
@@ -281,4 +281,3 @@ function initHeroSlider() {
   // Bắt đầu chu trình tự động trượt
   startAutoSlide();
 }
-

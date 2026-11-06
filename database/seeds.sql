@@ -20,8 +20,11 @@ INSERT INTO `users` (`id`, `role_id`, `full_name`, `email`, `phone`, `password_h
 (3, 2, 'Trần Khách Hàng', 'customer@fastfood.vn', '0903000003', '$2a$10$bkietFQJeqvf5auGcaZdpeA3bauzIW68ngdzqkEYVS9T1o4j.tsXe', 'active'),
 (4, 4, 'Lê Tài Xế Giao Hàng', 'shipper@fastfood.vn', '0904000004', '$2a$10$bkietFQJeqvf5auGcaZdpeA3bauzIW68ngdzqkEYVS9T1o4j.tsXe', 'active')
 ON DUPLICATE KEY UPDATE
+  `role_id` = VALUES(`role_id`),
   `full_name` = VALUES(`full_name`),
-  `password_hash` = VALUES(`password_hash`);
+  `phone` = VALUES(`phone`),
+  `password_hash` = VALUES(`password_hash`),
+  `status` = VALUES(`status`);
 
 -- 3. Thêm danh mục món ăn
 INSERT INTO `categories` (`id`, `restaurant_id`, `name`, `slug`, `icon_url`, `display_order`, `is_active`) VALUES

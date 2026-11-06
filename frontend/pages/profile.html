@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hồ Sơ Cá Nhân - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+    <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <!-- Page Header -->
+  <div class="page-header-bar">
+    <div class="container">
+      <div class="breadcrumb">
+        <a href="./home.html">Trang chủ</a> <span>/</span> <span>Hồ sơ cá nhân</span>
+      </div>
+      <h1 class="page-title">Quản Lý Tài Khoản</h1>
+    </div>
+  </div>
+
+  <main class="container" style="max-width:800px; margin-bottom:4rem;">
+    <div class="card">
+      <div style="display:flex; align-items:center; gap:1.25rem; border-bottom:1px solid var(--border-color); padding-bottom:1.5rem; margin-bottom:1.5rem;">
+        <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=200&auto=format&fit=crop&q=80" alt="Avatar" style="width:76px; height:76px; border-radius:50%; object-fit:cover; border:3px solid var(--primary-color); box-shadow:var(--shadow-md);">
+        <div>
+          <h2 style="font-size:1.35rem; font-weight:800; color:var(--text-main);">Trần Văn FastFood</h2>
+          <span class="badge badge-success">Thành viên Thân Thiết</span>
+        </div>
+      </div>
+
+      <form id="profile-edit-form">
+        <div class="grid grid-cols-2" style="gap:1rem;">
+          <div class="form-group">
+            <label class="form-label" for="prof-name">Họ và Tên</label>
+            <input type="text" id="prof-name" class="form-control" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prof-phone">Số Điện Thoại</label>
+            <input type="tel" id="prof-phone" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prof-email">Email</label>
+          <input type="email" id="prof-email" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="prof-address">Địa Chỉ Mặc Định</label>
+          <input type="text" id="prof-address" class="form-control" required>
+        </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2rem; border-top:1px solid var(--border-color); padding-top:1.25rem;">
+          <button type="button" class="btn btn-outline text-danger" onclick="StorageManager.remove(StorageManager.KEYS.USER); window.location.href='./login.html';">
+            Đăng Xuất
+          </button>
+
+          <button type="submit" class="btn btn-primary">
+            Lưu Thay Đổi
+          </button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/profile.js"></script>
+</body>
+</html>
+

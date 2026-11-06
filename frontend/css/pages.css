@@ -1,0 +1,416 @@
+/* ===================================================================
+   FASTFOOD SUBPAGES STYLES (Foods, Detail, Cart, Checkout, Tracking, History, Profile, Auth)
+   =================================================================== */
+
+/* Page Banner / Header Bar */
+.page-header-bar {
+  background: linear-gradient(135deg, #FFF9F3 0%, #FFF3E5 100%);
+  padding: 2.5rem 0;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 2.5rem;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: var(--font-size-xs);
+  color: var(--text-muted);
+  margin-bottom: 0.75rem;
+}
+
+.breadcrumb a:hover {
+  color: var(--primary-color);
+}
+
+.page-title {
+  font-size: var(--font-size-2xl);
+  font-weight: 800;
+  color: var(--text-main);
+}
+
+/* Filter & Layout Split (Foods & Restaurants) */
+.layout-with-sidebar {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.filter-sidebar {
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 1.5rem;
+  height: fit-content;
+  position: sticky;
+  top: calc(var(--header-height) + 1.5rem);
+}
+
+.filter-group {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-group:last-child {
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+.filter-group-title {
+  font-size: var(--font-size-sm);
+  font-weight: 700;
+  color: var(--text-main);
+  margin-bottom: 0.85rem;
+}
+
+.filter-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin-bottom: 0.65rem;
+  cursor: pointer;
+}
+
+.filter-checkbox-item input[type="checkbox"],
+.filter-checkbox-item input[type="radio"] {
+  accent-color: var(--primary-color);
+  width: 16px;
+  height: 16px;
+}
+
+.content-top-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+/* --- FOOD DETAIL PAGE --- */
+.food-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 3rem;
+  margin-bottom: 3.5rem;
+  background: #FFFFFF;
+  padding: 2.5rem;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.food-gallery-main {
+  width: 100%;
+  height: 380px;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  background: #F8F8FA;
+}
+
+.food-gallery-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.detail-price-box {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin: 1.25rem 0 1.5rem;
+}
+
+.detail-current-price {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--primary-color);
+}
+
+.detail-old-price {
+  font-size: 1.1rem;
+  color: var(--text-muted);
+  text-decoration: line-through;
+}
+
+.topping-section {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  background: var(--bg-surface);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.topping-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.topping-item:last-child {
+  border-bottom: none;
+}
+
+.quantity-control {
+  display: inline-flex;
+  align-items: center;
+  background: #FFFFFF;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.qty-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  font-weight: bold;
+  color: var(--text-main);
+  background: var(--bg-surface);
+  transition: all var(--transition-fast);
+}
+
+.qty-btn:hover {
+  background: var(--primary-color);
+  color: #FFFFFF;
+}
+
+.qty-input {
+  width: 50px;
+  text-align: center;
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+/* --- CART PAGE --- */
+.cart-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.cart-items-card {
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 1.75rem;
+}
+
+.cart-item-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cart-item-row:last-child {
+  border-bottom: none;
+}
+
+.cart-item-thumb {
+  width: 74px;
+  height: 74px;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.cart-item-info {
+  flex: 1;
+}
+
+.cart-item-title {
+  font-weight: 700;
+  font-size: var(--font-size-base);
+  color: var(--text-main);
+  margin-bottom: 0.25rem;
+}
+
+.cart-item-price {
+  color: var(--primary-color);
+  font-weight: 700;
+  font-size: var(--font-size-sm);
+}
+
+.cart-summary-card {
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  padding: 1.75rem;
+  height: fit-content;
+  position: sticky;
+  top: calc(var(--header-height) + 1.5rem);
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.85rem;
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+}
+
+.summary-row.total-row {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--text-main);
+  padding-top: 1rem;
+  border-top: 2px dashed var(--border-color);
+  margin-top: 1rem;
+}
+
+/* --- CHECKOUT PAGE --- */
+.checkout-layout {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+  gap: 2rem;
+  margin-bottom: 4rem;
+}
+
+.payment-method-card {
+  border: 2px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  cursor: pointer;
+  margin-bottom: 0.75rem;
+  transition: all var(--transition-fast);
+}
+
+.payment-method-card:hover, .payment-method-card.active {
+  border-color: var(--primary-color);
+  background: var(--primary-light);
+}
+
+/* --- ORDER TRACKING PAGE --- */
+.tracking-card {
+  background: #FFFFFF;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  padding: 2.5rem;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 3rem;
+}
+
+.timeline-stepper {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  margin: 3rem 0 2.5rem;
+}
+
+.timeline-stepper::before {
+  content: '';
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  right: 30px;
+  height: 4px;
+  background: var(--border-color);
+  z-index: 1;
+}
+
+.timeline-progress-bar {
+  position: absolute;
+  top: 20px;
+  left: 30px;
+  height: 4px;
+  background: var(--primary-color);
+  z-index: 2;
+  transition: width var(--transition-smooth);
+}
+
+.timeline-step {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  width: 110px;
+}
+
+.step-node {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #FFFFFF;
+  border: 3px solid var(--border-color);
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  margin-bottom: 0.65rem;
+  transition: all var(--transition-normal);
+}
+
+.timeline-step.completed .step-node {
+  background: var(--primary-color);
+  border-color: var(--primary-color);
+  color: #FFFFFF;
+}
+
+.timeline-step.active .step-node {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  box-shadow: 0 0 0 6px var(--primary-glow);
+}
+
+.step-title {
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--text-main);
+}
+
+.step-time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 0.2rem;
+}
+
+.shipper-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2rem;
+}
+
+/* --- AUTH PAGES (LOGIN / REGISTER) --- */
+.auth-page-wrap {
+  min-height: calc(100vh - var(--header-height) - 180px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+}
+
+.auth-form-card {
+  width: 100%;
+  max-width: 440px;
+  background: #FFFFFF;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-card);
+  padding: 2.5rem 2.25rem;
+}
+

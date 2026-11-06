@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thực Đơn Món Ăn - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+    <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <!-- Page Header -->
+  <div class="page-header-bar">
+    <div class="container">
+      <div class="breadcrumb">
+        <a href="./home.html">Trang chủ</a> <span>/</span> <span>Thực đơn</span>
+      </div>
+      <h1 class="page-title">Thực Đơn Món Ăn FASTFOOD</h1>
+    </div>
+  </div>
+
+  <main class="container">
+    <div class="layout-with-sidebar">
+      
+      <!-- Filter Sidebar -->
+      <aside class="filter-sidebar">
+        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:1.25rem;">Lọc Món Ăn</h3>
+
+        <!-- Danh mục -->
+        <div class="filter-group">
+          <h4 class="filter-group-title">Danh Mục</h4>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-cat" class="food-cat-filter" value="all" checked>
+            <span>Tất cả danh mục</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-cat" class="food-cat-filter" value="com">
+            <span>Cơm & Món Việt</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-cat" class="food-cat-filter" value="burger">
+            <span>Burger & Gà Rán</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-cat" class="food-cat-filter" value="tra-sua">
+            <span>Trà Sữa & Đồ Uống</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-cat" class="food-cat-filter" value="pizza">
+            <span>Pizza & Mỳ Ý</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-cat" class="food-cat-filter" value="healthy">
+            <span>Salad Healthy</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-cat" class="food-cat-filter" value="an-vat">
+            <span>Ăn Vặt & Bánh</span>
+          </label>
+        </div>
+
+        <!-- Mức giá -->
+        <div class="filter-group">
+          <h4 class="filter-group-title">Khoảng Giá</h4>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-price" class="food-price-filter" value="all" checked>
+            <span>Tất cả mức giá</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-price" class="food-price-filter" value="under-50">
+            <span>Dưới 50.000 đ</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-price" class="food-price-filter" value="50-100">
+            <span>50.000 đ - 100.000 đ</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="f-price" class="food-price-filter" value="over-100">
+            <span>Trên 100.000 đ</span>
+          </label>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <div>
+        <div class="content-top-toolbar">
+          <div style="flex:1; max-width:320px;">
+            <input type="text" id="food-search-input" class="form-control" placeholder="Tìm theo tên món hoặc mô tả...">
+          </div>
+
+          <div style="display:flex; align-items:center; gap:1rem;">
+            <span id="food-results-count" style="font-size:0.85rem; color:var(--text-muted); font-weight:600;">8 món ăn</span>
+            <select id="food-sort-select" class="form-control" style="width:auto; padding:0.5rem 1rem;">
+              <option value="default">Mặc định</option>
+              <option value="price-asc">Giá: Thấp đến cao</option>
+              <option value="price-desc">Giá: Cao đến thấp</option>
+              <option value="rating">Đánh giá cao nhất</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Foods Grid -->
+        <div class="grid grid-cols-3" id="foods-grid-container">
+          <!-- Rendered by foods.js -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/foods.js"></script>
+</body>
+</html>
+

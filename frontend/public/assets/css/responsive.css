@@ -1,0 +1,55 @@
+/* ===================================================================
+   FASTFOOD RESPONSIVE STYLES
+   =================================================================== */
+
+/* Tablet (max-width: 992px) */
+@media (max-width: 992px) {
+  .navbar {
+    height: 64px;
+  }
+
+  .nav-links {
+    display: none; /* Collapsible on mobile/tablet */
+  }
+
+  .grid-cols-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Mobile (max-width: 768px) */
+@media (max-width: 768px) {
+  .container {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .grid-cols-3, .grid-cols-2 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .card {
+    padding: 1rem;
+  }
+
+  .hero-section {
+    padding: 2.5rem 0 !important;
+    text-align: center;
+  }
+
+  .hero-buttons {
+    justify-content: center;
+  }
+
+  #toast-container {
+    left: 1rem;
+    right: 1rem;
+    bottom: 1rem;
+  }
+
+  .toast {
+    min-width: auto;
+    width: 100%;
+  }
+}
+

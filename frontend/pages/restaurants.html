@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danh Sách Quán Ăn Đối Tác - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+    <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <!-- Page Header -->
+  <div class="page-header-bar">
+    <div class="container">
+      <div class="breadcrumb">
+        <a href="./home.html">Trang chủ</a> <span>/</span> <span>Nhà hàng đối tác</span>
+      </div>
+      <h1 class="page-title">Khám Phá Các Quán Ăn Ngon</h1>
+    </div>
+  </div>
+
+  <main class="container">
+    <div class="layout-with-sidebar">
+      
+      <!-- Filter Sidebar -->
+      <aside class="filter-sidebar">
+        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:1.25rem;">Bộ Lọc Tìm Kiếm</h3>
+
+        <!-- Nhóm danh mục -->
+        <div class="filter-group">
+          <h4 class="filter-group-title">Danh Mục Quán</h4>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="res-cat" class="filter-category-radio" value="all" checked>
+            <span>Tất cả quán ăn</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="res-cat" class="filter-category-radio" value="burger">
+            <span>Burger & Gà Rán</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="res-cat" class="filter-category-radio" value="com">
+            <span>Cơm & Món Việt</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="res-cat" class="filter-category-radio" value="tra-sua">
+            <span>Trà Sữa & Đồ Uống</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="radio" name="res-cat" class="filter-category-radio" value="pizza">
+            <span>Pizza & Mỳ Ý</span>
+          </label>
+        </div>
+
+        <!-- Tiêu chí ưu đãi -->
+        <div class="filter-group">
+          <h4 class="filter-group-title">Ưu Đãi</h4>
+          <label class="filter-checkbox-item">
+            <input type="checkbox">
+            <span>Quán có mã Freeship</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="checkbox">
+            <span>Giảm giá từ 25K</span>
+          </label>
+          <label class="filter-checkbox-item">
+            <input type="checkbox">
+            <span>Đối tác xác thực ★</span>
+          </label>
+        </div>
+      </aside>
+
+      <!-- Main Content Area -->
+      <div>
+        <div class="content-top-toolbar">
+          <div style="flex:1; max-width:320px;">
+            <input type="text" id="restaurant-search-input" class="form-control" placeholder="Tìm kiếm theo tên quán ăn...">
+          </div>
+
+          <div style="display:flex; align-items:center; gap:0.5rem;">
+            <span style="font-size:0.85rem; color:var(--text-secondary);">Sắp xếp theo:</span>
+            <select id="restaurant-sort-select" class="form-control" style="width:auto; padding:0.5rem 1rem;">
+              <option value="popular">Phổ biến nhất</option>
+              <option value="rating">Đánh giá cao nhất</option>
+              <option value="reviews">Nhiều đánh giá nhất</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Restaurants Grid -->
+        <div class="grid grid-cols-2" id="restaurants-grid-container">
+          <!-- Rendered by restaurants.js -->
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/restaurants.js"></script>
+</body>
+</html>
+

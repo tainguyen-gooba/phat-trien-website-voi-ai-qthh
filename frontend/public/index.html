@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FASTFOOD - Đặt Đồ Ăn Trực Tuyến Nhanh Chóng</title>
+  <link rel="icon" type="image/svg+xml" href="/assets/images/logo.svg">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="/assets/css/variables.css">
+  <link rel="stylesheet" href="/assets/css/reset.css">
+  <link rel="stylesheet" href="/assets/css/main.css">
+  <link rel="stylesheet" href="/assets/css/responsive.css">
+</head>
+<body>
+
+  <!-- Site Header -->
+  <header class="site-header">
+    <div class="container navbar">
+      <a href="/index.html" class="brand-logo">
+        <img src="/assets/images/logo.svg" alt="FASTFOOD Logo" style="height: 44px;">
+      </a>
+
+      <nav class="nav-links">
+        <a href="/index.html" class="nav-link active">Trang Chủ Hệ Thống</a>
+        <a href="/pages/home.html" class="nav-link">Giao Diện Khách Hàng (App)</a>
+        <a href="/pages/foods.html" class="nav-link">Thực Đơn</a>
+        <a href="/pages/restaurants.html" class="nav-link">Quán Ăn</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="/pages/login.html" class="btn btn-outline btn-sm">Đăng Nhập</a>
+        <a href="/pages/register.html" class="btn btn-primary btn-sm">Đăng Ký</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container" style="padding-top: 2.5rem; padding-bottom: 3rem;">
+    
+    <!-- Hero Banner -->
+    <section class="hero-section card" style="background: linear-gradient(135deg, #00B14F 0%, #007736 100%); color: white; padding: 3rem; margin-bottom: 2.5rem; border: none;">
+      <div style="max-width: 720px;">
+        <span class="badge" style="background: rgba(255,255,255,0.2); color: #fff; margin-bottom: 1rem;">
+          🚀 Hệ Thống Đặt Món Trực Tuyến Thế Hệ Mới
+        </span>
+        <h1 style="font-size: 2.5rem; font-weight: 800; line-height: 1.2; margin-bottom: 1rem;">
+          FASTFOOD - Giao đồ ăn siêu tốc, chuẩn vị nóng hổi
+        </h1>
+        <p style="font-size: 1.1rem; opacity: 0.95; margin-bottom: 2rem; line-height: 1.6;">
+          Nền tảng thương mại điện tử F&B đa đối tác: Khách hàng, Quán ăn, Tài xế và Quản trị viên. 
+          Kiến trúc thuần chuẩn RESTful API, Node.js Express và MySQL 16 bảng chuẩn hóa.
+        </p>
+        <div class="hero-buttons" style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="/pages/customer/home.html" class="btn btn-secondary">
+            🍔 Xem Thực Đơn Demo
+          </a>
+          <button id="btn-ping-api" class="btn" style="background: white; color: var(--primary-color);">
+            🔄 Kiểm Tra Kết Nối Server & MySQL
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- System Diagnostic & Health Card -->
+    <section class="card" style="margin-bottom: 2.5rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 1rem;">
+        <div>
+          <h2 style="font-size: 1.35rem; font-weight: 700; color: var(--text-main);">
+            Tình Trạng Nền Tảng (System Diagnostics)
+          </h2>
+          <p style="color: var(--text-secondary); font-size: 0.9rem;">
+            Theo dõi trạng thái thời gian thực giữa Frontend thuần, Backend Express và Cơ sở dữ liệu MySQL
+          </p>
+        </div>
+        <div style="display: flex; gap: 0.75rem; align-items: center;">
+          <span id="server-status-badge" class="badge badge-warning">
+            <span class="status-dot"></span> Đang kết nối...
+          </span>
+          <span id="db-status-badge" class="badge badge-warning">
+            <span class="status-dot"></span> Đang kiểm tra DB...
+          </span>
+        </div>
+      </div>
+
+      <div id="system-details">
+        <p style="color: var(--text-muted); padding: 1.5rem 0; text-align: center;">
+          Đang lấy dữ liệu chẩn đoán hệ thống...
+        </p>
+      </div>
+    </section>
+
+    <!-- Architecture & Modules Preview -->
+    <section>
+      <h2 style="font-size: 1.35rem; font-weight: 700; margin-bottom: 1.25rem;">
+        Cấu Trúc Các Phân Hệ Chức Năng (Modules Architecture)
+      </h2>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+        <!-- Card 1: Auth -->
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.75rem;">🔐</div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Xác Thực & Phân Quyền</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            JWT Token, mã hóa mật khẩu bcrypt, phân quyền 4 nhóm vai trò (Admin, Customer, Owner, Shipper).
+          </p>
+          <div style="display: flex; gap: 0.5rem;">
+            <a href="/pages/login.html" class="btn btn-outline btn-sm">Đăng Nhập</a>
+            <a href="/pages/register.html" class="btn btn-outline btn-sm">Đăng Ký</a>
+          </div>
+        </div>
+
+        <!-- Card 2: Customer Ordering -->
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.75rem;">🍜</div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Khách Hàng Đặt Món</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Tìm kiếm quán ăn, lọc món theo danh mục, thêm giỏ hàng theo từng quán, áp mã giảm giá và thanh toán.
+          </p>
+          <a href="/pages/home.html" class="btn btn-outline btn-sm">Xem Giao Diện Khách</a>
+        </div>
+
+        <!-- Card 3: Restaurant Portal -->
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.75rem;">🏪</div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Kênh Quán Ăn Đối Tác</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Quản lý thực đơn, bật/tắt nhận đơn trực tiếp, cập nhật trạng thái món, xử lý đơn hàng theo thời gian thực.
+          </p>
+          <a href="/pages/restaurant/dashboard.html" class="btn btn-outline btn-sm">Kênh Chủ Quán</a>
+        </div>
+
+        <!-- Card 4: Platform Admin -->
+        <div class="card">
+          <div style="font-size: 2rem; margin-bottom: 0.75rem;">📊</div>
+          <h3 style="font-size: 1.15rem; font-weight: 700; margin-bottom: 0.5rem;">Quản Trị Toàn Sàn (Admin)</h3>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            Duyệt quán ăn đối tác, quản lý người dùng, mã khuyến mãi toàn sàn, theo dõi doanh thu và thống kê đơn.
+          </p>
+          <a href="/pages/admin/dashboard.html" class="btn btn-outline btn-sm">Trang Quản Trị</a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Site Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div style="display: flex; justify-content: space-between; flex-wrap: wrap; gap: 2rem;">
+        <div style="max-width: 360px;">
+          <h4 style="color: #fff; font-size: 1.25rem; font-weight: 800; margin-bottom: 0.75rem;">FASTFOOD</h4>
+          <p style="font-size: 0.9rem; line-height: 1.6;">
+            Nền tảng thương mại điện tử đặt đồ ăn trực tuyến công nghệ cao, tối ưu tốc độ và trải nghiệm người dùng.
+          </p>
+        </div>
+        <div>
+          <h5 style="color: #fff; font-weight: 700; margin-bottom: 0.75rem;">API Endpoints Sẵn Sàng</h5>
+          <ul style="font-size: 0.85rem; line-height: 1.8;">
+            <li><code>GET /api/v1</code> - Thông tin API</li>
+            <li><code>GET /api/v1/health</code> - Kiểm tra trạng thái hệ thống</li>
+            <li><code>GET /api/v1/health/db</code> - Kiểm tra kết nối MySQL</li>
+          </ul>
+        </div>
+        <div>
+          <h5 style="color: #fff; font-weight: 700; margin-bottom: 0.75rem;">Cơ Sở Dữ Liệu</h5>
+          <p style="font-size: 0.85rem; line-height: 1.8;">
+            16 Bảng dữ liệu chuẩn 3NF: Users, Roles, Restaurants, Categories, Products, Images, Addresses, Carts, Items, Orders, Payments, Coupons, Reviews, Notifications, Staff.
+          </p>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        &copy; 2026 FASTFOOD Platform. Đã khởi tạo hoàn tất theo chuẩn Prompt 0.
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="/assets/js/config.js"></script>
+  <script src="/assets/js/utils.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/main.js"></script>
+</body>
+</html>
+

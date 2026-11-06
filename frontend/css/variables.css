@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
+/* ===================================================================
+   FASTFOOD DESIGN SYSTEM - COLOR PALETTE & VARIABLES
+   Phong cách: Modern Food Delivery (Trắng & Cam Chủ Đạo)
+   =================================================================== */
+
+:root {
+  /* Brand Color Palette */
+  --primary-color: #F28A24;         /* Cam chủ đạo FASTFOOD */
+  --primary-hover: #D87413;
+  --primary-active: #BF6209;
+  --primary-light: #FFF8F1;
+  --primary-glow: rgba(242, 138, 36, 0.25);
+
+  --secondary-color: #FFF3E5;       /* Cam nhạt Pastel làm nền điểm nhấn */
+  --secondary-hover: #FFE6CB;
+
+  --accent-color: #FF4742;          /* Đỏ cam cho badge Sale, Hot Deals */
+  --accent-gold: #FFAA00;           /* Màu sao đánh giá Rating */
+
+  /* Neutral & Grayscale */
+  --bg-color: #FFFFFF;              /* Nền trắng chuẩn */
+  --bg-surface: #FAFAFB;            /* Nền phụ siêu nhẹ */
+  --bg-card: #FFFFFF;
+  --bg-input: #F7F7F8;
+
+  --text-main: #222222;             /* Chữ chính đậm rõ nét */
+  --text-secondary: #555555;        /* Chữ phụ giải thích */
+  --text-muted: #888888;            /* Chữ mờ, placeholder */
+  --text-inverse: #FFFFFF;          /* Chữ trên nền màu */
+
+  --border-color: #EFEFEF;          /* Viền nhẹ thanh lịch */
+  --border-focus: #F28A24;
+
+  /* State Colors */
+  --success: #10B981;
+  --success-bg: #E8FBF4;
+  --warning: #F59E0B;
+  --warning-bg: #FEF7E6;
+  --danger: #EF4444;
+  --danger-bg: #FEEEEE;
+  --info: #3B82F6;
+  --info-bg: #EFF6FF;
+
+  /* Typography - Chuẩn Modern Food Delivery (Plus Jakarta Sans & Be Vietnam Pro) */
+  --font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  --font-size-xs: 0.75rem;    /* 12px */
+  --font-size-sm: 0.875rem;   /* 14px */
+  --font-size-base: 1rem;     /* 16px */
+  --font-size-md: 1.125rem;   /* 18px */
+  --font-size-lg: 1.25rem;    /* 20px */
+  --font-size-xl: 1.5rem;     /* 24px */
+  --font-size-2xl: 1.875rem;  /* 30px */
+  --font-size-3xl: 2.25rem;   /* 36px */
+  --font-size-hero: 3rem;     /* 48px */
+
+  /* Border Radii (Bo góc mềm mại chuẩn UI hiện đại) */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Shadows (Đổ bóng thanh lịch, đa tầng) */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.08);
+  --shadow-card: 0 6px 18px rgba(34, 34, 34, 0.06);
+  --shadow-hover: 0 12px 30px rgba(242, 138, 36, 0.15);
+  --shadow-nav: 0 2px 15px rgba(0, 0, 0, 0.05);
+
+  /* Transitions */
+  --transition-fast: 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layout */
+  --container-max-width: 1240px;
+  --header-height: 80px;
+}
+

@@ -67,7 +67,7 @@ const UIComponents = {
       <div class="container navbar">
         <!-- Brand Logo -->
         <a href="./home.html" class="brand-logo">
-          <img src="../assets/images/logo.svg" alt="FASTFOOD Logo" class="brand-logo-img">
+          <img src="../assets/images/logo.svg" alt="FASTFOOD Buôn Ma Thuột" class="brand-logo-img">
         </a>
 
         <!-- Header Search Bar -->
@@ -193,17 +193,25 @@ const UIComponents = {
         <div class="footer-grid">
           <!-- Cột 1: Brand -->
           <div>
-            <a href="./home.html" class="brand-logo" style="color:#FFFFFF;">
-              <img src="../assets/images/logo.svg" alt="FASTFOOD Logo" style="height:44px; filter:brightness(0) invert(1);">
+            <a href="./home.html" class="footer-brand-logo" aria-label="FASTFOOD Buôn Ma Thuột - Trang chủ">
+              <img src="../assets/images/logo-footer.svg" alt="FASTFOOD Buôn Ma Thuột" width="360" height="64">
             </a>
             <p class="footer-brand-desc">
-              FASTFOOD - Nền tảng đặt món ăn trực tuyến thế hệ mới. Giao hàng thần tốc trong 20 phút, bảo đảm chất lượng món ăn nóng hổi chuẩn vị.
+              FASTFOOD Buôn Ma Thuột - Đặt món ngon địa phương, giao tận nơi trong thành phố.
             </p>
-            <div style="display:flex; gap:0.75rem; margin-top:1.25rem;">
-              <span style="font-size:1.4rem; cursor:pointer;">📱</span>
-              <span style="font-size:1.4rem; cursor:pointer;">📘</span>
-              <span style="font-size:1.4rem; cursor:pointer;">📸</span>
-              <span style="font-size:1.4rem; cursor:pointer;">🎥</span>
+            <div class="footer-quick-links" aria-label="Liên hệ nhanh">
+              <a href="tel:19008888" aria-label="Gọi hotline 1900 8888" title="Gọi hotline">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5 9 3l2 4.7-2 1.7a15 15 0 0 0 5.6 5.6l1.7-2 4.7 2-.5 2.4a3 3 0 0 1-3.3 2.4A17.5 17.5 0 0 1 4.2 6.8a3 3 0 0 1 2.4-3.3Z"/></svg>
+              </a>
+              <a href="mailto:hotro@fastfood.vn" aria-label="Gửi email hỗ trợ" title="Gửi email">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m4 7 8 6 8-6"/></svg>
+              </a>
+              <a href="https://www.google.com/maps/search/?api=1&query=Buon+Ma+Thuot%2C+Dak+Lak" target="_blank" rel="noopener noreferrer" aria-label="Xem Buôn Ma Thuột trên bản đồ" title="Xem bản đồ">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+              </a>
+              <a href="#support-contact" aria-label="Thông tin hỗ trợ" title="Thông tin hỗ trợ">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 13v-2a8 8 0 0 1 16 0v2"/><path d="M4 12h3v7H6a2 2 0 0 1-2-2zm16 0h-3v7h1a2 2 0 0 0 2-2zM9 21h4"/></svg>
+              </a>
             </div>
           </div>
 
@@ -213,8 +221,8 @@ const UIComponents = {
             <div class="footer-links">
               <a href="./home.html" class="footer-link">Trang chủ FASTFOOD</a>
               <a href="./restaurants.html" class="footer-link">Danh sách quán ăn</a>
-              <a href="./foods.html" class="footer-link">Món ăn bán chạy</a>
-              <a href="./foods.html?filter=flash" class="footer-link">Flash Deals giảm giá</a>
+              <a href="./home.html#best-sellers" class="footer-link">Món ăn bán chạy</a>
+              <a href="./home.html#flash-deals" class="footer-link">Flash Deals giảm giá</a>
               <a href="./cart.html" class="footer-link">Giỏ hàng của bạn</a>
             </div>
           </div>
@@ -223,11 +231,11 @@ const UIComponents = {
           <div>
             <h4 class="footer-col-title">Chính Sách & Hỗ Trợ</h4>
             <div class="footer-links">
-              <a href="#" class="footer-link">Điều khoản dịch vụ</a>
-              <a href="#" class="footer-link">Chính sách bảo mật</a>
-              <a href="#" class="footer-link">Quy chuẩn vệ sinh an toàn</a>
+              <a href="./policies.html#terms" class="footer-link">Điều khoản dịch vụ</a>
+              <a href="./policies.html#privacy" class="footer-link">Chính sách bảo mật</a>
+              <a href="./policies.html#food-safety" class="footer-link">Quy chuẩn vệ sinh an toàn</a>
               <a href="./order-tracking.html" class="footer-link">Theo dõi đơn hàng</a>
-              <a href="#" class="footer-link">Đăng ký làm đối tác quán</a>
+              <a href="./restaurant/dashboard.html" class="footer-link">Đăng ký làm đối tác quán</a>
             </div>
           </div>
 
@@ -244,7 +252,7 @@ const UIComponents = {
             </div>
             <div class="footer-contact-item">
               <span>📍</span>
-              <span>Tòa nhà FASTFOOD Center, Quận 1, TP. HCM</span>
+              <span>Buôn Ma Thuột, Đắk Lắk</span>
             </div>
             <div style="background:#24262A; padding:0.75rem 1rem; border-radius:var(--radius-md); margin-top:1rem;">
               <small style="color:#FFA24A; font-weight:700; display:block;">GIAO ĐỒ ĂN NHANH</small>
@@ -253,12 +261,12 @@ const UIComponents = {
           </div>
         </div>
 
-        <div class="footer-bottom">
+        <div class="footer-bottom" id="support-contact">
           <div>&copy; 2026 FASTFOOD Việt Nam. Tất cả quyền được bảo lưu. Thiết kế chuẩn Modern Food Delivery.</div>
-          <div style="display:flex; gap:1.25rem;">
-            <span>Chính Sách Riêng Tư</span>
-            <span>Quy Chế Hoạt Động</span>
-            <span>Giải Quyết Khiếu Nại</span>
+          <div class="footer-bottom-links">
+            <a href="./policies.html#privacy">Chính Sách Riêng Tư</a>
+            <a href="./policies.html#terms">Quy Chế Hoạt Động</a>
+            <a href="./policies.html#complaints">Giải Quyết Khiếu Nại</a>
           </div>
         </div>
       </div>

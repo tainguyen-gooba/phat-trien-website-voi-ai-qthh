@@ -241,6 +241,9 @@
         <button class="nav-item" type="button" data-section="products">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 8.5 12 4l8 4.5v8L12 21l-8-4.5z"/><path d="m4.5 8.7 7.5 4.2 7.5-4.2M12 13v8"/></svg>Sản phẩm
         </button>
+        <button class="nav-item" type="button" data-section="restaurants">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-6h6v6M8 10h.01M12 10h.01M16 10h.01"/></svg>Quán ăn
+        </button>
         <button class="nav-item" type="button" data-section="orders">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 3h12l2 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7z"/><path d="M4 7h16M9 11h6M9 15h6"/></svg>Đơn hàng
         </button>
@@ -456,6 +459,10 @@
           title: 'Quản lý sản phẩm', description: 'Theo dõi thực đơn và tình trạng kinh doanh của sản phẩm.',
           tableTitle: 'Danh sách sản phẩm', subtitle: 'Tất cả sản phẩm trên hệ thống', collection: 'products',
         },
+        restaurants: {
+          title: 'Quản lý quán ăn', description: 'Cập nhật địa chỉ và đường dẫn của các quán trên website.',
+          tableTitle: 'Danh sách quán ăn', subtitle: 'Thông tin quán được hiển thị trên FASTFOOD', collection: 'restaurants',
+        },
         orders: {
           title: 'Quản lý đơn hàng', description: 'Theo dõi tiến độ và thông tin các đơn hàng gần đây.',
           tableTitle: 'Danh sách đơn hàng', subtitle: 'Đơn hàng mới nhất trên FASTFOOD', collection: 'orders',
@@ -473,8 +480,13 @@
         },
         products: {
           singular: 'sản phẩm', statusOptions: ['Đang bán', 'Tạm hết'],
-          columns: [{ key: 'name', label: 'Tên sản phẩm' }, { key: 'category', label: 'Danh mục' }, { key: 'restaurant', label: 'Nhà hàng' }, { key: 'price', label: 'Giá bán' }, { key: 'status', label: 'Trạng thái' }],
-          fields: [{ key: 'name', label: 'Tên sản phẩm', required: true }, { key: 'category', label: 'Danh mục', required: true }, { key: 'restaurant', label: 'Nhà hàng', required: true }, { key: 'price', label: 'Giá bán (đ)', type: 'number', min: 0, required: true }, { key: 'status', label: 'Trạng thái', type: 'status' }],
+          columns: [{ key: 'name', label: 'Tên sản phẩm' }, { key: 'category', label: 'Danh mục' }, { key: 'restaurant', label: 'Nhà hàng' }, { key: 'address', label: 'Địa chỉ' }, { key: 'url', label: 'URL món ăn' }, { key: 'price', label: 'Giá bán' }, { key: 'status', label: 'Trạng thái' }],
+          fields: [{ key: 'name', label: 'Tên sản phẩm', required: true }, { key: 'category', label: 'Danh mục', required: true }, { key: 'restaurant', label: 'Nhà hàng', required: true }, { key: 'address', label: 'Địa chỉ món ăn', required: true }, { key: 'url', label: 'URL món ăn', type: 'url' }, { key: 'price', label: 'Giá bán (đ)', type: 'number', min: 0, required: true }, { key: 'status', label: 'Trạng thái', type: 'status' }],
+        },
+        restaurants: {
+          singular: 'quán ăn', statusOptions: ['Đang hoạt động', 'Đã ẩn'],
+          columns: [{ key: 'name', label: 'Tên quán ăn' }, { key: 'address', label: 'Địa chỉ' }, { key: 'url', label: 'URL quán ăn' }, { key: 'status', label: 'Trạng thái' }],
+          fields: [{ key: 'name', label: 'Tên quán ăn', required: true }, { key: 'address', label: 'Địa chỉ', required: true }, { key: 'url', label: 'URL quán ăn', type: 'url' }, { key: 'status', label: 'Trạng thái', type: 'status' }],
         },
         orders: {
           singular: 'đơn hàng', statusOptions: ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Đã giao', 'Đã hủy'],
@@ -488,6 +500,12 @@
         },
       };
       const seedData = {
+        restaurants: [
+          { id: 'res-1', name: 'Burger King Station - Buôn Ma Thuột', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+          { id: 'res-2', name: 'Cơm Tấm Sài Gòn Xưa - Buôn Ma Thuột', address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+          { id: 'res-3', name: 'Tiệm Trà Sữa GongCha Tea & Coffee', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+          { id: 'res-4', name: 'Pizza Hut Italia - Buôn Ma Thuột', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+        ],
         categories: [
           { id: 'cat-1', name: 'Cơm & Món Việt', description: 'Món ăn Việt Nam', itemCount: 18, status: 'Đang hoạt động' },
           { id: 'cat-2', name: 'Burger & Gà rán', description: 'Đồ ăn nhanh', itemCount: 12, status: 'Đang hoạt động' },
@@ -497,14 +515,14 @@
           { id: 'cat-6', name: 'Salad & Healthy', description: 'Món ăn lành mạnh', itemCount: 8, status: 'Đang hoạt động' },
         ],
         products: [
-          { id: 'prd-1', name: 'Burger Bò Nướng Phô Mai', category: 'Burger & Gà rán', restaurant: 'Burger King Station', price: 69000, status: 'Đang bán' },
-          { id: 'prd-2', name: 'Cơm Tấm Sườn Bì Chả', category: 'Cơm & Món Việt', restaurant: 'Cơm Tấm Sài Gòn Xưa', price: 55000, status: 'Đang bán' },
-          { id: 'prd-3', name: 'Trà Sữa Trân Châu Hoàng Gia', category: 'Trà sữa & Đồ uống', restaurant: 'GongCha Tea & Coffee', price: 45000, status: 'Đang bán' },
-          { id: 'prd-4', name: 'Pizza Hải Sản Đặc Biệt', category: 'Pizza & Mỳ Ý', restaurant: 'Pizza Hut Italia', price: 159000, status: 'Tạm hết' },
-          { id: 'prd-5', name: 'Gà Rán Giòn Sốt Cay', category: 'Burger & Gà rán', restaurant: 'Burger King Station', price: 75000, status: 'Đang bán' },
-          { id: 'prd-6', name: 'Salad Bơ Cá Hồi', category: 'Salad & Healthy', restaurant: 'Green Bowl Kitchen', price: 89000, status: 'Đang bán' },
-          { id: 'prd-7', name: 'Mỳ Ý Sốt Bò Bằm', category: 'Pizza & Mỳ Ý', restaurant: 'Pizza Hut Italia', price: 99000, status: 'Đang bán' },
-          { id: 'prd-8', name: 'Khoai Tây Lắc Phô Mai', category: 'Ăn vặt & Tráng miệng', restaurant: 'Burger King Station', price: 35000, status: 'Tạm hết' },
+          { id: 'prd-1', name: 'Burger Bò Nướng Phô Mai', category: 'Burger & Gà rán', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 69000, status: 'Đang bán' },
+          { id: 'prd-2', name: 'Cơm Tấm Sườn Bì Chả', category: 'Cơm & Món Việt', restaurant: 'Cơm Tấm Sài Gòn Xưa', address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 55000, status: 'Đang bán' },
+          { id: 'prd-3', name: 'Trà Sữa Trân Châu Hoàng Gia', category: 'Trà sữa & Đồ uống', restaurant: 'GongCha Tea & Coffee', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 45000, status: 'Đang bán' },
+          { id: 'prd-4', name: 'Pizza Hải Sản Đặc Biệt', category: 'Pizza & Mỳ Ý', restaurant: 'Pizza Hut Italia', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 159000, status: 'Tạm hết' },
+          { id: 'prd-5', name: 'Gà Rán Giòn Sốt Cay', category: 'Burger & Gà rán', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 75000, status: 'Đang bán' },
+          { id: 'prd-6', name: 'Salad Bơ Cá Hồi', category: 'Salad & Healthy', restaurant: 'Green Bowl Kitchen', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 89000, status: 'Đang bán' },
+          { id: 'prd-7', name: 'Mỳ Ý Sốt Bò Bằm', category: 'Pizza & Mỳ Ý', restaurant: 'Pizza Hut Italia', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 99000, status: 'Đang bán' },
+          { id: 'prd-8', name: 'Khoai Tây Lắc Phô Mai', category: 'Ăn vặt & Tráng miệng', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', url: '', restaurantUrl: '', price: 35000, status: 'Tạm hết' },
         ],
         orders: [],
         users: [
@@ -522,14 +540,26 @@
         const saved = localStorage.getItem(STORAGE_KEY);
         if (saved) {
           const parsed = JSON.parse(saved);
-          if (parsed && Object.keys(seedData).every((key) => Array.isArray(parsed[key]))) data = parsed;
+          if (parsed && ['categories', 'products', 'orders', 'users'].every((key) => Array.isArray(parsed[key]))) {
+            data = { ...seedData, ...parsed, restaurants: Array.isArray(parsed.restaurants) ? parsed.restaurants : seedData.restaurants };
+          }
           else showToast('Dữ liệu đã lưu không đúng định dạng. Đang sử dụng dữ liệu mẫu.', true);
         }
       } catch (error) {
         showToast('Không thể đọc dữ liệu đã lưu trên trình duyệt.', true);
       }
       if (Array.isArray(publishedContent.categories)) data.categories = publishedContent.categories;
-      if (Array.isArray(publishedContent.products)) data.products = publishedContent.products;
+      if (Array.isArray(publishedContent.restaurants)) data.restaurants = publishedContent.restaurants;
+      if (Array.isArray(publishedContent.products)) {
+        data.products = publishedContent.products.map((product) => ({
+          ...(seedData.products.find((item) => item.id === product.id) || {}),
+          ...product,
+        }));
+      }
+      data.products = data.products.map((product) => ({
+        ...(seedData.products.find((item) => item.id === product.id) || {}),
+        ...product,
+      }));
       data.orders = [];
       try {
         const apiUrl = window.location.port === '5000'
@@ -584,7 +614,7 @@
       async function persist(collection) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-          if (collection === 'categories' || collection === 'products') {
+          if (collection === 'categories' || collection === 'products' || collection === 'restaurants') {
             if (!liveSocket) throw new Error('Không thể kết nối dịch vụ realtime.');
             const result = await new Promise((resolve, reject) => {
               liveSocket.timeout(5000).emit(
@@ -698,6 +728,11 @@
               const value = record[column.key];
               if (column.key === 'status') return `<td><span class="status-badge ${statusClass(value)}">${escapeHtml(value)}</span></td>`;
               if (column.key === 'price' || column.key === 'total') return `<td>${escapeHtml(money(value))}</td>`;
+              if (column.key === 'url' && value) {
+                const url = String(value).trim();
+                const safeUrl = /^https?:\/\/\S+$/i.test(url) || /^(\/(?!\/)|\.{1,2}\/)\S*$/.test(url);
+                return `<td>${safeUrl ? `<a href="${escapeHtml(url)}" ${/^https?:\/\//i.test(url) ? 'target="_blank" rel="noopener noreferrer"' : ''}>${escapeHtml(url)}</a>` : escapeHtml(url)}</td>`;
+              }
               if (column.key === 'orderNo') return `<td>${escapeHtml(value)}<span class="cell-sub">FASTFOOD</span></td>`;
               if (column.key === 'name' || column.key === 'customer') return `<td>${escapeHtml(value)}</td>`;
               return `<td>${escapeHtml(value)}</td>`;

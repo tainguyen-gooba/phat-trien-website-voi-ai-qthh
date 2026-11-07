@@ -172,6 +172,12 @@ Nếu database đã được khởi tạo trước đó, tạo các bảng nội
 npm --prefix backend run db:migrate:realtime
 ```
 
+### Bước 3.2: Cập nhật địa chỉ quán mẫu
+Nếu database đã khởi tạo từ trước, cập nhật hai quán mẫu sang địa chỉ Buôn Ma Thuột mà không xóa dữ liệu khác:
+```bash
+npm --prefix backend run db:migrate:buon-ma-thuot
+```
+
 ---
 
 ### Bước 4: Khởi động Backend Server
@@ -179,7 +185,8 @@ Tại thư mục gốc, gõ:
 ```bash
 npm run dev
 ```
-*(Chế độ development tự động reload khi sửa code với nodemon trên cổng **5000**)*
+Lệnh này tự kiểm tra MySQL trước khi chạy backend. Nếu dùng XAMPP tại `C:\xampp`, dự án sẽ tự khởi động MySQL khi dịch vụ chưa chạy; backend chỉ mở sau khi MySQL sẵn sàng. Khi cài XAMPP ở vị trí khác, đặt `MYSQLD_PATH` và (nếu cần) `MYSQLD_DEFAULTS_FILE` trong `backend/.env`.
+*(Chế độ development tự động reload khi sửa code với nodemon trên cổng **5000**. Dữ liệu database hiện có được giữ nguyên; lần đầu cần chạy `npm run db:init` thủ công.)*
 
 ---
 

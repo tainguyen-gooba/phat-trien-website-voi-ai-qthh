@@ -89,11 +89,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
           <div class="product-info">
             <div class="product-meta-row">
-              <span class="product-category-name">${UIComponents.escapeHtml(product.restaurantName)}</span>
+              ${window.getFastfoodRestaurantUrlForProduct(product)
+                ? `<a class="product-category-name" href="${UIComponents.escapeHtml(window.getFastfoodRestaurantUrl({ id: product.restaurantId, url: window.getFastfoodRestaurantUrlForProduct(product) }))}" ${window.isFastfoodExternalUrl(window.getFastfoodRestaurantUrlForProduct(product)) ? 'target="_blank" rel="noopener noreferrer"' : ''}>${UIComponents.escapeHtml(product.restaurantName)}</a>`
+                : `<span class="product-category-name">${UIComponents.escapeHtml(product.restaurantName)}</span>`}
               <span class="product-rating">★ ${product.rating}</span>
             </div>
+            <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.55rem;">📍 ${UIComponents.escapeHtml(window.getFastfoodRestaurantAddressForProduct(product))}</div>
 
-            <a href="./food-detail.html?id=${encodeURIComponent(product.id)}" class="product-title" title="${UIComponents.escapeHtml(product.name)}">
+            <a href="${UIComponents.escapeHtml(window.getFastfoodProductUrl(product))}" ${window.isFastfoodExternalUrl(product.url) ? 'target="_blank" rel="noopener noreferrer"' : ''} class="product-title" title="${UIComponents.escapeHtml(product.name)}">
               ${UIComponents.escapeHtml(product.name)}
             </a>
 

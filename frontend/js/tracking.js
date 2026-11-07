@@ -114,7 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <h4 style="font-size:0.95rem; font-weight:700; margin-bottom:0.6rem;">📍 Địa Chỉ Giao Hàng</h4>
           <p style="font-size:0.875rem; color:var(--text-secondary); line-height:1.6;">
             <strong>${escapeHtml(order.recipient?.name || 'Khách hàng')}</strong> (${escapeHtml(order.recipient?.phone || '0903000003')})<br>
-            ${escapeHtml(order.recipient?.address || '72 Lê Thánh Tôn, Bến Nghé, Quận 1, TP. HCM')}<br>
+            ${escapeHtml(order.recipient?.address || '72 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk')}<br>
             ${order.recipient?.notes ? `<small style="color:var(--primary-color);">Ghi chú: ${escapeHtml(order.recipient.notes)}</small>` : ''}
           </p>
         </div>

@@ -60,7 +60,7 @@ const FASTFOOD_DATA = {
   restaurants: [
     {
       id: 'res-1',
-      name: 'Burger King Station - Bến Nghé',
+      name: 'Burger King Station - Buôn Ma Thuột',
       slug: 'burger-king-station',
       category: 'burger',
       rating: 4.9,
@@ -70,14 +70,14 @@ const FASTFOOD_DATA = {
       minOrder: 30000,
       banner: 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=800&auto=format&fit=crop&q=80',
       logo: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=120&auto=format&fit=crop&q=80',
-      address: '123 Nguyễn Huệ, Phường Bến Nghé, Quận 1',
+      address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk',
       promo: 'GIẢM 25K',
       isVerified: true,
       tags: ['Burger Bò Úc', 'Gà Giòn Cay', 'Khoai Tây Lắc'],
     },
     {
       id: 'res-2',
-      name: 'Cơm Tấm Sài Gòn Xưa - Đa Kao',
+      name: 'Cơm Tấm Sài Gòn Xưa - Buôn Ma Thuột',
       slug: 'com-tam-sai-gon-xua',
       category: 'com',
       rating: 4.8,
@@ -87,7 +87,7 @@ const FASTFOOD_DATA = {
       minOrder: 25000,
       banner: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80',
       logo: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=120&auto=format&fit=crop&q=80',
-      address: '45 Lê Duẩn, Phường Đa Kao, Quận 1',
+      address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk',
       promo: 'FREESHIP',
       isVerified: true,
       tags: ['Cơm Sườn Nướng', 'Bì Chả Trứng', 'Canh Khổ Qua'],
@@ -104,14 +104,14 @@ const FASTFOOD_DATA = {
       minOrder: 40000,
       banner: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=800&auto=format&fit=crop&q=80',
       logo: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=120&auto=format&fit=crop&q=80',
-      address: '88 Hàm Nghi, Phường Nguyễn Thái Bình, Quận 1',
+      address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk',
       promo: 'MUA 1 TẶNG 1',
       isVerified: true,
       tags: ['Trà Đen Macchiato', 'Trân Châu Hoàng Gia', 'Trà Trái Cây'],
     },
     {
       id: 'res-4',
-      name: 'Pizza Hut Italia - Pasteur',
+      name: 'Pizza Hut Italia - Buôn Ma Thuột',
       slug: 'pizza-hut-pasteur',
       category: 'pizza',
       rating: 4.7,
@@ -121,7 +121,7 @@ const FASTFOOD_DATA = {
       minOrder: 60000,
       banner: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&auto=format&fit=crop&q=80',
       logo: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=120&auto=format&fit=crop&q=80',
-      address: '180 Pasteur, Phường Bến Nghé, Quận 1',
+      address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk',
       promo: 'GIẢM 50K',
       isVerified: true,
       tags: ['Pizza Hải Sản', 'Mì Ý Sốt Bò Bằm', 'Bánh Tỏi'],
@@ -340,6 +340,58 @@ const FASTFOOD_DATA = {
   ],
 };
 
+function getRestaurantForProduct(product) {
+  if (!product) return null;
+
+  const restaurants = FASTFOOD_DATA.restaurants;
+  const normalizeName = (value) => String(value || '')
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+  const productRestaurantName = normalizeName(product.restaurantName || product.restaurant);
+  if (!productRestaurantName) return null;
+
+  const byName = restaurants.find((restaurant) => {
+    const restaurantName = normalizeName(restaurant.name);
+    return restaurantName === productRestaurantName
+      || restaurantName.startsWith(`${productRestaurantName} `)
+      || productRestaurantName.startsWith(`${restaurantName} `);
+  });
+  return byName || restaurants.find((restaurant) => restaurant.id === product.restaurantId) || null;
+}
+
+function getRestaurantAddressForProduct(product) {
+  return product?.address || getRestaurantForProduct(product)?.address || 'Buôn Ma Thuột, Đắk Lắk';
+}
+
+function getRestaurantUrlForProduct(product) {
+  const restaurant = getRestaurantForProduct(product);
+  return restaurant ? (restaurant.url || '') : (product?.restaurantUrl || '');
+}
+
+function getWebsiteUrl(value, fallback) {
+  const url = String(value || '').trim();
+  if (/^https?:\/\/\S+$/i.test(url) || /^(\/(?!\/)|\.{1,2}\/)\S*$/.test(url)) {
+    return url;
+  }
+  return fallback;
+}
+
+function isExternalWebsiteUrl(value) {
+  return /^https?:\/\//i.test(String(value || '').trim());
+}
+
+function getProductUrl(product) {
+  return getWebsiteUrl(product?.url, `./food-detail.html?id=${encodeURIComponent(product?.id || '')}`);
+}
+
+function getRestaurantUrl(restaurant) {
+  return getWebsiteUrl(restaurant?.url, `./foods.html?restaurant=${encodeURIComponent(restaurant?.id || '')}`);
+}
+
 function applySavedWebsiteContent() {
   let content;
   try {
@@ -369,6 +421,26 @@ function applySavedWebsiteContent() {
     ];
   }
 
+  if (Array.isArray(content.restaurants)) {
+    const originalRestaurants = FASTFOOD_DATA.restaurants;
+    FASTFOOD_DATA.restaurants = content.restaurants
+      .filter((restaurant) => !String(restaurant.status || '').toLocaleLowerCase('vi').includes('ẩn'))
+      .map((restaurant, index) => {
+      const existing = originalRestaurants.find((item) => item.id === restaurant.id)
+        || originalRestaurants.find((item) => (
+          String(item.name).toLocaleLowerCase('vi')
+            .startsWith(String(restaurant.name || '').toLocaleLowerCase('vi'))
+        ));
+      return {
+        ...existing,
+        ...restaurant,
+        id: existing?.id || restaurant.id || `live-restaurant-${index}`,
+        name: String(restaurant.name || existing?.name || 'Quán ăn'),
+        address: String(restaurant.address || existing?.address || 'Buôn Ma Thuột, Đắk Lắk'),
+      };
+      });
+  }
+
   if (Array.isArray(content.products)) {
     const originalProducts = FASTFOOD_DATA.products;
     const categories = FASTFOOD_DATA.categories;
@@ -379,13 +451,22 @@ function applySavedWebsiteContent() {
         const existing = originalProducts.find((item) => item.name.toLocaleLowerCase('vi') === name.toLocaleLowerCase('vi'))
           || originalProducts.find((item) => String(item.id).replace('prod-', '') === String(product.id).replace(/^prd-/, ''));
         const category = categories.find((item) => item.name.toLocaleLowerCase('vi') === String(product.category || '').toLocaleLowerCase('vi'));
+        const restaurantName = String(product.restaurant || existing?.restaurantName || 'FASTFOOD');
+        const restaurant = getRestaurantForProduct({
+          restaurantId: product.restaurantId || existing?.restaurantId,
+          restaurantName,
+        });
         return {
           ...existing,
           id: existing?.id || `live-product-${product.id || index}`,
           name,
           slug: existing?.slug || name.toLocaleLowerCase('vi').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''),
           category: category?.id || existing?.category || 'all',
-          restaurantName: String(product.restaurant || existing?.restaurantName || 'FASTFOOD'),
+          restaurantName: restaurant?.name || restaurantName,
+          restaurantId: restaurant?.id || product.restaurantId || existing?.restaurantId,
+          address: String(product.address || existing?.address || restaurant?.address || ''),
+          url: String(product.url ?? existing?.url ?? ''),
+          restaurantUrl: String(restaurant ? (restaurant.url || '') : (product.restaurantUrl || '')),
           price: Number(product.price) || existing?.price || 0,
           image: existing?.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80',
           isBestSeller: existing?.isBestSeller ?? true,
@@ -399,3 +480,9 @@ function applySavedWebsiteContent() {
 
 applySavedWebsiteContent();
 window.FASTFOOD_DATA = FASTFOOD_DATA;
+window.getFastfoodRestaurantForProduct = getRestaurantForProduct;
+window.getFastfoodRestaurantAddressForProduct = getRestaurantAddressForProduct;
+window.getFastfoodRestaurantUrlForProduct = getRestaurantUrlForProduct;
+window.getFastfoodProductUrl = getProductUrl;
+window.getFastfoodRestaurantUrl = getRestaurantUrl;
+window.isFastfoodExternalUrl = isExternalWebsiteUrl;

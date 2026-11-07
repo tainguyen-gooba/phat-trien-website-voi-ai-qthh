@@ -10,6 +10,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const productId = urlParams.get('id') || 'prod-1';
 
   const product = FASTFOOD_DATA.products.find(p => p.id === productId) || FASTFOOD_DATA.products[0];
+  const restaurant = window.getFastfoodRestaurantForProduct(product);
+  const restaurantAddress = window.getFastfoodRestaurantAddressForProduct(product);
 
   let currentQty = 1;
   const selectedToppings = [];
@@ -27,10 +29,13 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Chi tiết thông tin -->
         <div>
           <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem;">
-            <span class="badge badge-secondary">${UIComponents.escapeHtml(product.restaurantName)}</span>
+            ${window.getFastfoodRestaurantUrlForProduct(product)
+              ? `<a class="badge badge-secondary" href="${UIComponents.escapeHtml(window.getFastfoodRestaurantUrl({ id: product.restaurantId, url: window.getFastfoodRestaurantUrlForProduct(product) }))}" ${window.isFastfoodExternalUrl(window.getFastfoodRestaurantUrlForProduct(product)) ? 'target="_blank" rel="noopener noreferrer"' : ''}>${UIComponents.escapeHtml(product.restaurantName)}</a>`
+              : `<span class="badge badge-secondary">${UIComponents.escapeHtml(product.restaurantName)}</span>`}
             <span style="color:var(--accent-gold); font-weight:700; font-size:0.9rem;">★ ${product.rating} (${product.reviews} đánh giá)</span>
             <span style="color:var(--text-muted); font-size:0.85rem;">• ⏱️ ${product.time}</span>
           </div>
+          <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.65rem;">📍 ${UIComponents.escapeHtml(restaurantAddress)}${restaurant ? '' : ' (khu vực giao hàng)'}</p>
 
           <h1 style="font-size:2rem; font-weight:800; color:var(--text-main); line-height:1.25;">${UIComponents.escapeHtml(product.name)}</h1>
           

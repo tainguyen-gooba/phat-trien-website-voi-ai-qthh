@@ -1,5 +1,5 @@
 const LIVE_CONTENT_KEY = 'fastfood-live-content-v1';
-const LIVE_CONTENT_COLLECTIONS = new Set(['categories', 'products']);
+const LIVE_CONTENT_COLLECTIONS = new Set(['categories', 'products', 'restaurants']);
 
 function mergeLiveContent(update) {
   if (!update || !LIVE_CONTENT_COLLECTIONS.has(update.collection) || !Array.isArray(update.records)) return false;
@@ -187,7 +187,7 @@ window.initFastfoodRealtime = function initFastfoodRealtime(user = null) {
 
       socket.on('content:updated', (update) => {
         if (!mergeLiveContent(update)) return;
-        if (currentUser?.role !== 'admin') window.location.reload();
+        if (!window.location.pathname.endsWith('/pages/admin/dashboard.html')) window.location.reload();
         else window.UIComponents?.showToast('Nội dung website đã được đồng bộ.', 'success');
       });
       socket.on('notification:new', (notification) => {

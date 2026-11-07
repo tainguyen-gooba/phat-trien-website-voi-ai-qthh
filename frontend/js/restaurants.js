@@ -49,22 +49,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     container.innerHTML = list.map(res => `
-      <div class="restaurant-card" onclick="window.location.href='./foods.html?restaurant=${res.id}'" style="cursor:pointer;">
+      <a class="restaurant-card" href="${UIComponents.escapeHtml(window.getFastfoodRestaurantUrl(res))}" ${window.isFastfoodExternalUrl(res.url) ? 'target="_blank" rel="noopener noreferrer"' : ''}>
         <div class="restaurant-banner-wrap">
           <img src="${res.banner}" alt="${res.name}" class="restaurant-banner" loading="lazy">
           <span class="restaurant-badge-promo">${res.promo}</span>
         </div>
 
         <div class="restaurant-body">
-          <h4 class="restaurant-name">${res.name}</h4>
-          <div class="restaurant-tags">${res.tags.join(' • ')}</div>
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.75rem;">📍 ${res.address}</div>
+          <h4 class="restaurant-name">${UIComponents.escapeHtml(res.name)}</h4>
+          <div class="restaurant-tags">${res.tags.map((tag) => UIComponents.escapeHtml(tag)).join(' • ')}</div>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.75rem;">📍 ${UIComponents.escapeHtml(res.address)}</div>
 
           <div class="restaurant-footer">
             <span class="restaurant-rating-pill">★ ${res.rating} (${res.reviewCount}+)</span>
             <span>🛵 ${res.deliveryTime}</span>
             <span>📍 ${res.distance}</span>
-          </div>
+          </a>
         </div>
       </div>
     `).join('');
@@ -95,4 +95,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderList();
 });
-

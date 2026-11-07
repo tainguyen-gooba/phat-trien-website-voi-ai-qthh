@@ -5,10 +5,11 @@
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
+    "start": "node scripts/start-local.js start",
+    "dev": "node scripts/start-local.js dev",
     "db:test": "node scripts/test-db.js",
     "db:init": "node scripts/init-db.js",
+    "db:migrate:buon-ma-thuot": "node scripts/migrate-buon-ma-thuot.js",
     "db:migrate:realtime": "node scripts/migrate-realtime.js",
     "db:reset-demo-admin": "node scripts/reset-demo-admin.js"
   },

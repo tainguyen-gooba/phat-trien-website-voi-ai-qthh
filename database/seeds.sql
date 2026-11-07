@@ -37,9 +37,14 @@ ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
 -- 4. Thêm quán ăn mẫu
 INSERT INTO `restaurants` (`id`, `owner_id`, `name`, `slug`, `description`, `address`, `latitude`, `longitude`, `phone`, `email`, `is_active`, `is_verified`, `rating_avg`, `rating_count`, `opening_time`, `closing_time`, `min_order_amount`) VALUES
-(1, 2, 'Burger King Station - FASTFOOD', 'burger-king-station', 'Chuyên các loại burger bò nướng lửa, gà giòn sốt cay và khoai tây lắc.', '123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh', 10.776889, 106.700806, '0283999999', 'burgerking@fastfood.vn', 1, 1, 4.85, 120, '08:00:00', '23:00:00', 30000.00),
-(2, 2, 'Tiệm Cơm Tấm Sài Gòn Xưa', 'tiem-com-tam-sai-gon-xua', 'Cơm tấm sườn bì chả nướng than hoa gia truyền đậm đà.', '45 Lê Duẩn, Phường Đa Kao, Quận 1, TP. Hồ Chí Minh', 10.781200, 106.698500, '0283888888', 'comtam@fastfood.vn', 1, 1, 4.90, 350, '06:30:00', '21:30:00', 25000.00)
-ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
+(1, 2, 'Burger King Station - Buôn Ma Thuột', 'burger-king-station', 'Chuyên các loại burger bò nướng lửa, gà giòn sốt cay và khoai tây lắc.', '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', 12.679500, 108.050500, '0262388888', 'burgerking@fastfood.vn', 1, 1, 4.85, 120, '08:00:00', '23:00:00', 30000.00),
+(2, 2, 'Tiệm Cơm Tấm Sài Gòn Xưa - Buôn Ma Thuột', 'tiem-com-tam-sai-gon-xua', 'Cơm tấm sườn bì chả nướng than hoa gia truyền đậm đà.', '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk', 12.666100, 108.045500, '0262388889', 'comtam@fastfood.vn', 1, 1, 4.90, 350, '06:30:00', '21:30:00', 25000.00)
+ON DUPLICATE KEY UPDATE
+  `name` = VALUES(`name`),
+  `address` = VALUES(`address`),
+  `latitude` = VALUES(`latitude`),
+  `longitude` = VALUES(`longitude`),
+  `phone` = VALUES(`phone`);
 
 -- 5. Thêm món ăn mẫu
 INSERT INTO `products` (`id`, `restaurant_id`, `category_id`, `name`, `slug`, `description`, `base_price`, `discount_price`, `is_available`, `is_featured`, `prep_time_minutes`) VALUES

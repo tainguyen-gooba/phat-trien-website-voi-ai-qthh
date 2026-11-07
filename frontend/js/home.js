@@ -105,11 +105,14 @@ function createProductCardHtml(product) {
 
       <div class="product-info">
         <div class="product-meta-row">
-          <span class="product-category-name">${UIComponents.escapeHtml(product.restaurantName)}</span>
+          ${window.getFastfoodRestaurantUrlForProduct(product)
+            ? `<a class="product-category-name" href="${UIComponents.escapeHtml(window.getFastfoodRestaurantUrl({ id: product.restaurantId, url: window.getFastfoodRestaurantUrlForProduct(product) }))}" ${window.isFastfoodExternalUrl(window.getFastfoodRestaurantUrlForProduct(product)) ? 'target="_blank" rel="noopener noreferrer"' : ''}>${UIComponents.escapeHtml(product.restaurantName)}</a>`
+            : `<span class="product-category-name">${UIComponents.escapeHtml(product.restaurantName)}</span>`}
           <span class="product-rating">★ ${product.rating}</span>
         </div>
+        <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.55rem;">📍 ${UIComponents.escapeHtml(window.getFastfoodRestaurantAddressForProduct(product))}</div>
 
-        <a href="./food-detail.html?id=${encodeURIComponent(product.id)}" class="product-title" title="${UIComponents.escapeHtml(product.name)}">
+        <a href="${UIComponents.escapeHtml(window.getFastfoodProductUrl(product))}" ${window.isFastfoodExternalUrl(product.url) ? 'target="_blank" rel="noopener noreferrer"' : ''} class="product-title" title="${UIComponents.escapeHtml(product.name)}">
           ${UIComponents.escapeHtml(product.name)}
         </a>
 
@@ -134,7 +137,7 @@ function renderFeaturedRestaurants() {
   if (!container) return;
 
   container.innerHTML = FASTFOOD_DATA.restaurants.map(res => `
-    <div class="restaurant-card" onclick="window.location.href='./foods.html?restaurant=${res.id}'" style="cursor:pointer;">
+    <a class="restaurant-card" href="${UIComponents.escapeHtml(window.getFastfoodRestaurantUrl(res))}" ${window.isFastfoodExternalUrl(res.url) ? 'target="_blank" rel="noopener noreferrer"' : ''}>
       <div class="restaurant-banner-wrap">
         <img src="${res.banner}" alt="${res.name}" class="restaurant-banner" loading="lazy">
         <span class="restaurant-badge-promo">${res.promo}</span>
@@ -143,6 +146,7 @@ function renderFeaturedRestaurants() {
       <div class="restaurant-body">
         <h4 class="restaurant-name">${res.name}</h4>
         <div class="restaurant-tags">${res.tags.join(' • ')}</div>
+        <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.75rem;">📍 ${UIComponents.escapeHtml(res.address)}</div>
 
         <div class="restaurant-footer">
           <span class="restaurant-rating-pill">★ ${res.rating} (${res.reviewCount}+)</span>
@@ -150,7 +154,7 @@ function renderFeaturedRestaurants() {
           <span>📍 ${res.distance}</span>
         </div>
       </div>
-    </div>
+    </a>
   `).join('');
 }
 

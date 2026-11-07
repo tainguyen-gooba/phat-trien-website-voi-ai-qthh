@@ -4,7 +4,7 @@ const config = require('./config/app.config');
 const { pool } = require('./config/db.config');
 const logger = require('./utils/logger');
 
-const CONTENT_COLLECTIONS = new Set(['categories', 'products']);
+const CONTENT_COLLECTIONS = new Set(['categories', 'products', 'restaurants']);
 const ORDER_STATUSES = {
   'Chờ xác nhận': 'pending',
   'Đang chuẩn bị': 'preparing',

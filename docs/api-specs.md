@@ -30,6 +30,7 @@ Tất cả các API đều trả về cấu trúc chuẩn:
 - `POST /api/v1/auth/login` - Đăng nhập bằng email/mật khẩu, trả về JWT và thông tin người dùng.
 - `POST /api/v1/auth/register` - Tạo tài khoản khách hàng và trả về JWT để đăng nhập ngay.
 - `GET /api/v1/realtime/content` - Lấy danh mục và sản phẩm mới nhất do admin đồng bộ.
+- `POST /api/v1/realtime/uploads/product-image` - Tải ảnh món ăn (JPG, PNG hoặc WebP, tối đa 5 MB); yêu cầu JWT admin và gửi nội dung ảnh trực tiếp với `Content-Type` tương ứng.
 - `GET /api/v1/realtime/orders` - Lấy đơn hàng của khách đã đăng nhập; admin xem danh sách đơn.
 - `POST /api/v1/realtime/orders` - Tạo đơn hàng realtime; chỉ khách hàng đã đăng nhập.
 - `GET /api/v1/realtime/chat/:customerId` - Lấy lịch sử chat; khách chỉ được xem chat của mình, admin được xem mọi khách.
@@ -44,6 +45,9 @@ Request body:
 ```
 
 Khi thành công, `data` chứa `token` và thông tin an toàn của tài khoản (`id`, `fullName`, `email`, `phone`, `role`). Mật khẩu không được trả về.
+
+### Tải ảnh món ăn
+Gửi byte ảnh trực tiếp đến endpoint với `Authorization: Bearer <token>` và `Content-Type: image/jpeg`, `image/png` hoặc `image/webp`. Phản hồi thành công chứa đường dẫn công khai trong `data.url`; ảnh được lưu dưới `/assets/uploads/`.
 
 ### Đăng ký khách hàng
 Request body:

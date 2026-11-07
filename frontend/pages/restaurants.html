@@ -17,7 +17,7 @@
   <link rel="stylesheet" href="../css/pages.css">
   <link rel="stylesheet" href="../css/responsive.css">
 </head>
-<body>
+<body class="restaurants-page">
 
   <div id="site-header"></div>
 
@@ -28,6 +28,7 @@
         <a href="./home.html">Trang chủ</a> <span>/</span> <span>Nhà hàng đối tác</span>
       </div>
       <h1 class="page-title">Khám Phá Các Quán Ăn Ngon</h1>
+      <p class="restaurants-page-intro">Tìm quán yêu thích và khám phá những món ngon gần bạn.</p>
     </div>
   </div>
 
@@ -35,12 +36,11 @@
     <div class="layout-with-sidebar">
       
       <!-- Filter Sidebar -->
-      <aside class="filter-sidebar">
-        <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:1.25rem;">Bộ Lọc Tìm Kiếm</h3>
+      <aside class="filter-sidebar" aria-labelledby="restaurant-filter-title">
+        <h2 class="restaurant-filter-heading" id="restaurant-filter-title">Danh mục quán</h2>
 
         <!-- Nhóm danh mục -->
         <div class="filter-group">
-          <h4 class="filter-group-title">Danh Mục Quán</h4>
           <label class="filter-checkbox-item">
             <input type="radio" name="res-cat" class="filter-category-radio" value="all" checked>
             <span>Tất cả quán ăn</span>
@@ -63,46 +63,32 @@
           </label>
         </div>
 
-        <!-- Tiêu chí ưu đãi -->
-        <div class="filter-group">
-          <h4 class="filter-group-title">Ưu Đãi</h4>
-          <label class="filter-checkbox-item">
-            <input type="checkbox">
-            <span>Quán có mã Freeship</span>
-          </label>
-          <label class="filter-checkbox-item">
-            <input type="checkbox">
-            <span>Giảm giá từ 25K</span>
-          </label>
-          <label class="filter-checkbox-item">
-            <input type="checkbox">
-            <span>Đối tác xác thực ★</span>
-          </label>
-        </div>
       </aside>
 
       <!-- Main Content Area -->
-      <div>
+      <section class="restaurants-content" aria-label="Danh sách quán ăn">
         <div class="content-top-toolbar">
-          <div style="flex:1; max-width:320px;">
-            <input type="text" id="restaurant-search-input" class="form-control" placeholder="Tìm kiếm theo tên quán ăn...">
-          </div>
+          <label class="restaurant-search">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg>
+            <input type="search" id="restaurant-search-input" class="form-control" placeholder="Tìm theo tên quán hoặc món ăn..." aria-label="Tìm theo tên quán hoặc món ăn">
+          </label>
 
-          <div style="display:flex; align-items:center; gap:0.5rem;">
-            <span style="font-size:0.85rem; color:var(--text-secondary);">Sắp xếp theo:</span>
-            <select id="restaurant-sort-select" class="form-control" style="width:auto; padding:0.5rem 1rem;">
+          <label class="restaurant-sort">
+            <span>Sắp xếp</span>
+            <select id="restaurant-sort-select" class="form-control">
               <option value="popular">Phổ biến nhất</option>
               <option value="rating">Đánh giá cao nhất</option>
               <option value="reviews">Nhiều đánh giá nhất</option>
             </select>
-          </div>
+          </label>
         </div>
 
         <!-- Restaurants Grid -->
-        <div class="grid grid-cols-2" id="restaurants-grid-container">
+        <div class="restaurant-results" id="restaurant-results-count" aria-live="polite"></div>
+        <div class="restaurants-grid" id="restaurants-grid-container">
           <!-- Rendered by restaurants.js -->
         </div>
-      </div>
+      </section>
 
     </div>
   </main>
@@ -116,4 +102,3 @@
   <script src="../js/restaurants.js"></script>
 </body>
 </html>
-

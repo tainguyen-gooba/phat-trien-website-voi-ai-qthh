@@ -46,6 +46,29 @@
     position: static;
   }
 
+  .restaurants-page .layout-with-sidebar {
+    grid-template-columns: 220px minmax(0, 1fr);
+    gap: 1.25rem;
+  }
+
+  .restaurants-page .filter-sidebar {
+    position: static;
+  }
+
+  .restaurants-grid {
+    gap: 1rem;
+  }
+
+  .restaurants-page .restaurant-body {
+    padding: 0.9rem;
+  }
+
+  .restaurants-page .restaurant-footer {
+    grid-template-columns: 1fr;
+    justify-items: start;
+    gap: 0.4rem;
+  }
+
   .food-detail-grid {
     grid-template-columns: 1fr;
     gap: 2rem;
@@ -70,6 +93,60 @@
   .container {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .restaurants-page .layout-with-sidebar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .restaurants-page .filter-sidebar {
+    padding: 1rem;
+  }
+
+  .restaurants-page .filter-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.15rem;
+  }
+
+  .restaurants-page .filter-checkbox-item:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .restaurants-page .content-top-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .restaurant-search {
+    max-width: none;
+  }
+
+  .restaurant-sort {
+    justify-content: space-between;
+  }
+
+  .restaurant-sort .form-control {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .restaurants-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .restaurants-page .restaurant-body {
+    min-height: 0;
+    padding: 1rem;
+  }
+
+  .restaurants-page .restaurant-footer {
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
   }
 
   .hero-section {

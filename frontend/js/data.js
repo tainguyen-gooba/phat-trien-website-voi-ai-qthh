@@ -15,7 +15,7 @@ const FASTFOOD_DATA = {
     {
       id: 'com',
       name: 'Cơm & Món Việt',
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=240&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=240&auto=format&fit=crop&q=80',
       count: 18,
     },
     {
@@ -27,7 +27,7 @@ const FASTFOOD_DATA = {
     {
       id: 'tra-sua',
       name: 'Trà Sữa & Đồ Uống',
-      image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=240&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=240&auto=format&fit=crop&q=80',
       count: 15,
     },
     {
@@ -85,8 +85,8 @@ const FASTFOOD_DATA = {
       deliveryTime: '15 - 20 phút',
       distance: '0.8 km',
       minOrder: 25000,
-      banner: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&auto=format&fit=crop&q=80',
-      logo: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=120&auto=format&fit=crop&q=80',
+      banner: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=800&auto=format&fit=crop&q=80',
+      logo: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=120&auto=format&fit=crop&q=80',
       address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk',
       promo: 'FREESHIP',
       isVerified: true,
@@ -102,8 +102,8 @@ const FASTFOOD_DATA = {
       deliveryTime: '20 - 30 phút',
       distance: '2.1 km',
       minOrder: 40000,
-      banner: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=800&auto=format&fit=crop&q=80',
-      logo: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=120&auto=format&fit=crop&q=80',
+      banner: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=800&auto=format&fit=crop&q=80',
+      logo: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=120&auto=format&fit=crop&q=80',
       address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk',
       promo: 'MUA 1 TẶNG 1',
       isVerified: true,
@@ -164,7 +164,7 @@ const FASTFOOD_DATA = {
       rating: 4.9,
       reviews: 280,
       time: '12 phút',
-      image: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&auto=format&fit=crop&q=80',
       isBestSeller: true,
       isFlashDeal: false,
       description: 'Dĩa cơm tấm hạt vỡ chuẩn vị, sườn cốt lết dày dặn ướp mật ong nướng than hoa vàng óng, bì dai giòn, chả trứng hấp béo bùi.',
@@ -186,7 +186,7 @@ const FASTFOOD_DATA = {
       rating: 4.8,
       reviews: 310,
       time: '10 phút',
-      image: 'https://images.unsplash.com/photo-1541696432-82c6da8ce7bf?w=600&auto=format&fit=crop&q=80',
+      image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&auto=format&fit=crop&q=80',
       isBestSeller: true,
       isFlashDeal: true,
       description: 'Trà đen Ceylon thơm nồng kết hợp sữa tươi thanh trùng béo nhẹ và trân châu đường đen dẻo dai nấu mới mỗi 3 tiếng.',
@@ -372,6 +372,32 @@ function getRestaurantUrlForProduct(product) {
   return restaurant ? (restaurant.url || '') : (product?.restaurantUrl || '');
 }
 
+function findMatchingProductImage(product, products) {
+  const normalizeTokens = (value) => String(value || '')
+    .toLocaleLowerCase('vi')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .split(' ')
+    .filter((token) => token.length > 1);
+  const requestedTokens = new Set(normalizeTokens(product?.name));
+  if (!requestedTokens.size) return null;
+
+  let bestMatch = null;
+  let bestScore = 0;
+  products.forEach((candidate) => {
+    const candidateTokens = new Set(normalizeTokens(candidate.name));
+    const overlap = [...requestedTokens].filter((token) => candidateTokens.has(token)).length;
+    const score = overlap / new Set([...requestedTokens, ...candidateTokens]).size;
+    if (score > bestScore) {
+      bestMatch = candidate;
+      bestScore = score;
+    }
+  });
+  return bestScore >= 0.25 ? bestMatch : null;
+}
+
 function getWebsiteUrl(value, fallback) {
   const url = String(value || '').trim();
   if (/^https?:\/\/\S+$/i.test(url) || /^(\/(?!\/)|\.{1,2}\/)\S*$/.test(url)) {
@@ -450,6 +476,7 @@ function applySavedWebsiteContent() {
         const name = String(product.name || 'Món ăn mới');
         const existing = originalProducts.find((item) => item.name.toLocaleLowerCase('vi') === name.toLocaleLowerCase('vi'))
           || originalProducts.find((item) => String(item.id).replace('prod-', '') === String(product.id).replace(/^prd-/, ''));
+        const matchingImageProduct = findMatchingProductImage(product, originalProducts);
         const category = categories.find((item) => item.name.toLocaleLowerCase('vi') === String(product.category || '').toLocaleLowerCase('vi'));
         const restaurantName = String(product.restaurant || existing?.restaurantName || 'FASTFOOD');
         const restaurant = getRestaurantForProduct({
@@ -468,7 +495,7 @@ function applySavedWebsiteContent() {
           url: String(product.url ?? existing?.url ?? ''),
           restaurantUrl: String(restaurant ? (restaurant.url || '') : (product.restaurantUrl || '')),
           price: Number(product.price) || existing?.price || 0,
-          image: existing?.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80',
+          image: String(product.image || matchingImageProduct?.image || 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80'),
           isBestSeller: existing?.isBestSeller ?? true,
           isFlashDeal: existing?.isFlashDeal || false,
           description: existing?.description || '',

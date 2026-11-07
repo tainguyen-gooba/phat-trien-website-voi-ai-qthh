@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 package-lock.json
+/frontend/assets/uploads/*
 
 # Environment variables
 .env
@@ -14,4 +15,3 @@ npm-debug.log*
 # OS files
 .DS_Store
 Thumbs.db
-

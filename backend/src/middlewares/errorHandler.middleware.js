@@ -42,6 +42,15 @@ function errorHandler(err, req, res, next) { // eslint-disable-line no-unused-va
     );
   }
 
+  if (err.type === 'entity.too.large') {
+    const isProductImageUpload = req.originalUrl.includes('/realtime/uploads/product-image');
+    return ApiResponse.error(
+      res,
+      isProductImageUpload ? 'Ảnh tải lên vượt quá dung lượng tối đa 5 MB.' : 'Dữ liệu gửi lên vượt quá dung lượng cho phép.',
+      HTTP_STATUS.PAYLOAD_TOO_LARGE
+    );
+  }
+
   // JWT errors
   if (err.name === 'JsonWebTokenError') {
     return ApiResponse.error(

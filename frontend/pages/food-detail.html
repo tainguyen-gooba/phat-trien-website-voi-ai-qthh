@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chi Tiết Món Ăn - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+    <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <!-- Page Header -->
+  <div class="page-header-bar">
+    <div class="container">
+      <div class="breadcrumb">
+        <a href="./home.html">Trang chủ</a> <span>/</span> <a href="./foods.html">Món ăn</a> <span>/</span> <span>Chi tiết</span>
+      </div>
+      <h1 class="page-title">Thông Tin Món Ăn</h1>
+    </div>
+  </div>
+
+  <main class="container">
+    <!-- Main Detail Box (Rendered by food-detail.js) -->
+    <div id="food-detail-container">
+      <div class="state-box">
+        <div class="spinner"></div>
+        <p>Đang tải thông tin món ăn...</p>
+      </div>
+    </div>
+
+    <!-- Related Products -->
+    <section style="margin-top:4rem; margin-bottom:4rem;">
+      <h3 style="font-size:1.35rem; font-weight:800; color:var(--text-main); margin-bottom:1.5rem;">
+        Món Ăn Liên Quan Được Yêu Thích
+      </h3>
+      <div class="grid grid-cols-4" id="related-foods-container">
+        <!-- Rendered by food-detail.js -->
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/food-detail.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng Ký Tài Khoản - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+    <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <main class="auth-page-wrap">
+    <div class="auth-form-card">
+      <div style="text-align:center; margin-bottom:1.75rem;">
+        <h1 style="font-size:1.75rem; font-weight:900; color:var(--text-main); margin-bottom:0.35rem;">
+          Đăng Ký Tài Khoản
+        </h1>
+        <p style="font-size:0.9rem; color:var(--text-secondary);">
+          Nhận ngay voucher 50K cho đơn hàng đầu tiên!
+        </p>
+      </div>
+
+      <form id="register-page-form">
+        <div class="form-group">
+          <label class="form-label" for="reg-email">Địa chỉ Email *</label>
+          <input type="email" id="reg-email" class="form-control" placeholder="vidu@email.com" required>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="reg-password">Mật khẩu *</label>
+          <input type="password" id="reg-password" class="form-control" placeholder="Tối thiểu 6 ký tự" required>
+        </div>
+
+        <div style="margin-bottom:1.25rem; font-size:0.85rem; color:var(--text-secondary);">
+          <label style="display:flex; align-items:flex-start; gap:0.5rem; cursor:pointer;">
+            <input type="checkbox" required checked style="accent-color:var(--primary-color); margin-top:3px;">
+            <span>Tôi đồng ý với các Điều khoản & Quy chế hoạt động của FASTFOOD</span>
+          </label>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">
+          Tạo Tài Khoản Ngay
+        </button>
+      </form>
+
+      <div style="margin-top:1.5rem; text-align:center; font-size:0.9rem; color:var(--text-secondary);">
+        Đã có tài khoản? <a id="register-login-link" href="./login.html" style="color:var(--primary-color); font-weight:700;">Đăng nhập</a>
+      </div>
+    </div>
+  </main>
+
+  <dialog id="customer-profile-dialog" class="profile-dialog" aria-labelledby="profile-dialog-title">
+    <div class="profile-dialog-card">
+      <button type="button" class="profile-dialog-close" aria-label="Đóng và bổ sung thông tin sau">&times;</button>
+      <h2 id="profile-dialog-title">Bổ sung thông tin khách hàng</h2>
+      <p>Vui lòng cung cấp thông tin để hoàn tất hồ sơ của bạn.</p>
+      <form id="customer-profile-form">
+        <div class="form-group">
+          <label class="form-label" for="customer-fullname">Họ và Tên *</label>
+          <input type="text" id="customer-fullname" class="form-control" maxlength="150" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="customer-phone">Số Điện Thoại *</label>
+          <input type="tel" id="customer-phone" class="form-control" placeholder="0901234567" maxlength="20" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="customer-address">Địa Chỉ *</label>
+          <input type="text" id="customer-address" class="form-control" placeholder="Số nhà, tên đường, thành phố" maxlength="255" required>
+        </div>
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%;">Lưu thông tin</button>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="welcome-voucher-dialog" class="profile-dialog" aria-labelledby="welcome-voucher-title">
+    <div class="profile-dialog-card voucher-dialog-card">
+      <button type="button" class="profile-dialog-close voucher-dialog-close" aria-label="Đóng">&times;</button>
+      <div class="voucher-success-icon" aria-hidden="true">✓</div>
+      <h2 id="welcome-voucher-title">Hồ sơ hoàn tất! Bạn nhận được voucher 50.000đ</h2>
+      <p>Nhập mã này tại giỏ hàng để được giảm 50.000đ. Mã có hiệu lực trong 30 ngày.</p>
+      <div class="welcome-voucher-code" id="welcome-voucher-code"></div>
+      <button type="button" id="copy-welcome-voucher" class="btn btn-primary btn-lg" style="width:100%;">Sao chép mã voucher</button>
+    </div>
+  </dialog>
+
+  <div id="site-footer"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/auth.js"></script>
+</body>
+</html>

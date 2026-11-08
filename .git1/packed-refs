@@ -1,0 +1,23 @@
+# pack-refs with: peeled fully-peeled sorted 
+0305e667184269f17612f55cd5a82a5842ddd83b refs/agents/1e6f22e9-a81f-4ec6-a813-3538c08eb6a8/checkpoints/turn/0
+fdfb01125e3b0e73eb60504e3ecda9e3a86c48d2 refs/agents/1e6f22e9-a81f-4ec6-a813-3538c08eb6a8/checkpoints/turn/1
+a7c7bc60456c5efac789408c821c73880017557a refs/agents/1e6f22e9-a81f-4ec6-a813-3538c08eb6a8/checkpoints/turn/2
+c08ddd5dd00c282a5bcd9d05ac538c8fd05905d4 refs/agents/1e6f22e9-a81f-4ec6-a813-3538c08eb6a8/checkpoints/turn/3
+b2dce6c8ef068eae552a7831035f0f8fcd259eee refs/agents/1e6f22e9-a81f-4ec6-a813-3538c08eb6a8/checkpoints/turn/4
+433d84a8a887d569e96e26e485b5cc5c339f6059 refs/agents/1e6f22e9-a81f-4ec6-a813-3538c08eb6a8/checkpoints/turn/5
+973a1431d5e60764290e49d2e17ec265037e88ec refs/agents/1e6f22e9-a81f-4ec6-a813-3538c08eb6a8/checkpoints/turn/6
+14cdb3baf371deea25b1c88d131e68b7400abf49 refs/agents/8707ed00-95af-41ee-8888-a0856f9611f3/checkpoints/turn/0
+d1c223145e36fa9c998b2f3aaf51895f09fc0a83 refs/agents/8707ed00-95af-41ee-8888-a0856f9611f3/checkpoints/turn/1
+67764a32a3f648159be6452b53d73efe100d4192 refs/agents/8707ed00-95af-41ee-8888-a0856f9611f3/checkpoints/turn/2
+e10abf89a6a43de043391b0571c1b379359d9835 refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/0
+de2fca01f712943f3f665e700f6728b40975e802 refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/1
+974c6b927fb77387d2c5bcb9fe42c2c819dbd6d4 refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/2
+28b2ff25271604767c500d071caf4f779b4fe112 refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/3
+c9a992221187f933616b5b84a4a69841835854fa refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/4
+c94796d946d13bcda0c2438131afd7ae082a742d refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/5
+bfff6e6108ef0dffe7317ff4d970379e9142681c refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/6
+358161e09c0f8bfaae80143dfd35570f902f2e88 refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/7
+b295de0c5743e8a0b8cedfd6865f183511db2c86 refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/8
+89b0fab07558e627ac03791c41a43e3b72208373 refs/agents/9a8a588d-aa5b-416e-aad6-695dee99ff0f/checkpoints/turn/9
+29797944ccdb3e12dec00eec9acd8ea4ca235d5b refs/heads/main
+6fe46254e5130d1014cd218efe47f4ff1a1450ef refs/remotes/origin/main

@@ -1,0 +1,38 @@
+{
+  "name": "fastfood-backend",
+  "version": "1.0.0",
+  "description": "Backend RESTful API for FASTFOOD Online Ordering Platform",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node scripts/start-local.js start",
+    "dev": "node scripts/start-local.js dev",
+    "db:test": "node scripts/test-db.js",
+    "db:init": "node scripts/init-db.js",
+    "db:migrate:buon-ma-thuot": "node scripts/migrate-buon-ma-thuot.js",
+    "db:migrate:realtime": "node scripts/migrate-realtime.js",
+    "db:migrate:customer-profile": "node scripts/migrate-customer-profile.js",
+    "db:reset-demo-admin": "node scripts/reset-demo-admin.js"
+  },
+  "keywords": [
+    "fastfood",
+    "express",
+    "rest-api",
+    "mysql",
+    "food-delivery"
+  ],
+  "author": "FASTFOOD Team",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.12.0",
+    "socket.io": "^4.8.4"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.9"
+  }
+}

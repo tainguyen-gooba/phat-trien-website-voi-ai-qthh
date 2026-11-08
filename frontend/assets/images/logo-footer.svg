@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 64" width="360" height="64" role="img" aria-labelledby="title">
+  <title id="title">FASTFOOD Buôn Ma Thuột</title>
+  <g transform="translate(4 8)" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M1 15h8M3 22h7M1 29h6" stroke="#FFA24A" stroke-width="2.5"/>
+    <path d="M14 20c0-11 30-11 30 0z" fill="#F28A24" stroke="none"/>
+    <path d="M13 22h32l-6 4H19z" fill="#FFAA00" stroke="none"/>
+    <rect x="13" y="26" width="32" height="5" rx="2.5" fill="#8B4513" stroke="none"/>
+    <path d="M11 33q8-4 16 0 8-4 16 0 4 2 2 4H13z" fill="#10B981" stroke="none"/>
+    <rect x="15" y="39" width="28" height="5" rx="2.5" fill="#F28A24" stroke="none"/>
+  </g>
+  <text x="58" y="39" font-family="Arial, sans-serif" font-size="29" font-weight="800" fill="#FFFFFF" letter-spacing="-1">FASTFOOD</text>
+  <rect x="238" y="19" width="118" height="25" rx="7" fill="#F28A24"/>
+  <text x="297" y="35" font-family="Arial, sans-serif" font-size="8.5" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="0.35">BUÔN MA THUỘT</text>
+</svg>

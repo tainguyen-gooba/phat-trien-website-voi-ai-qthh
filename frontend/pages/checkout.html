@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanh Toán Đơn Hàng - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+    <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <!-- Page Header -->
+  <div class="page-header-bar">
+    <div class="container">
+      <div class="breadcrumb">
+        <a href="./home.html">Trang chủ</a> <span>/</span> <a href="./cart.html">Giỏ hàng</a> <span>/</span> <span>Thanh toán</span>
+      </div>
+      <h1 class="page-title">Xác Nhận & Thanh Toán Đơn Hàng</h1>
+    </div>
+  </div>
+
+  <main class="container">
+    <form id="checkout-form" class="checkout-layout">
+      
+      <!-- Left: Delivery Information & Payment Method -->
+      <div>
+        
+        <!-- 1. Thông tin giao hàng -->
+        <div class="card" style="margin-bottom:2rem;">
+          <h3 style="font-size:1.25rem; font-weight:800; color:var(--text-main); margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem;">
+            <span>📍</span> 1. Thông Tin Nhận Hàng
+          </h3>
+
+          <div class="grid grid-cols-2" style="gap:1rem;">
+            <div class="form-group">
+              <label class="form-label" for="customer-name">Họ và Tên người nhận *</label>
+              <input type="text" id="customer-name" class="form-control" placeholder="Họ và tên người nhận" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="customer-phone">Số điện thoại liên hệ *</label>
+              <input type="tel" id="customer-phone" class="form-control" placeholder="Số điện thoại liên hệ" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="customer-address">Địa chỉ nhận món chi tiết *</label>
+            <input type="text" id="customer-address" class="form-control" placeholder="Địa chỉ giao hàng chi tiết (số nhà, tên đường...)" required>
+          </div>
+
+          <div class="form-group" style="margin-bottom:0;">
+            <label class="form-label" for="customer-notes">Ghi chú cho tài xế hoặc nhà hàng</label>
+            <input type="text" id="customer-notes" class="form-control" placeholder="Ví dụ: Gọi trước khi giao 5 phút, gửi bảo vệ...">
+          </div>
+        </div>
+
+        <!-- 2. Phương thức thanh toán -->
+        <div class="card">
+          <h3 style="font-size:1.25rem; font-weight:800; color:var(--text-main); margin-bottom:1.25rem; display:flex; align-items:center; gap:0.5rem;">
+            <span>💳</span> 2. Phương Thức Thanh Toán
+          </h3>
+
+          <label class="payment-method-card active">
+            <input type="radio" name="paymentMethod" value="cod" checked style="accent-color:var(--primary-color);">
+            <div style="width:48px; height:48px; border-radius:var(--radius-md); background:#E8F8EE; color:#00B14F; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:1.1rem; flex-shrink:0;">
+              COD
+            </div>
+            <div style="flex:1;">
+              <strong style="display:block; font-size:0.95rem;">Thanh toán khi nhận hàng (Tiền mặt COD)</strong>
+              <small style="color:var(--text-secondary);">Thanh toán tiền mặt trực tiếp cho shipper khi giao món đến nơi</small>
+            </div>
+          </label>
+
+          <label class="payment-method-card">
+            <input type="radio" name="paymentMethod" value="vnpay" style="accent-color:var(--primary-color);">
+            <div style="width:48px; height:48px; border-radius:var(--radius-md); background:#005BAA; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.8rem; letter-spacing:0.5px; flex-shrink:0;">
+              VNPAY
+            </div>
+            <div style="flex:1;">
+              <strong style="display:block; font-size:0.95rem;">Cổng thanh toán điện tử VNPAY-QR</strong>
+              <small style="color:var(--text-secondary);">Quét mã QR qua ứng dụng ngân hàng hoặc thẻ ATM nội địa</small>
+            </div>
+          </label>
+
+          <label class="payment-method-card">
+            <input type="radio" name="paymentMethod" value="momo" style="accent-color:var(--primary-color);">
+            <div style="width:48px; height:48px; border-radius:var(--radius-md); background:#A50064; color:#FFFFFF; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:0.85rem; flex-shrink:0;">
+              MoMo
+            </div>
+            <div style="flex:1;">
+              <strong style="display:block; font-size:0.95rem;">Ví điện tử MoMo</strong>
+              <small style="color:var(--text-secondary);">Thanh toán một chạm nhanh chóng qua app ví MoMo trên điện thoại</small>
+            </div>
+          </label>
+        </div>
+
+      </div>
+
+      <!-- Right: Order Bill Summary -->
+      <div>
+        <div class="card" style="position:sticky; top:calc(var(--header-height) + 1.5rem);">
+          <h3 style="font-size:1.15rem; font-weight:800; color:var(--text-main); margin-bottom:1.25rem;">
+            Chi Tiết Đơn Hàng
+          </h3>
+
+          <!-- Mini list of items -->
+          <div id="checkout-items-summary" style="border-bottom:1px solid var(--border-color); padding-bottom:1rem; margin-bottom:1rem;">
+            <!-- Rendered by checkout.js -->
+          </div>
+
+          <div class="summary-row">
+            <span>Tạm tính món ăn:</span>
+            <span id="checkout-subtotal" style="font-weight:700;">0 đ</span>
+          </div>
+
+          <div class="summary-row">
+            <span>Phí giao hàng:</span>
+            <span id="checkout-shipping" style="font-weight:700;">18.000 đ</span>
+          </div>
+
+          <div class="summary-row" style="color:var(--success);">
+            <span>Mã giảm giá:</span>
+            <span id="checkout-discount" style="font-weight:700;">-0 đ</span>
+          </div>
+
+          <div class="summary-row total-row">
+            <span>Tổng cộng thanh toán:</span>
+            <span id="checkout-total" style="color:var(--primary-color);">0 đ</span>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%; margin-top:1.5rem;">
+            🚀 Đặt Hàng Ngay
+          </button>
+
+          <small style="display:block; text-align:center; color:var(--text-muted); margin-top:0.75rem; font-size:0.75rem;">
+            Bằng cách đặt hàng, bạn đồng ý với Điều khoản dịch vụ của FASTFOOD
+          </small>
+        </div>
+      </div>
+
+    </form>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/checkout.js"></script>
+</body>
+</html>

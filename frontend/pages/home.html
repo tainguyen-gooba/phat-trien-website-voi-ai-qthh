@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FASTFOOD - Đặt Đồ Ăn Trực Tuyến Nhanh Chóng & Chuẩn Vị</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+  <!-- CSS Design System -->
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/home.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <!-- Universal Header -->
+  <div id="site-header"></div>
+
+  <main class="container">
+    
+    <!-- 1. FULL-BLEED HERO BANNER WITH AUTO-SLIDING IMAGES -->
+    <section class="hero-section">
+      <!-- Auto Horizontal Sliding Carousel -->
+      <div class="hero-slider-container" aria-label="Món ăn nổi bật">
+        <div class="hero-slider-track" id="hero-slider-track">
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-1'">
+            <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1600&auto=format&fit=crop&q=85" alt="Burger Bò Nướng Phô Mai" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🔥 ƯU ĐÃI GIẢM 50%</span>
+              <h3 class="hero-slide-title">Burger Bò Nướng Phô Mai</h3>
+              <p class="hero-slide-sub">Burger King Station • Nóng hổi giao 15 phút</p>
+            </div>
+          </div>
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-5'">
+            <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1600&auto=format&fit=crop&q=85" alt="Pizza Hải Sản Pesto" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🍕 MUA 1 TẶNG 1 HÔM NAY</span>
+              <h3 class="hero-slide-title">Pizza Hải Sản Pesto Ý</h3>
+              <p class="hero-slide-sub">Pizza Hut Italia • Phô mai kéo sợi thơm lừng</p>
+            </div>
+          </div>
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-2'">
+            <img src="https://images.unsplash.com/photo-1512058564366-18510be2db19?w=1600&auto=format&fit=crop&q=85" alt="Cơm Tấm Sườn Bì Chả" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🍚 FREESHIP 0Đ ĐƠN TỪ 50K</span>
+              <h3 class="hero-slide-title">Cơm Tấm Sườn Bì Chả</h3>
+              <p class="hero-slide-sub">Cơm Tấm Sài Gòn Xưa • Chuẩn vị truyền thống</p>
+            </div>
+          </div>
+          <div class="hero-slide" onclick="window.location.href='./food-detail.html?id=prod-3'">
+            <img src="https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=1600&auto=format&fit=crop&q=85" alt="Trà Sữa GongCha Hoàng Gia" class="hero-slide-img">
+            <div class="hero-slide-overlay">
+              <span class="hero-slide-badge">🧋 GIẢM 30K GIỜ VÀNG</span>
+              <h3 class="hero-slide-title">Trà Sữa Trân Châu Hoàng Gia</h3>
+              <p class="hero-slide-sub">GongCha Tea • Trân châu đường đen dẻo dai</p>
+            </div>
+          </div>
+        </div>
+
+        <button class="hero-slider-btn prev" id="slider-prev-btn" aria-label="Slide trước">‹</button>
+        <button class="hero-slider-btn next" id="slider-next-btn" aria-label="Slide tiếp">›</button>
+        <div class="hero-slider-dots" id="hero-slider-dots">
+          <span class="dot active" data-index="0"></span>
+          <span class="dot" data-index="1"></span>
+          <span class="dot" data-index="2"></span>
+          <span class="dot" data-index="3"></span>
+        </div>
+      </div>
+
+      <div class="hero-grid">
+        <div class="hero-copy">
+          <span class="hero-badge-tag">
+            🛵 GIAO HÀNG HỎA TỐC 20 PHÚT
+          </span>
+
+          <h1 class="hero-title">
+            Thèm Món Gì, <br>
+            <span>FASTFOOD</span> Giao Đó!
+          </h1>
+
+          <p class="hero-desc">
+            Khám phá hàng ngàn món ăn nóng hổi từ các thương hiệu hàng đầu với ưu đãi freeship ngập tràn mỗi ngày.
+          </p>
+
+          <div class="hero-tags">
+            <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Burger'">Burger Bò</span>
+            <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Cơm tấm'">Cơm Tấm</span>
+            <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Trà sữa'">Trà Sữa</span>
+            <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Gà rán'">Gà Rán</span>
+            <span class="hero-tags-pill" onclick="window.location.href='./foods.html?search=Pizza'">Pizza Ý</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. DANH MỤC MÓN ĂN -->
+    <section class="category-section">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">Danh Mục Món Ăn</h2>
+          <p class="section-subtitle">Lựa chọn món ăn theo khẩu vị yêu thích của bạn</p>
+        </div>
+        <a href="./foods.html" class="section-link">Xem tất cả ➔</a>
+      </div>
+
+      <div class="category-grid" id="category-grid-container">
+        <!-- Rendered by home.js -->
+      </div>
+    </section>
+
+    <!-- 3. FLASH DEALS / GIẢM GIÁ HÔM NAY -->
+    <section class="flash-deals-banner" id="flash-deals">
+      <div class="flash-deals-header">
+        <div>
+          <span style="background:rgba(255,255,255,0.25); padding:0.25rem 0.65rem; border-radius:var(--radius-sm); font-size:0.75rem; font-weight:800; text-transform:uppercase;">
+            ⚡ CHỚP MẮT LÀ HẾT
+          </span>
+          <h2 style="font-size:1.85rem; font-weight:800; margin-top:0.4rem;">5 Món Ăn Flash Sale Đổi Mới Mỗi Giờ</h2>
+        </div>
+
+        <!-- Countdown Timer -->
+        <div class="flash-timer-box">
+          <span>Kết thúc trong:</span>
+          <span class="timer-digit" id="timer-hours">01</span> :
+          <span class="timer-digit" id="timer-minutes">00</span> :
+          <span class="timer-digit" id="timer-seconds">00</span>
+        </div>
+      </div>
+
+      <div class="grid flash-deals-products" id="flash-deals-container">
+        <!-- Rendered by home.js -->
+      </div>
+    </section>
+
+    <!-- 4. MÓN ĂN BÁN CHẠY NHẤT -->
+    <section id="best-sellers" style="margin-bottom: 4rem;">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">Món Ăn Bán Chạy Nhất (Best Sellers)</h2>
+          <p class="section-subtitle">Được khách hàng đặt nhiều nhất trong tuần qua</p>
+        </div>
+        <a href="./foods.html?sort=popular" class="section-link">Xem thực đơn ➔</a>
+      </div>
+
+      <div class="grid grid-cols-4" id="best-sellers-container">
+        <!-- Rendered by home.js -->
+      </div>
+    </section>
+
+    <!-- 5. CHƯƠNG TRÌNH KHUYẾN MÃI / VOUCHERS -->
+    <section style="margin-bottom: 4rem;">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">Mã Giảm Giá & Ưu Đãi Độc Quyền</h2>
+          <p class="section-subtitle">Lưu mã ngay để được trừ tiền trực tiếp vào đơn hàng</p>
+        </div>
+      </div>
+
+      <div class="promo-grid" id="coupons-container">
+        <!-- Rendered by home.js -->
+      </div>
+    </section>
+
+    <!-- 6. NHÀ HÀNG NỔI BẬT -->
+    <section style="margin-bottom: 4rem;">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">Nhà Hàng & Quán Ăn Nổi Bật</h2>
+          <p class="section-subtitle">Đối tác chính hãng, đảm bảo vệ sinh ATTP và chế biến chuẩn vị</p>
+        </div>
+        <a href="./restaurants.html" class="section-link">Xem tất cả quán ➔</a>
+      </div>
+
+      <div class="grid grid-cols-2" id="featured-restaurants-container">
+        <!-- Rendered by home.js -->
+      </div>
+    </section>
+
+    <!-- 7. ĐÁNH GIÁ KHÁCH HÀNG -->
+    <section style="margin-bottom: 4rem;">
+      <div class="section-title-wrap">
+        <div>
+          <h2 class="section-title">Khách Hàng Nói Gì Về FASTFOOD?</h2>
+          <p class="section-subtitle">Hơn 50,000+ bữa ăn được phục vụ mỗi ngày với nụ cười hài lòng</p>
+        </div>
+      </div>
+
+      <div class="review-grid" id="reviews-container">
+        <!-- Rendered by home.js -->
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Universal Footer -->
+  <div id="site-footer"></div>
+
+  <!-- Scripts -->
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/home.js"></script>
+</body>
+</html>

@@ -225,12 +225,23 @@
   #toast-container {
     left: 1rem;
     right: 1rem;
-    bottom: 1rem;
+    top: calc(var(--header-height) + 0.75rem);
+    width: auto;
   }
 
   .toast {
-    min-width: auto;
     width: 100%;
+    padding: 0.9rem 1rem;
+  }
+
+  .toast-message {
+    font-size: 0.92rem;
+  }
+
+  .rating-row {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
   }
 
   .cart-item-row {

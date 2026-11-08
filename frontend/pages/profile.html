@@ -45,22 +45,23 @@
         <div class="grid grid-cols-2" style="gap:1rem;">
           <div class="form-group">
             <label class="form-label" for="prof-name">Họ và Tên</label>
-            <input type="text" id="prof-name" class="form-control" required>
+            <input type="text" id="prof-name" class="form-control" minlength="5" maxlength="150" autocomplete="name" required>
           </div>
           <div class="form-group">
             <label class="form-label" for="prof-phone">Số Điện Thoại</label>
-            <input type="tel" id="prof-phone" class="form-control" required>
+            <input type="tel" id="prof-phone" class="form-control" inputmode="tel" minlength="10" maxlength="16" placeholder="0912345678" autocomplete="tel" required>
           </div>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="prof-email">Email</label>
-          <input type="email" id="prof-email" class="form-control" required>
+          <input type="email" id="prof-email" class="form-control" readonly aria-describedby="profile-email-note" required>
+          <small id="profile-email-note" style="color:var(--text-muted);">Email đăng nhập không thể thay đổi tại đây.</small>
         </div>
 
         <div class="form-group">
           <label class="form-label" for="prof-address">Địa Chỉ Mặc Định</label>
-          <input type="text" id="prof-address" class="form-control" placeholder="Số nhà, tên đường, Buôn Ma Thuột, Đắk Lắk" required>
+          <input type="text" id="prof-address" class="form-control" minlength="12" maxlength="255" placeholder="Số nhà, tên đường, phường/xã, thành phố" autocomplete="street-address" required>
         </div>
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:2rem; border-top:1px solid var(--border-color); padding-top:1.25rem;">

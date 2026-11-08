@@ -168,16 +168,20 @@ function createRealtimeServer(httpServer) {
 
       try {
         const [orders] = await pool.execute(
-          'SELECT id, user_id FROM orders WHERE order_code = ? LIMIT 1',
+          'SELECT id, user_id, status FROM orders WHERE order_code = ? LIMIT 1',
           [orderCode]
         );
         const [realtimeOrders] = await pool.execute(
-          'SELECT id, user_id FROM realtime_orders WHERE order_code = ? LIMIT 1',
+          'SELECT id, user_id, status FROM realtime_orders WHERE order_code = ? LIMIT 1',
           [orderCode]
         );
         const order = orders[0] || realtimeOrders[0];
         if (!order) {
           acknowledge({ success: false, message: 'Không tìm thấy đơn hàng cần cập nhật.' });
+          return;
+        }
+        if (order.status === 'cancelled' && status !== 'cancelled') {
+          acknowledge({ success: false, message: 'Đơn hàng đã hủy không thể khôi phục trạng thái.' });
           return;
         }
 

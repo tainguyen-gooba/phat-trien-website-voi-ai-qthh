@@ -2,7 +2,7 @@
  * FASTFOOD ORDER LIVE TRACKING CONTROLLER
  */
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (!UIComponents.requireLogin()) return;
 
   UIComponents.renderHeader('orders');
@@ -10,24 +10,72 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const urlParams = new URLSearchParams(window.location.search);
   const orderId = urlParams.get('id');
-
-  let order = null;
-  const allOrders = StorageManager.getOrders();
-
-  if (orderId) {
-    order = allOrders.find(o => o.id === orderId);
-  }
-
-  if (!order) {
-    order = StorageManager.getActiveOrder() || allOrders[0];
-  }
-
   const container = document.getElementById('tracking-content-container');
-  if (!container || !order) return;
+  if (!container) return;
+  container.innerHTML = `
+    <div class="state-box">
+      <div class="spinner"></div>
+      <p>Đang tải đơn hàng...</p>
+    </div>
+  `;
+
+  const apiUrl = window.location.port === '5000'
+    ? `${window.location.origin}/api/v1`
+    : 'http://localhost:5000/api/v1';
+  let order;
+  try {
+    const response = await fetch(`${apiUrl}/realtime/orders`, {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${sessionStorage.getItem('fastfood_auth_token') || ''}`,
+      },
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success || !Array.isArray(result.data)) {
+      throw new Error(result.message || 'Không thể tải đơn hàng.');
+    }
+
+    const cachedOrders = new Map(StorageManager.getOrders().map(item => [String(item.id), item]));
+    const orders = result.data.map(item => ({
+      ...item,
+      rating: cachedOrders.get(String(item.id))?.rating || item.rating,
+    }));
+    StorageManager.set(StorageManager.KEYS.ORDERS, orders);
+    const cachedActiveOrder = StorageManager.getActiveOrder();
+    const requestedOrderId = orderId || cachedActiveOrder?.id;
+    order = orders.find(item => String(item.id) === String(requestedOrderId)) || (orderId ? null : orders[0]);
+    if (!order) {
+      if (cachedActiveOrder) StorageManager.remove(StorageManager.KEYS.ACTIVE_ORDER);
+      container.innerHTML = `
+        <div class="state-box">
+          <h3 class="state-title">Không tìm thấy đơn hàng</h3>
+          <p class="state-desc">Đơn hàng không có trên máy chủ hoặc không thuộc tài khoản này.</p>
+          <a href="./order-history.html" class="btn btn-primary">Xem đơn hàng của tôi</a>
+        </div>
+      `;
+      return;
+    }
+    StorageManager.set(StorageManager.KEYS.ACTIVE_ORDER, order);
+  } catch (error) {
+    container.innerHTML = `
+      <div class="state-box">
+        <h3 class="state-title">Không thể tải đơn hàng</h3>
+        <p class="state-desc">Vui lòng kiểm tra kết nối rồi tải lại trang.</p>
+      </div>
+    `;
+    UIComponents.showToast(error.message || 'Không thể tải đơn hàng.', 'error');
+    return;
+  }
 
   const currentStep = order.statusStep || 3;
   const escapeHtml = UIComponents.escapeHtml;
   const statusHeading = order.statusText || 'Đang giao đến bạn';
+  const normalizedStatuses = [order.status, order.statusText]
+    .map(status => String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g, 'd'));
+  const canCancelOrder = normalizedStatuses.some(status => (
+    status === 'pending' || status === 'preparing'
+    || status.includes('cho xac nhan') || status.includes('dang chuan bi')
+  ));
 
   container.innerHTML = `
     <div class="tracking-card">
@@ -38,13 +86,20 @@ document.addEventListener('DOMContentLoaded', () => {
             ${escapeHtml(statusHeading)}${order.statusText ? '' : ` (${escapeHtml(order.estimatedTime || '20 - 25 phút')})`}
           </h2>
           <p style="color:var(--text-secondary); font-size:0.9rem;">
-            Quán ăn: <strong>${escapeHtml(order.restaurantName)}</strong> • Thời gian đặt: ${escapeHtml(order.createdAt)}
+            Quán ăn: <strong>${escapeHtml(order.restaurantName)}</strong> • Thời gian đặt: ${escapeHtml(UIComponents.formatDateTime(order.createdAt))}
           </p>
         </div>
 
-        <button class="btn btn-outline btn-sm" onclick="window.print()">
-          🖨️ In Hóa Đơn
-        </button>
+        <div style="display:flex; flex-wrap:wrap; gap:0.75rem;">
+          ${canCancelOrder ? `
+            <button type="button" class="btn btn-outline btn-sm" id="cancel-tracked-order">
+              ✕ Hủy đơn
+            </button>
+          ` : ''}
+          <button class="btn btn-outline btn-sm" onclick="window.print()">
+            🖨️ In Hóa Đơn
+          </button>
+        </div>
       </div>
 
       <!-- Timeline Stepper 5 bước -->
@@ -137,6 +192,41 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </div>
   `;
+
+  const cancelButton = document.getElementById('cancel-tracked-order');
+  cancelButton?.addEventListener('click', async () => {
+    if (!canCancelOrder) {
+      UIComponents.showToast('Đơn này không còn đủ điều kiện để hủy.', 'warning');
+      return;
+    }
+    if (!window.confirm('Bạn chắc chắn muốn hủy đơn hàng này? Mỗi lần hủy, phí giao hàng cho các đơn tiếp theo sẽ tăng thêm 3%.')) {
+      return;
+    }
+
+    cancelButton.disabled = true;
+    try {
+      const response = await fetch(`${apiUrl}/realtime/orders/${encodeURIComponent(order.id)}/cancel`, {
+        method: 'PATCH',
+        headers: {
+          Accept: 'application/json',
+          Authorization: `Bearer ${sessionStorage.getItem('fastfood_auth_token') || ''}`,
+        },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success || !result.data) {
+        throw new Error(result.message || 'Không thể hủy đơn hàng.');
+      }
+
+      order = { ...order, ...result.data };
+      StorageManager.set(StorageManager.KEYS.ORDERS, allOrders.map(item => item.id === order.id ? order : item));
+      StorageManager.set(StorageManager.KEYS.ACTIVE_ORDER, order);
+      UIComponents.showToast('Đã hủy đơn. Phí giao hàng cho các đơn tiếp theo sẽ tăng 3%.', 'success');
+      window.setTimeout(() => window.location.reload(), 700);
+    } catch (error) {
+      cancelButton.disabled = false;
+      UIComponents.showToast(error.message || 'Không thể hủy đơn hàng.', 'error');
+    }
+  });
 
   window.addEventListener('fastfood:order-updated', (event) => {
     const update = event.detail;

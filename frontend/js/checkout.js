@@ -38,11 +38,11 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // Đồng thời kiểm tra dữ liệu tài khoản mới nhất qua API nếu có token
-  const authToken = localStorage.getItem('fastfood_auth_token') || sessionStorage.getItem('fastfood_auth_token');
+  const authToken = sessionStorage.getItem('fastfood_auth_token');
+  const apiUrl = window.location.port === '5000'
+    ? `${window.location.origin}/api/v1`
+    : 'http://localhost:5000/api/v1';
   if (authToken) {
-    const apiUrl = window.location.port === '5000'
-      ? `${window.location.origin}/api/v1`
-      : 'http://localhost:5000/api/v1';
     fetch(`${apiUrl}/auth/me`, {
       headers: {
         Accept: 'application/json',
@@ -69,6 +69,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const appliedCoupon = StorageManager.get(StorageManager.KEYS.COUPON, null);
   const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
   const summary = CartController.getBillSummary(discountAmount);
+  const token = sessionStorage.getItem('fastfood_auth_token');
+  const cancellationNotice = document.getElementById('checkout-cancellation-notice');
+  const shippingPolicyPromise = CartController.getShippingPolicy()
+    .then((policy) => {
+      const billSummary = CartController.applyCancellationSurcharge(summary, policy.cancellationCount);
+      if (cancellationNotice && policy.cancellationCount > 0) {
+        cancellationNotice.hidden = false;
+        cancellationNotice.textContent = `Bạn đã hủy ${policy.cancellationCount} đơn. Phí giao hàng hiện tăng ${policy.increasePercent}% cho các đơn tiếp theo.`;
+      }
+      if (shipEl) shipEl.innerText = billSummary.shippingFee === 0 ? 'Miễn phí' : UIComponents.formatVND(billSummary.shippingFee);
+      if (totalEl) totalEl.innerText = UIComponents.formatVND(billSummary.total);
+      return billSummary;
+    })
+    .catch((error) => {
+      UIComponents.showToast(error.message || 'Không thể tải chính sách phí giao hàng.', 'error');
+      return null;
+    });
 
   // Render Mini Order Items List
   const itemsContainer = document.getElementById('checkout-items-summary');
@@ -120,25 +137,36 @@ document.addEventListener('DOMContentLoaded', () => {
       const address = document.getElementById('customer-address')?.value.trim();
       const notes = document.getElementById('customer-notes')?.value.trim();
 
-      if (!name || !phone || !address) {
-        UIComponents.showToast('Vui lòng điền đầy đủ tên, số điện thoại và địa chỉ giao hàng!', 'warning');
+      const customerDetails = UIComponents.validateCustomerDetails({ fullName: name, phone, address });
+      if (!customerDetails.valid) {
+        UIComponents.showToast(Object.values(customerDetails.errors).filter(Boolean).join(' '), 'warning');
         return;
       }
 
-      // Tạo mã đơn hàng ngẫu nhiên (VD: FF-20261105-8942)
-      const orderCode = `FF-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(1000 + Math.random() * 9000)}`;
+      const currentBill = await shippingPolicyPromise;
+      if (!currentBill) {
+        UIComponents.showToast('Chưa thể xác nhận phí giao hàng. Vui lòng tải lại trang trước khi đặt hàng.', 'error');
+        return;
+      }
+
+      const orderCode = UIComponents.createOrderCode();
 
       const newOrder = {
         id: orderCode,
-        createdAt: new Date().toLocaleString('vi-VN'),
+        createdAt: new Date().toISOString(),
         restaurantName: cart[0]?.restaurantName || 'FASTFOOD Partner',
-        recipient: { name, phone, address, notes },
+        recipient: {
+          name: customerDetails.fullName,
+          phone: customerDetails.phone,
+          address: customerDetails.address,
+          notes,
+        },
         items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, toppings: i.selectedToppings })),
         paymentMethod: selectedPayment.toUpperCase(),
-        subtotal: summary.subtotal,
-        shippingFee: summary.shippingFee,
-        discount: summary.discount,
-        total: summary.total,
+        subtotal: currentBill.subtotal,
+        shippingFee: currentBill.shippingFee,
+        discount: currentBill.discount,
+        total: currentBill.total,
         status: 'pending',
         statusStep: 2, // 1: Đặt đơn, 2: Quán nhận, 3: Đang làm, 4: Đang giao, 5: Đã giao
         estimatedTime: '20 - 25 phút',
@@ -149,10 +177,6 @@ document.addEventListener('DOMContentLoaded', () => {
         },
       };
 
-      const token = localStorage.getItem('fastfood_auth_token') || sessionStorage.getItem('fastfood_auth_token');
-      const apiUrl = window.location.port === '5000'
-        ? `${window.location.origin}/api/v1`
-        : 'http://localhost:5000/api/v1';
       const submitButton = checkoutForm.querySelector('[type="submit"]');
       if (submitButton) submitButton.disabled = true;
       try {

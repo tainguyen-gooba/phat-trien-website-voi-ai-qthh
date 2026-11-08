@@ -10,23 +10,74 @@ const UIComponents = {
     return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
   },
 
+  formatDateTime(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return String(value || '');
+    return new Intl.DateTimeFormat('vi-VN', {
+      timeZone: 'Asia/Ho_Chi_Minh',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+    }).format(date);
+  },
+
+  createOrderCode() {
+    const randomBytes = new Uint32Array(1);
+    window.crypto.getRandomValues(randomBytes);
+    return `FF${String(randomBytes[0] % 10000).padStart(4, '0')}`;
+  },
+
   escapeHtml(value) {
     return String(value ?? '').replace(/[&<>"']/g, (char) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
     })[char]);
   },
 
+  validateCustomerDetails({ fullName, phone, address } = {}) {
+    const name = String(fullName || '').trim().replace(/\s+/g, ' ');
+    const normalizedPhone = String(phone || '').trim().replace(/[\s().-]/g, '').replace(/^\+?84/, '0');
+    const normalizedAddress = String(address || '').trim().replace(/\s+/g, ' ');
+    const nameIsValid = name.length >= 5
+      && /^[\p{L}]+(?:[ '-][\p{L}]+)+$/u.test(name)
+      && name.length <= 150;
+    const phoneIsValid = /^0[35789]\d{8}$/.test(normalizedPhone);
+    const addressWords = normalizedAddress.match(/[\p{L}]{2,}/gu) || [];
+    const addressIsValid = normalizedAddress.length >= 12
+      && normalizedAddress.length <= 255
+      && /^[\p{L}\p{N}\s,.'/#-]+$/u.test(normalizedAddress)
+      && addressWords.length >= (/\d/.test(normalizedAddress) ? 2 : 3);
+
+    return {
+      valid: nameIsValid && phoneIsValid && addressIsValid,
+      fullName: name,
+      phone: normalizedPhone,
+      address: normalizedAddress,
+      errors: {
+        fullName: nameIsValid ? '' : 'Vui lòng nhập họ tên thật (ít nhất 5 ký tự), gồm họ và tên bằng chữ.',
+        phone: phoneIsValid ? '' : 'Số điện thoại phải là số di động Việt Nam hợp lệ gồm 10 chữ số.',
+        address: addressIsValid ? '' : 'Vui lòng nhập địa chỉ chi tiết (số nhà/đường và khu vực).',
+      },
+    };
+  },
+
   // Hiển thị Toast thông báo
-  showToast(message, type = 'info', duration = 3000) {
+  showToast(message, type = 'info', duration = 4500) {
     let container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'toast-container';
+      container.setAttribute('aria-live', 'polite');
+      container.setAttribute('aria-atomic', 'false');
       document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
+    toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
     
     const icons = {
       success: '✅',
@@ -35,19 +86,33 @@ const UIComponents = {
       info: '🍔',
     };
 
-    toast.innerHTML = `
-      <div style="display:flex; align-items:center; gap:0.6rem;">
-        <span style="font-size:1.1rem;">${icons[type] || 'ℹ️'}</span>
-        <span style="font-size:0.9rem; font-weight:600; color:var(--text-main);">${message}</span>
-      </div>
-      <button style="color:var(--text-muted); cursor:pointer; font-weight:bold; font-size:1rem; padding:0 4px;" onclick="this.closest('.toast').remove()">✕</button>
-    `;
+    const icon = document.createElement('span');
+    icon.className = 'toast-icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = icons[type] || 'ℹ️';
+
+    const text = document.createElement('span');
+    text.className = 'toast-message';
+    text.textContent = message;
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'toast-close';
+    closeButton.type = 'button';
+    closeButton.setAttribute('aria-label', 'Đóng thông báo');
+    closeButton.textContent = '✕';
+    closeButton.addEventListener('click', () => toast.remove());
+
+    const content = document.createElement('div');
+    content.className = 'toast-content';
+    content.append(icon, text);
+    toast.append(content, closeButton);
 
     container.appendChild(toast);
 
     setTimeout(() => {
+      if (!toast.isConnected) return;
       toast.style.opacity = '0';
-      toast.style.transform = 'translateY(15px)';
+      toast.style.transform = 'translateY(-10px)';
       toast.style.transition = 'all 0.3s ease';
       setTimeout(() => toast.remove(), 300);
     }, duration);

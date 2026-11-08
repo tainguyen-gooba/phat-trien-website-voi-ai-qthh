@@ -62,7 +62,7 @@ function mountLiveChat(user, socket) {
     if (!customerId || historyCustomerId === customerId) return;
     historyCustomerId = customerId;
     messageList.replaceChildren();
-    const token = localStorage.getItem('fastfood_auth_token') || sessionStorage.getItem('fastfood_auth_token');
+    const token = sessionStorage.getItem('fastfood_auth_token');
     fetch(`/api/v1/realtime/chat/${encodeURIComponent(customerId)}`, {
       headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' },
     })
@@ -163,7 +163,7 @@ window.initFastfoodRealtime = function initFastfoodRealtime(user = null) {
   window.fastfoodRealtimeReady = new Promise((resolve) => {
     const start = () => {
       const currentUser = user || window.StorageManager?.getUser();
-      const token = localStorage.getItem('fastfood_auth_token') || sessionStorage.getItem('fastfood_auth_token');
+      const token = sessionStorage.getItem('fastfood_auth_token');
       const socket = window.io({
         auth: { token },
         reconnection: true,

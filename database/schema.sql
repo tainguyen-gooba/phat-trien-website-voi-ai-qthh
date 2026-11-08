@@ -231,7 +231,7 @@ CREATE TABLE `coupons` (
 DROP TABLE IF EXISTS `orders`;
 CREATE TABLE `orders` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `order_code` VARCHAR(30) NOT NULL UNIQUE COMMENT 'Mã đơn hiển thị người dùng (ví dụ: FF-20261105-001)',
+  `order_code` VARCHAR(30) NOT NULL UNIQUE COMMENT 'Mã đơn hiển thị người dùng (ví dụ: FF0123)',
   `user_id` BIGINT UNSIGNED NOT NULL COMMENT 'Khách hàng đặt món',
   `restaurant_id` BIGINT UNSIGNED NOT NULL COMMENT 'Quán ăn nhận đơn',
   `delivery_address_id` BIGINT UNSIGNED NOT NULL COMMENT 'Địa chỉ nhận hàng',

@@ -46,17 +46,17 @@
           <div class="grid grid-cols-2" style="gap:1rem;">
             <div class="form-group">
               <label class="form-label" for="customer-name">Họ và Tên người nhận *</label>
-              <input type="text" id="customer-name" class="form-control" placeholder="Họ và tên người nhận" required>
+              <input type="text" id="customer-name" class="form-control" placeholder="Họ và tên người nhận" minlength="5" maxlength="150" autocomplete="name" required>
             </div>
             <div class="form-group">
               <label class="form-label" for="customer-phone">Số điện thoại liên hệ *</label>
-              <input type="tel" id="customer-phone" class="form-control" placeholder="Số điện thoại liên hệ" required>
+              <input type="tel" id="customer-phone" class="form-control" placeholder="0912345678" inputmode="tel" minlength="10" maxlength="16" autocomplete="tel" required>
             </div>
           </div>
 
           <div class="form-group">
             <label class="form-label" for="customer-address">Địa chỉ nhận món chi tiết *</label>
-            <input type="text" id="customer-address" class="form-control" placeholder="Địa chỉ giao hàng chi tiết (số nhà, tên đường...)" required>
+            <input type="text" id="customer-address" class="form-control" placeholder="Địa chỉ chi tiết (số nhà, tên đường, phường/xã...)" minlength="12" maxlength="255" autocomplete="street-address" required>
           </div>
 
           <div class="form-group" style="margin-bottom:0;">
@@ -128,6 +128,9 @@
             <span>Phí giao hàng:</span>
             <span id="checkout-shipping" style="font-weight:700;">18.000 đ</span>
           </div>
+          <p id="checkout-cancellation-notice" hidden style="margin:-0.35rem 0 0.8rem; color:var(--warning); font-size:0.78rem; line-height:1.5;">
+            Mỗi lần hủy đơn, phí giao hàng cho các đơn tiếp theo tăng thêm 3%.
+          </p>
 
           <div class="summary-row" style="color:var(--success);">
             <span>Mã giảm giá:</span>

@@ -1,6 +1,7 @@
 const BaseController = require('./base.controller');
 const AuthService = require('../services/auth.service');
 const HTTP_STATUS = require('../constants/httpStatusCodes');
+const { normalizeCustomerProfile } = require('../utils/customer-profile.validation');
 
 class AuthController extends BaseController {
   async login(req, res, next) {
@@ -56,26 +57,16 @@ class AuthController extends BaseController {
 
   async completeCustomerProfile(req, res, next) {
     try {
-      const { fullName, phone, address } = req.body;
-      const phoneIsValid = typeof phone === 'string'
-        && /^\+?[0-9\s().-]{8,20}$/.test(phone.trim());
-      if (
-        typeof fullName !== 'string' || !fullName.trim() || fullName.trim().length > 150
-        || !phoneIsValid
-        || typeof address !== 'string' || !address.trim() || address.trim().length > 255
-      ) {
+      const profile = normalizeCustomerProfile(req.body);
+      if (!profile.valid) {
         return this.sendError(
           res,
-          'Vui lòng nhập họ tên, số điện thoại và địa chỉ hợp lệ.',
+          Object.values(profile.errors).filter(Boolean).join(' '),
           HTTP_STATUS.BAD_REQUEST
         );
       }
 
-      const result = await AuthService.completeCustomerProfile(req.user.id, {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-      });
+      const result = await AuthService.completeCustomerProfile(req.user.id, profile);
       if (!result) {
         return this.sendError(res, 'Tài khoản không còn hoạt động', HTTP_STATUS.UNAUTHORIZED);
       }
@@ -97,26 +88,16 @@ class AuthController extends BaseController {
 
   async updateCustomerProfile(req, res, next) {
     try {
-      const { fullName, phone, address } = req.body;
-      const phoneIsValid = typeof phone === 'string'
-        && /^\+?[0-9\s().-]{8,20}$/.test(phone.trim());
-      if (
-        typeof fullName !== 'string' || !fullName.trim() || fullName.trim().length > 150
-        || !phoneIsValid
-        || typeof address !== 'string' || !address.trim() || address.trim().length > 255
-      ) {
+      const profile = normalizeCustomerProfile(req.body);
+      if (!profile.valid) {
         return this.sendError(
           res,
-          'Vui lòng nhập họ tên, số điện thoại và địa chỉ hợp lệ.',
+          Object.values(profile.errors).filter(Boolean).join(' '),
           HTTP_STATUS.BAD_REQUEST
         );
       }
 
-      const user = await AuthService.updateCustomerProfile(req.user.id, {
-        fullName: fullName.trim(),
-        phone: phone.trim(),
-        address: address.trim(),
-      });
+      const user = await AuthService.updateCustomerProfile(req.user.id, profile);
       if (!user) {
         return this.sendError(res, 'Tài khoản không còn hoạt động', HTTP_STATUS.UNAUTHORIZED);
       }

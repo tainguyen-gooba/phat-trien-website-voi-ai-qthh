@@ -12,9 +12,15 @@ const StorageManager = {
     AVAILABLE_COUPONS: 'fastfood_available_coupons',
   },
 
+  SESSION_KEYS: new Set(['fastfood_user', 'fastfood_cart', 'fastfood_orders', 'fastfood_active_order', 'fastfood_applied_coupon', 'fastfood_available_coupons']),
+
+  getStorage(key) {
+    return this.SESSION_KEYS.has(key) ? sessionStorage : localStorage;
+  },
+
   get(key, defaultValue = null) {
     try {
-      const data = localStorage.getItem(key);
+      const data = this.getStorage(key).getItem(key);
       return data ? JSON.parse(data) : defaultValue;
     } catch (e) {
       console.error(`Error reading ${key} from localStorage:`, e);
@@ -24,14 +30,14 @@ const StorageManager = {
 
   set(key, value) {
     try {
-      localStorage.setItem(key, JSON.stringify(value));
+      this.getStorage(key).setItem(key, JSON.stringify(value));
     } catch (e) {
       console.error(`Error saving ${key} to localStorage:`, e);
     }
   },
 
   remove(key) {
-    localStorage.removeItem(key);
+    this.getStorage(key).removeItem(key);
   },
 
   // Helpers
@@ -46,10 +52,7 @@ const StorageManager = {
   },
 
   getUser() {
-    const hasToken = Boolean(
-      localStorage.getItem('fastfood_auth_token')
-      || sessionStorage.getItem('fastfood_auth_token')
-    );
+    const hasToken = Boolean(sessionStorage.getItem('fastfood_auth_token'));
     const user = this.get(this.KEYS.USER);
     return hasToken && user?.isLoggedIn ? user : null;
   },
@@ -60,9 +63,10 @@ const StorageManager = {
   },
 
   clearAuth() {
-    localStorage.removeItem('fastfood_auth_token');
     sessionStorage.removeItem('fastfood_auth_token');
-    this.remove(this.KEYS.USER);
+    for (const key of this.SESSION_KEYS) sessionStorage.removeItem(key);
+    localStorage.removeItem('fastfood_auth_token');
+    localStorage.removeItem(this.KEYS.USER);
     window.dispatchEvent(new CustomEvent('userUpdated', { detail: null }));
   },
 
@@ -81,5 +85,8 @@ const StorageManager = {
     return this.get(this.KEYS.ACTIVE_ORDER, null);
   },
 };
+
+localStorage.removeItem('fastfood_auth_token');
+localStorage.removeItem(StorageManager.KEYS.USER);
 
 window.StorageManager = StorageManager;

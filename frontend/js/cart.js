@@ -91,6 +91,32 @@ const CartController = {
     };
   },
 
+  async getShippingPolicy() {
+    const token = sessionStorage.getItem('fastfood_auth_token');
+    if (!token) return { cancellationCount: 0, increasePercent: 0 };
+
+    const apiUrl = window.location.port === '5000'
+      ? `${window.location.origin}/api/v1`
+      : 'http://localhost:5000/api/v1';
+    const response = await fetch(`${apiUrl}/realtime/orders/shipping-policy`, {
+      headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    });
+    const result = await response.json();
+    if (!response.ok || !result.success || !Number.isSafeInteger(result.data?.cancellationCount)) {
+      throw new Error(result.message || 'Không thể xác nhận phụ phí giao hàng.');
+    }
+    return result.data;
+  },
+
+  applyCancellationSurcharge(summary, cancellationCount) {
+    const shippingFee = Math.round(summary.shippingFee * (1 + cancellationCount * 0.03));
+    return {
+      ...summary,
+      shippingFee,
+      total: Math.max(0, summary.subtotal + shippingFee - summary.discount),
+    };
+  },
+
   // Render toàn bộ giao diện Cart Page
   renderCartPage() {
     const container = document.getElementById('cart-items-container');
@@ -103,6 +129,8 @@ const CartController = {
     const appliedCoupon = StorageManager.get(StorageManager.KEYS.COUPON, null);
     const discountAmount = appliedCoupon ? appliedCoupon.discount : 0;
     const summary = this.getBillSummary(discountAmount);
+    const renderId = (this.cartRenderId || 0) + 1;
+    this.cartRenderId = renderId;
 
     if (cart.length === 0) {
       if (layout) layout.style.display = 'none';
@@ -157,6 +185,29 @@ const CartController = {
     if (shipEl) shipEl.innerText = summary.shippingFee === 0 ? 'Miễn phí' : UIComponents.formatVND(summary.shippingFee);
     if (discountEl) discountEl.innerText = `-${UIComponents.formatVND(summary.discount)}`;
     if (totalEl) totalEl.innerText = UIComponents.formatVND(summary.total);
+
+    this.getShippingPolicy()
+      .then((policy) => {
+        if (renderId !== this.cartRenderId) return;
+        const currentCoupon = StorageManager.get(StorageManager.KEYS.COUPON, null);
+        const currentSummary = this.getBillSummary(currentCoupon ? currentCoupon.discount : 0);
+        const adjustedSummary = this.applyCancellationSurcharge(currentSummary, policy.cancellationCount);
+        if (shipEl) shipEl.innerText = adjustedSummary.shippingFee === 0
+          ? 'Miễn phí'
+          : UIComponents.formatVND(adjustedSummary.shippingFee);
+        if (totalEl) totalEl.innerText = UIComponents.formatVND(adjustedSummary.total);
+
+        const notice = document.getElementById('cart-cancellation-notice');
+        if (notice && policy.cancellationCount > 0) {
+          notice.hidden = false;
+          notice.textContent = `Bạn đã hủy ${policy.cancellationCount} đơn. Phí giao hàng tăng ${policy.increasePercent}% cho đơn tiếp theo.`;
+        }
+      })
+      .catch((error) => {
+        if (renderId === this.cartRenderId) {
+          UIComponents.showToast(error.message || 'Không thể tải chính sách phí giao hàng.', 'error');
+        }
+      });
   },
 };
 

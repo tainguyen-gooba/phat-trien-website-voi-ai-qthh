@@ -24,11 +24,10 @@ document.addEventListener('DOMContentLoaded', () => {
     loginLink.href = `./login.html?next=${encodeURIComponent(returnPath)}`;
   }
 
-  function saveSession(token, user, rememberLogin = true) {
-    const tokenStorage = rememberLogin ? localStorage : sessionStorage;
-    const otherStorage = rememberLogin ? sessionStorage : localStorage;
-    tokenStorage.setItem('fastfood_auth_token', token);
-    otherStorage.removeItem('fastfood_auth_token');
+  function saveSession(token, user) {
+    sessionStorage.setItem('fastfood_auth_token', token);
+    localStorage.removeItem('fastfood_auth_token');
+    localStorage.removeItem(StorageManager.KEYS.USER);
     StorageManager.setUser({ ...user, isLoggedIn: true });
   }
 
@@ -65,8 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const { token, user } = result.data;
-        const rememberLogin = loginForm.querySelector('input[type="checkbox"]')?.checked;
-        saveSession(token, user, rememberLogin);
+        saveSession(token, user);
 
         UIComponents.showToast('Đăng nhập thành công! Đang chuyển trang...', 'success');
         window.setTimeout(() => {
@@ -163,10 +161,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const fullName = document.getElementById('customer-fullname').value.trim();
       const phone = document.getElementById('customer-phone').value.trim();
       const address = document.getElementById('customer-address').value.trim();
+      const customerDetails = UIComponents.validateCustomerDetails({ fullName, phone, address });
       const submitButton = profileForm.querySelector('button[type="submit"]');
 
-      if (!fullName || !phone || !address) {
-        UIComponents.showToast('Vui lòng điền đầy đủ họ tên, số điện thoại và địa chỉ.', 'warning');
+      if (!customerDetails.valid) {
+        UIComponents.showToast(Object.values(customerDetails.errors).filter(Boolean).join(' '), 'warning');
         return;
       }
 
@@ -183,7 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
             Accept: 'application/json',
             Authorization: `Bearer ${newAccountToken}`,
           },
-          body: JSON.stringify({ fullName, phone, address }),
+          body: JSON.stringify(customerDetails),
         });
         const result = await response.json();
 

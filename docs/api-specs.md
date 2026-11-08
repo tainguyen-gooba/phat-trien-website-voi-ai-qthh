@@ -34,9 +34,27 @@ Tất cả các API đều trả về cấu trúc chuẩn:
 - `GET /api/v1/realtime/orders` - Lấy đơn hàng của khách đã đăng nhập; admin xem danh sách đơn.
 - `POST /api/v1/realtime/orders` - Tạo đơn hàng realtime; chỉ khách hàng đã đăng nhập.
 - `GET /api/v1/realtime/chat/:customerId` - Lấy lịch sử chat; khách chỉ được xem chat của mình, admin được xem mọi khách.
+- `GET /api/v1/realtime/chat/conversations` - Lấy danh sách hội thoại của khách hàng; chỉ admin.
+- `POST /api/v1/realtime/orders/:orderCode/reviews/:target` - Lưu đánh giá sao và nhận xét của tài xế (`driver`) hoặc quán (`restaurant`) cho đơn đã giao; chỉ chủ đơn.
+- `GET /api/v1/realtime/orders/reviews` - Lấy đánh giá của khách hàng sau khi hoàn thành đơn; chỉ admin. Khi lưu từng đánh giá, server phát `review:new` và `notification:new` ngay sau khi giao dịch thành công.
+- `POST /api/v1/payments/momo/initiate` - Tạo giao dịch MoMo cho đơn của khách đang đăng nhập; chỉ chuyển trạng thái khi IPN có chữ ký hợp lệ.
+- `POST /api/v1/payments/bank/initiate` - Tạo QR chuyển khoản theo mã đơn; chỉ đánh dấu đã thanh toán khi SePay xác nhận webhook.
+- `GET /api/v1/payments/:orderCode/status` - Lấy trạng thái thanh toán của đơn thuộc khách đăng nhập.
+- `POST /api/v1/payments/momo/ipn` - IPN công khai của MoMo; kiểm tra HMAC-SHA256, mã đơn, số tiền và request ID.
+- `POST /api/v1/payments/sepay/webhook` - Webhook SePay; xác thực `Authorization: Apikey ...`, tài khoản nhận, nội dung mã đơn và số tiền.
 - `GET /api/v1/auth/me` - Lấy thông tin tài khoản hiện tại; yêu cầu `Authorization: Bearer <token>`.
 
-Socket.IO xác thực bằng JWT qua handshake. Admin dùng `admin:content:publish` và `admin:order:status`; khách/admin gửi hỗ trợ qua `chat:send`. Các sự kiện cập nhật được phát đến tài khoản liên quan, không phát thông tin đơn hàng cho khách không liên quan.
+Socket.IO xác thực bằng JWT qua handshake. Admin dùng `admin:content:publish` và `admin:order:status`; khách/admin gửi hỗ trợ qua `chat:send`. Trợ lý tự động trả lời theo các chủ đề hỗ trợ phổ biến; phản hồi của admin tạm dừng trợ lý trong 10 phút. Các sự kiện cập nhật được phát đến tài khoản liên quan, không phát thông tin đơn hàng cho khách không liên quan.
+
+Trước khi chạy phiên bản có chat tự động và thanh toán realtime, cập nhật cơ sở dữ liệu bằng `npm --prefix backend run db:migrate:realtime`.
+
+### Cấu hình thanh toán
+Đặt các biến MoMo, SePay và `PAYMENT_PUBLIC_URL` trong `backend/.env` theo mẫu `backend/.env.example`. Chọn `MOMO_ENV=sandbox` khi thử nghiệm hoặc `MOMO_ENV=production` với bộ khóa production; không đưa khóa bí mật vào frontend hoặc Git. Production cần URL HTTPS công khai để MoMo/SePay gửi callback:
+- MoMo IPN: `${PAYMENT_PUBLIC_URL}/api/v1/payments/momo/ipn`
+- SePay webhook: `${PAYMENT_PUBLIC_URL}/api/v1/payments/sepay/webhook`
+
+QR bank dùng nội dung chuyển khoản là mã đơn. Không xác nhận thanh toán dựa trên thao tác của trình duyệt; chỉ webhook khớp API key, tài khoản nhận, mã đơn và số tiền mới cập nhật thành công.
+Với đơn thanh toán trực tuyến, máy chủ tính lại giá sản phẩm, topping và mã giảm giá từ dữ liệu tin cậy; nếu giỏ hàng cũ hoặc danh mục chưa có giá/topping tương ứng, khách cần tải lại giỏ hàng trước khi thanh toán.
 
 ### Đăng nhập
 Request body:

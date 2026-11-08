@@ -24,6 +24,25 @@
       font-family: "Plus Jakarta Sans", "Be Vietnam Pro", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
+    function handlePaymentUpdate(update) {
+      if (!update?.orderCode) return;
+      const record = data.orders.find((item) => String(item.id).replace(/^#/, '') === String(update.orderCode));
+      if (!record) {
+        refreshOrders();
+        return;
+      }
+      record.paymentStatus = update.paymentStatus;
+      record.paymentLabel = update.paymentStatus === 'completed'
+        ? 'Đã thanh toán'
+        : record.paymentMethod === 'momo' ? 'Chờ MoMo' : 'Chờ QR';
+      saveRealtimeSnapshot();
+      renderAll();
+      showToast(update.paymentStatus === 'completed'
+        ? `Đơn ${update.orderCode} đã thanh toán thành công.`
+        : `Thanh toán đơn ${update.orderCode} chưa thành công.`,
+      update.paymentStatus !== 'completed');
+    }
+
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--canvas); color: var(--ink); min-width: 320px; }
     button, input, select { font: inherit; }
@@ -462,6 +481,37 @@
     .product-image-cell span { overflow: hidden; max-width: 170px; color: #777; text-overflow: ellipsis; white-space: nowrap; }
     .toast { border-radius: 12px; }
 
+    #chat-inbox[hidden] { display: none; }
+    .chat-inbox { display: grid; grid-template-columns: minmax(230px, .75fr) minmax(0, 1.8fr); gap: 16px; min-height: 490px; max-height: 680px; }
+    .chat-inbox-panel { min-width: 0; overflow: hidden; border: 1px solid #eee; border-radius: 17px; background: #fff; box-shadow: var(--shadow); }
+    .chat-inbox-heading { padding: 18px 20px; border-bottom: 1px solid #f1f1f1; }
+    .chat-inbox-heading h2 { margin: 0; font-size: 15px; }
+    .chat-inbox-heading p { margin: 5px 0 0; color: #999; font-size: 11px; }
+    .chat-conversation-list { max-height: 590px; overflow-y: auto; }
+    .chat-conversation { display: grid; width: 100%; gap: 5px; padding: 14px 16px; border: 0; border-bottom: 1px solid #f4f4f4; background: #fff; text-align: left; }
+    .chat-conversation:hover, .chat-conversation.active { background: #fff7ed; }
+    .chat-conversation strong { overflow: hidden; color: var(--ink); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-conversation span, .chat-conversation small { overflow: hidden; color: #888; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .chat-empty { padding: 18px; color: #999; font-size: 12px; }
+    .chat-thread { display: flex; min-height: 0; flex-direction: column; }
+    .chat-thread-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; padding: 18px 20px; border-bottom: 1px solid #f1f1f1; }
+    .chat-thread-heading h2 { margin: 0; font-size: 15px; }
+    .chat-thread-heading p { margin: 5px 0 0; color: #999; font-size: 10px; }
+    #chat-assistant-status { color: #a75a20; text-align: right; }
+    .admin-chat-messages { display: flex; min-height: 0; flex: 1; flex-direction: column; gap: 10px; overflow-y: auto; padding: 18px; background: #fafafa; }
+    .admin-chat-message { width: fit-content; max-width: min(78%, 560px); padding: 10px 13px; border: 1px solid #eee; border-radius: 13px 13px 13px 4px; background: #fff; overflow-wrap: anywhere; }
+    .admin-chat-message.outgoing { align-self: flex-end; border-color: #ffe0c2; border-radius: 13px 13px 4px 13px; background: #fff0df; }
+    .admin-chat-message.assistant { border-color: #f0e2d4; background: #fffaf5; }
+    .admin-chat-message strong { display: block; margin-bottom: 4px; color: #999; font-size: 9px; }
+    .admin-chat-message p { margin: 0; color: #333; font-size: 12px; line-height: 1.55; white-space: pre-wrap; }
+    .admin-chat-form { display: flex; gap: 9px; padding: 12px; border-top: 1px solid #eee; }
+    .admin-chat-form input { min-width: 0; flex: 1; height: 42px; padding: 0 12px; border: 1px solid #ddd; border-radius: 9px; outline: 0; }
+    .admin-chat-form input:focus { border-color: #fdba74; box-shadow: 0 0 0 3px rgba(249,115,22,.08); }
+    .admin-chat-form button { padding: 0 15px; border: 0; border-radius: 9px; background: var(--orange); color: #fff; font-size: 12px; font-weight: 750; }
+    .admin-chat-form button:disabled { cursor: wait; opacity: .6; }
+    #admin-chat-feedback { min-height: 17px; margin: 0; padding: 0 13px 8px; color: #56805d; font-size: 10px; }
+    #admin-chat-feedback.error { color: #b94a48; }
+
     .section-purpose {
       display: flex;
       align-items: center;
@@ -520,6 +570,11 @@
     }
     .analytics-title { margin: 0; font-size: 14px; font-weight: 800; }
     .analytics-caption { margin: 5px 0 0; color: #999; font-size: 10px; line-height: 1.5; }
+    .analytics-heading-main { display: flex; width: 100%; align-items: flex-start; justify-content: space-between; gap: 16px; }
+    .chart-summary { display: flex; gap: 9px; }
+    .chart-summary-item { min-width: 90px; padding: 8px 11px; border: 1px solid #f3eee9; border-radius: 11px; background: #fffaf6; }
+    .chart-summary-item span { display: block; color: #999; font-size: 9px; }
+    .chart-summary-item strong { display: block; margin-top: 3px; color: #35302c; font-size: 12px; }
     .realtime-badge {
       display: inline-flex;
       flex: 0 0 auto;
@@ -540,10 +595,14 @@
     .revenue-chart { display: block; width: 100%; height: auto; overflow: visible; }
     .revenue-chart[hidden], .donut-chart[hidden], .donut-legend[hidden] { display: none; }
     .revenue-chart text { fill: #999; font-family: inherit; font-size: 10px; }
-    .revenue-chart .chart-grid { stroke: #f0f0f0; stroke-width: 1; }
+    .revenue-chart .chart-grid { stroke: #f0f0f0; stroke-width: 1; stroke-dasharray: 4 5; }
+    .revenue-chart .chart-axis { stroke: #e8e4e0; stroke-width: 1; }
     .revenue-chart .chart-area { fill: url(#sales-area-gradient); }
-    .revenue-chart .chart-line { fill: none; stroke: var(--orange); stroke-linecap: round; stroke-linejoin: round; stroke-width: 3; }
-    .revenue-chart .chart-point { fill: #fff; stroke: var(--orange); stroke-width: 2.5; }
+    .revenue-chart .chart-line { fill: none; stroke: url(#sales-line-gradient); stroke-linecap: round; stroke-linejoin: round; stroke-width: 3.5; }
+    .revenue-chart .chart-point-halo { fill: #fff2e8; }
+    .revenue-chart .chart-point { fill: #fff; stroke: #f97316; stroke-width: 2.5; transition: r .15s ease; }
+    .revenue-chart .chart-point-group:hover .chart-point { r: 6; }
+    .revenue-chart .chart-guide { stroke: #fed7aa; stroke-width: 1; stroke-dasharray: 3 4; }
     .donut-content { display: flex; align-items: center; gap: 19px; min-height: 190px; }
     .donut-chart {
       position: relative;
@@ -575,6 +634,23 @@
     .legend-value { color: #555; font-size: 9px; font-weight: 750; white-space: nowrap; }
     .chart-empty { display: grid; min-height: 180px; place-items: center; color: #999; font-size: 11px; text-align: center; }
     .chart-empty[hidden] { display: none; }
+    #reviews-section[hidden] { display: none; }
+    .reviews-panel { overflow: hidden; border: 1px solid #eee; border-radius: 17px; background: #fff; box-shadow: var(--shadow); }
+    .reviews-panel-heading { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 21px 23px; border-bottom: 1px solid #f1f1f1; }
+    .reviews-panel-heading h2 { margin: 0; font-size: 16px; }
+    .reviews-panel-heading p { margin: 5px 0 0; color: #999; font-size: 11px; }
+    .reviews-count { padding: 7px 10px; border-radius: 20px; background: #fff4e8; color: #c65a0a; font-size: 10px; font-weight: 750; white-space: nowrap; }
+    .reviews-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; padding: 16px; }
+    .review-card { min-width: 0; padding: 17px; border: 1px solid #f0ece8; border-radius: 14px; background: linear-gradient(145deg, #fff, #fffaf6); }
+    .review-card-top, .review-card-meta { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+    .review-customer { min-width: 0; }
+    .review-customer strong { display: block; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .review-customer span, .review-card-meta { color: #999; font-size: 10px; }
+    .review-target { flex: 0 0 auto; padding: 5px 8px; border-radius: 20px; background: #eef7f2; color: #16835d; font-size: 9px; font-weight: 750; }
+    .review-stars { margin-top: 12px; color: #f4a723; font-size: 16px; letter-spacing: 2px; }
+    .review-comment { min-height: 38px; margin: 7px 0 12px; color: #4b4540; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere; white-space: pre-wrap; }
+    .review-card-meta { padding-top: 10px; border-top: 1px solid #f1ece7; }
+    .reviews-empty { grid-column: 1 / -1; padding: 42px 18px; color: #999; font-size: 12px; text-align: center; }
     .chart-live-note { margin: 9px 0 0; color: #999; font-size: 9px; line-height: 1.5; }
 
     @keyframes dashboard-enter {
@@ -611,6 +687,8 @@
       .page-heading { min-height: 150px; }
       .analytics-grid { grid-template-columns: 1fr; }
       .donut-content { justify-content: flex-start; }
+      .chat-inbox { grid-template-columns: minmax(180px, .8fr) minmax(0, 1.6fr); }
+      .reviews-list { grid-template-columns: 1fr; }
     }
     @media (max-width: 560px) {
       .topbar { gap: 10px; padding: 10px 14px; }
@@ -643,6 +721,15 @@
       .donut-chart { width: 118px; height: 118px; }
       .donut-chart::before { width: 76px; height: 76px; }
       .donut-legend { gap: 8px; }
+      .chat-inbox { min-height: 0; grid-template-columns: 1fr; max-height: none; }
+      .chat-conversation-list { max-height: 220px; }
+      .chat-thread { min-height: 440px; }
+      .chat-thread-heading { flex-direction: column; }
+      #chat-assistant-status { text-align: left; }
+      .admin-chat-message { max-width: 90%; }
+      .analytics-heading-main { flex-direction: column; }
+      .chart-summary { width: 100%; }
+      .chart-summary-item { flex: 1; }
     }
     @media (max-width: 400px) {
       .page-heading { flex-direction: column; gap: 12px; }
@@ -689,6 +776,12 @@
         </button>
         <button class="nav-item" type="button" data-section="users">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M3 20v-1.5A4.5 4.5 0 0 1 7.5 14h3a4.5 4.5 0 0 1 4.5 4.5V20M16 5a3.5 3.5 0 0 1 0 6.8M18 14a4.5 4.5 0 0 1 3 4.2V20"/></svg>Người dùng
+        </button>
+        <button class="nav-item" type="button" data-section="messages">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 9h8M8 13h5"/></svg>Tin nhắn khách hàng
+        </button>
+        <button class="nav-item" type="button" data-section="reviews">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>Đánh giá khách hàng
         </button>
       </nav>
       <div class="sidebar-bottom">
@@ -770,13 +863,19 @@
         <section class="analytics-grid" id="sales-analytics" aria-label="Phân tích bán hàng 7 ngày gần nhất">
           <article class="analytics-card">
             <div class="analytics-heading">
-              <div>
-                <h2 class="analytics-title">Doanh thu 7 ngày gần nhất</h2>
-                <p class="analytics-caption">Tổng giá trị đơn hàng chưa bị hủy theo từng ngày</p>
+              <div class="analytics-heading-main">
+                <div>
+                  <h2 class="analytics-title">Doanh thu 7 ngày gần nhất</h2>
+                  <p class="analytics-caption">Tổng giá trị đơn hàng chưa bị hủy theo từng ngày</p>
+                </div>
+                <div class="chart-summary" aria-label="Tổng quan doanh thu">
+                  <div class="chart-summary-item"><span>Tổng doanh thu</span><strong id="chart-total-revenue">0 đ</strong></div>
+                  <div class="chart-summary-item"><span>Tổng đơn hàng</span><strong id="chart-total-orders">0</strong></div>
+                </div>
               </div>
               <span class="realtime-badge" id="realtime-status" role="status">Đang kết nối</span>
             </div>
-            <svg class="revenue-chart" id="revenue-chart" viewBox="0 0 640 230" role="img" aria-labelledby="revenue-chart-title revenue-chart-description"></svg>
+            <svg class="revenue-chart" id="revenue-chart" viewBox="0 0 760 270" role="img" aria-labelledby="revenue-chart-title revenue-chart-description"></svg>
             <div class="chart-empty" id="revenue-empty" hidden>Chưa có đơn hàng trong 7 ngày gần nhất.</div>
             <p class="chart-live-note" id="chart-live-note">Biểu đồ tự cập nhật khi khách đặt hàng thành công hoặc trạng thái đơn thay đổi.</p>
           </article>
@@ -816,6 +915,33 @@
             <nav class="pagination" id="pagination" aria-label="Phân trang"></nav>
           </div>
         </section>
+        <section class="chat-inbox" id="chat-inbox" aria-label="Hộp thư tin nhắn khách hàng" hidden>
+          <aside class="chat-inbox-panel">
+            <div class="chat-inbox-heading"><h2>Khách hàng</h2><p>Các cuộc trò chuyện gần đây</p></div>
+            <div class="chat-conversation-list" id="chat-conversation-list" aria-live="polite"></div>
+          </aside>
+          <section class="chat-inbox-panel chat-thread" aria-label="Nội dung cuộc trò chuyện">
+            <header class="chat-thread-heading">
+              <div><h2 id="chat-thread-title">Chọn một khách hàng</h2><p>Hỗ trợ khách hàng trực tiếp</p></div>
+              <p id="chat-assistant-status">Trợ lý AI sẽ tự trả lời tin nhắn mới của khách.</p>
+            </header>
+            <div class="admin-chat-messages" id="admin-chat-messages" aria-live="polite"></div>
+            <form class="admin-chat-form" id="admin-chat-form">
+              <input name="message" maxlength="1000" placeholder="Nhập tin nhắn..." autocomplete="off" required>
+              <button type="submit">Gửi</button>
+            </form>
+            <p id="admin-chat-feedback" role="status"></p>
+          </section>
+          <section class="reviews-panel" id="reviews-section" aria-label="Đánh giá khách hàng" hidden>
+            <header class="reviews-panel-heading">
+              <div><h2>Nhận xét &amp; đánh giá gần đây</h2><p>Đánh giá từ khách sau khi hoàn thành đơn hàng</p></div>
+              <span class="reviews-count" id="reviews-count">0 đánh giá</span>
+            </header>
+            <div class="reviews-list" id="reviews-list" aria-live="polite">
+              <p class="reviews-empty">Đang tải đánh giá...</p>
+            </div>
+          </section>
+        </section>
       </div>
     </main>
   </div>
@@ -837,6 +963,7 @@
 
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/realtime.js"></script>
+  <script src="/js/admin-chat.js"></script>
   <script>
     (async () => {
       if (window.location.protocol === 'file:') {
@@ -902,8 +1029,35 @@
       }
 
       const liveSocket = await window.initFastfoodRealtime(authenticatedUser);
+      let reviewsUiReady = false;
+      const pendingReviewEvents = new Map();
+      let renderedReviews = [];
+      let reviewsLoaded = false;
+      let reviewsRequestId = 0;
+      liveSocket?.on('review:new', (review) => {
+        const target = review.target === 'driver' ? 'tài xế' : 'quán ăn';
+        showToast(`Đánh giá mới từ ${review.customerName || 'khách hàng'} cho ${target}: ${review.rating}/5 sao.`);
+        const key = `${review.orderCode}:${review.target}`;
+        pendingReviewEvents.set(key, review);
+        if (reviewsUiReady) {
+          if (reviewsLoaded) {
+            renderedReviews = mergeReviews(renderedReviews, [review]);
+            renderOrderReviews(renderedReviews);
+          }
+          loadOrderReviews();
+        }
+      });
+      const adminApiUrl = window.location.port === '5000'
+        ? `${window.location.origin}/api/v1`
+        : 'http://localhost:5000/api/v1';
+      window.adminChatInbox = window.initAdminChatInbox({
+        socket: liveSocket,
+        token,
+        apiUrl: adminApiUrl,
+      });
       let dashboardReady = false;
       const pendingOrderEvents = [];
+      const pendingPaymentEvents = [];
       const realtimeStatus = document.getElementById('realtime-status');
       function setRealtimeStatus(connected) {
         realtimeStatus.textContent = connected ? 'Đang trực tuyến' : 'Mất kết nối';
@@ -930,6 +1084,13 @@
             return;
           }
           handleOrderUpdate(update);
+        });
+        liveSocket.on('payment:updated', (update) => {
+          if (!dashboardReady) {
+            pendingPaymentEvents.push(update);
+            return;
+          }
+          handlePaymentUpdate(update);
         });
       } else {
         setRealtimeStatus(false);
@@ -1015,7 +1176,7 @@
         },
         orders: {
           singular: 'đơn hàng', statusOptions: ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Đã giao', 'Đã hủy'],
-          columns: [{ key: 'orderNo', label: 'Mã đơn hàng' }, { key: 'customer', label: 'Khách hàng' }, { key: 'restaurant', label: 'Nhà hàng' }, { key: 'total', label: 'Tổng tiền' }, { key: 'date', label: 'Ngày đặt' }, { key: 'status', label: 'Trạng thái' }],
+          columns: [{ key: 'orderNo', label: 'Mã đơn hàng' }, { key: 'customer', label: 'Khách hàng' }, { key: 'restaurant', label: 'Nhà hàng' }, { key: 'total', label: 'Tổng tiền' }, { key: 'paymentLabel', label: 'Thanh toán' }, { key: 'date', label: 'Ngày đặt' }, { key: 'status', label: 'Trạng thái' }],
           fields: [{ key: 'status', label: 'Trạng thái', type: 'status' }],
         },
         users: {
@@ -1120,6 +1281,12 @@
       const tableHead = document.getElementById('table-head');
       const tableBody = document.getElementById('table-body');
       const filterSelect = document.getElementById('status-filter');
+      const chatInbox = document.getElementById('chat-inbox');
+      const tablePanel = document.getElementById('table-title').closest('.table-panel');
+      const reviewsSection = document.getElementById('reviews-section');
+      const reviewsList = document.getElementById('reviews-list');
+      const reviewsCount = document.getElementById('reviews-count');
+      reviewsUiReady = true;
       const dialog = document.getElementById('record-dialog');
       const form = document.getElementById('record-form');
 
@@ -1136,6 +1303,101 @@
         toast.textContent = message;
         container.appendChild(toast);
         window.setTimeout(() => toast.remove(), 3400);
+      }
+
+      async function loadOrderReviews() {
+        const requestId = ++reviewsRequestId;
+        if (!reviewsLoaded) reviewsList.innerHTML = '<p class="reviews-empty">Đang tải đánh giá...</p>';
+        try {
+          const response = await fetch(`${adminApiUrl}/realtime/orders/reviews`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          });
+          const result = await response.json();
+          if (!response.ok || !result.success || !Array.isArray(result.data)) {
+            throw new Error(result.message || 'Không thể tải đánh giá khách hàng.');
+          }
+          if (requestId !== reviewsRequestId) return;
+          renderedReviews = mergeReviews(result.data, [...pendingReviewEvents.values()]);
+          pendingReviewEvents.clear();
+          reviewsLoaded = true;
+          renderOrderReviews(renderedReviews);
+        } catch (error) {
+          if (requestId !== reviewsRequestId) return;
+          const pendingReviews = [...pendingReviewEvents.values()];
+          if (reviewsLoaded || pendingReviews.length) {
+            renderedReviews = mergeReviews(renderedReviews, pendingReviews);
+            pendingReviewEvents.clear();
+            reviewsLoaded = true;
+            renderOrderReviews(renderedReviews);
+            showToast('Không thể làm mới danh sách đánh giá; các đánh giá realtime vẫn được giữ lại.', true);
+          } else {
+            reviewsList.innerHTML = '';
+            const message = document.createElement('p');
+            message.className = 'reviews-empty';
+            message.textContent = error.message || 'Không thể tải đánh giá khách hàng.';
+            reviewsList.appendChild(message);
+            showToast(message.textContent, true);
+          }
+        }
+      }
+
+      function mergeReviews(...groups) {
+        const byOrderAndTarget = new Map();
+        groups.flat().forEach((review) => {
+          if (review?.orderCode && ['driver', 'restaurant'].includes(review.target)) {
+            byOrderAndTarget.set(`${review.orderCode}:${review.target}`, review);
+          }
+        });
+        return [...byOrderAndTarget.values()].sort((first, second) => (
+          new Date(second.submittedAt || 0).getTime() - new Date(first.submittedAt || 0).getTime()
+        ));
+      }
+
+      function renderOrderReviews(reviews) {
+        renderedReviews = reviews;
+        reviewsCount.textContent = `${reviews.length} đánh giá`;
+        reviewsList.replaceChildren();
+        if (!reviews.length) {
+          const empty = document.createElement('p');
+          empty.className = 'reviews-empty';
+          empty.textContent = 'Chưa có đánh giá nào từ khách hàng.';
+          reviewsList.appendChild(empty);
+          return;
+        }
+
+        reviews.forEach((review) => {
+          const card = document.createElement('article');
+          card.className = 'review-card';
+          const top = document.createElement('div');
+          top.className = 'review-card-top';
+          const customer = document.createElement('div');
+          customer.className = 'review-customer';
+          const name = document.createElement('strong');
+          name.textContent = review.customerName || 'Khách hàng';
+          const order = document.createElement('span');
+          order.textContent = `Đơn ${review.orderCode || ''}`;
+          customer.append(name, order);
+          const target = document.createElement('span');
+          target.className = 'review-target';
+          target.textContent = review.target === 'driver' ? 'Tài xế' : `Quán · ${review.restaurantName || ''}`;
+          top.append(customer, target);
+
+          const stars = document.createElement('div');
+          stars.className = 'review-stars';
+          stars.setAttribute('aria-label', `${review.rating} trên 5 sao`);
+          stars.textContent = `${'★'.repeat(Math.max(0, Math.min(5, Number(review.rating) || 0)))}${'☆'.repeat(5 - Math.max(0, Math.min(5, Number(review.rating) || 0)))}`;
+          const comment = document.createElement('p');
+          comment.className = 'review-comment';
+          comment.textContent = review.comment || 'Khách hàng không để lại nhận xét.';
+          const meta = document.createElement('div');
+          meta.className = 'review-card-meta';
+          const submittedAt = new Date(review.submittedAt || '');
+          meta.textContent = Number.isNaN(submittedAt.getTime())
+            ? ''
+            : submittedAt.toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
+          card.append(top, stars, comment, meta);
+          reviewsList.appendChild(card);
+        });
       }
 
       function toOrderRecord(order) {
@@ -1155,6 +1417,11 @@
           customer: order.recipient?.name || 'Khách hàng',
           restaurant: order.restaurantName || 'FASTFOOD Partner',
           total: Number(order.total) || 0,
+          paymentMethod: String(order.paymentMethod || '').toLowerCase(),
+          paymentStatus: String(order.paymentStatus || 'pending').toLowerCase(),
+          paymentLabel: order.paymentStatus === 'completed' ? 'Đã thanh toán'
+            : String(order.paymentMethod || '').toLowerCase() === 'momo' ? 'Chờ MoMo'
+              : String(order.paymentMethod || '').toLowerCase() === 'banking' ? 'Chờ QR' : 'COD',
           date: vietnamDate || String(order.createdAt || '').slice(0, 10),
           status: statusText || 'Chờ xác nhận',
         };
@@ -1335,29 +1602,35 @@
         chart.hidden = !hasRecentOrders;
 
         if (hasRecentOrders) {
-          const chartTop = 20;
-          const chartBottom = 174;
-          const chartLeft = 64;
-          const chartRight = 622;
-          const maxRevenue = Math.max(1, ...dailySales.map((day) => day.revenue));
+          const chartTop = 24;
+          const chartBottom = 214;
+          const chartLeft = 72;
+          const chartRight = 742;
+          const maxRevenue = Math.max(100000, Math.ceil(Math.max(...dailySales.map((day) => day.revenue)) / 50000) * 50000);
           const points = dailySales.map((day, index) => ({
             ...day,
             x: chartLeft + index * (chartRight - chartLeft) / (dailySales.length - 1),
             y: chartBottom - day.revenue / maxRevenue * (chartBottom - chartTop),
           }));
-          const linePath = points.map((point, index) => `${index ? 'L' : 'M'}${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' ');
+          const linePath = points.slice(1).reduce((path, point, index) => {
+            const previous = points[index];
+            const middleX = (previous.x + point.x) / 2;
+            return `${path} C${middleX.toFixed(1)},${previous.y.toFixed(1)} ${middleX.toFixed(1)},${point.y.toFixed(1)} ${point.x.toFixed(1)},${point.y.toFixed(1)}`;
+          }, `M${points[0].x.toFixed(1)},${points[0].y.toFixed(1)}`);
           const areaPath = `${linePath} L${chartRight},${chartBottom} L${chartLeft},${chartBottom} Z`;
-          const grid = Array.from({ length: 4 }, (_, index) => {
-            const y = chartTop + index * (chartBottom - chartTop) / 3;
-            const value = maxRevenue * (3 - index) / 3;
-            return `<line class="chart-grid" x1="${chartLeft}" y1="${y.toFixed(1)}" x2="${chartRight}" y2="${y.toFixed(1)}"></line><text x="0" y="${(y + 3).toFixed(1)}">${escapeHtml(compactMoney(value))}</text>`;
+          const grid = Array.from({ length: 5 }, (_, index) => {
+            const y = chartTop + index * (chartBottom - chartTop) / 4;
+            const value = maxRevenue * (4 - index) / 4;
+            return `<line class="chart-grid" x1="${chartLeft}" y1="${y.toFixed(1)}" x2="${chartRight}" y2="${y.toFixed(1)}"></line><text x="${chartLeft - 12}" y="${(y + 3).toFixed(1)}" text-anchor="end">${escapeHtml(compactMoney(value))}</text>`;
           }).join('');
-          const labels = points.map((point) => `<text x="${point.x.toFixed(1)}" y="202" text-anchor="middle">${escapeHtml(point.label)}</text>`).join('');
-          const markers = points.map((point) => (
-            `<circle class="chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="4"><title>${escapeHtml(point.label)}: ${escapeHtml(money(point.revenue))} · ${point.orders} đơn</title></circle>`
+          const labels = points.map((point) => `<text x="${point.x.toFixed(1)}" y="246" text-anchor="middle">${escapeHtml(point.label)}</text>`).join('');
+          const markers = points.map((point, index) => (
+            `<g class="chart-point-group"><line class="chart-guide" x1="${point.x.toFixed(1)}" y1="${chartTop}" x2="${point.x.toFixed(1)}" y2="${chartBottom}"></line><circle class="chart-point-halo" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${index === points.length - 1 ? 9 : 7}"></circle><circle class="chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${index === points.length - 1 ? 4.5 : 3.5}"><title>${escapeHtml(point.label)}: ${escapeHtml(money(point.revenue))} · ${point.orders} đơn</title></circle></g>`
           )).join('');
-          chart.innerHTML = `<title id="revenue-chart-title">Doanh thu từng ngày trong 7 ngày gần nhất</title><desc id="revenue-chart-description">Biểu đồ đường doanh thu, tổng ${escapeHtml(money(dailySales.reduce((sum, day) => sum + day.revenue, 0)))} từ ${dailySales.reduce((sum, day) => sum + day.orders, 0)} đơn không bị hủy.</desc><defs><linearGradient id="sales-area-gradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#f97316" stop-opacity=".2"></stop><stop offset="100%" stop-color="#f97316" stop-opacity=".015"></stop></linearGradient></defs>${grid}<path class="chart-area" d="${areaPath}"></path><path class="chart-line" d="${linePath}"></path>${markers}${labels}`;
+          chart.innerHTML = `<title id="revenue-chart-title">Doanh thu từng ngày trong 7 ngày gần nhất</title><desc id="revenue-chart-description">Biểu đồ đường doanh thu, tổng ${escapeHtml(money(dailySales.reduce((sum, day) => sum + day.revenue, 0)))} từ ${dailySales.reduce((sum, day) => sum + day.orders, 0)} đơn không bị hủy.</desc><defs><linearGradient id="sales-area-gradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#f97316" stop-opacity=".19"></stop><stop offset="100%" stop-color="#f97316" stop-opacity=".01"></stop></linearGradient><linearGradient id="sales-line-gradient" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#fb923c"></stop><stop offset="100%" stop-color="#ea580c"></stop></linearGradient></defs>${grid}<line class="chart-axis" x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}"></line><path class="chart-area" d="${areaPath}"></path><path class="chart-line" d="${linePath}"></path>${markers}${labels}`;
         }
+        document.getElementById('chart-total-revenue').textContent = compactMoney(dailySales.reduce((sum, day) => sum + day.revenue, 0));
+        document.getElementById('chart-total-orders').textContent = new Intl.NumberFormat('vi-VN').format(dailySales.reduce((sum, day) => sum + day.orders, 0));
 
         const productTotals = new Map();
         salesOrders.forEach((order) => {
@@ -1516,6 +1789,31 @@
 
       function renderSection() {
         const section = sections[activeSection];
+        const addButton = document.getElementById('add-button');
+        if (activeSection === 'messages' || activeSection === 'reviews') {
+          const isMessages = activeSection === 'messages';
+          const sectionTitle = isMessages ? 'Tin nhắn khách hàng' : 'Đánh giá khách hàng';
+          document.getElementById('breadcrumb').textContent = sectionTitle;
+          document.getElementById('page-title').textContent = sectionTitle;
+          document.getElementById('page-description').textContent = isMessages
+            ? 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.'
+            : 'Nhận thông báo tức thì và theo dõi nhận xét của khách sau khi hoàn thành đơn.';
+          addButton.hidden = true;
+          addButton.style.display = 'none';
+          document.getElementById('dashboard-stats').hidden = true;
+          document.getElementById('section-purpose').hidden = true;
+          document.getElementById('sales-analytics').hidden = true;
+          tablePanel.hidden = true;
+          chatInbox.hidden = !isMessages;
+          reviewsSection.hidden = isMessages;
+          window.adminChatInbox?.setActive(isMessages);
+          if (!isMessages) loadOrderReviews();
+          return;
+        }
+        chatInbox.hidden = true;
+        reviewsSection.hidden = true;
+        tablePanel.hidden = false;
+        window.adminChatInbox?.setActive(false);
         const collection = section.collection;
         document.getElementById('breadcrumb').textContent = section.title;
         document.getElementById('page-title').textContent = section.title;
@@ -1523,7 +1821,6 @@
         document.getElementById('table-title').textContent = section.tableTitle;
         document.getElementById('table-subtitle').textContent = section.subtitle;
         document.querySelector('#add-button span').textContent = `Thêm ${schemas[collection].singular}`;
-        const addButton = document.getElementById('add-button');
         addButton.hidden = collection === 'orders';
         addButton.style.display = collection === 'orders' ? 'none' : '';
         document.getElementById('dashboard-stats').hidden = activeSection !== 'dashboard';
@@ -1695,12 +1992,13 @@
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
+        if (activeSection === 'messages' || activeSection === 'reviews') return;
         searchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
         currentPage = 1;
         renderTable();
       });
       document.getElementById('search-input').addEventListener('input', (event) => {
-        if (!event.target.value) {
+        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'reviews') {
           searchTerm = '';
           currentPage = 1;
           renderTable();
@@ -1868,6 +2166,7 @@
         if (event.type === 'new') handleNewOrder(event.order);
         else handleOrderUpdate(event.update);
       });
+      pendingPaymentEvents.forEach(handlePaymentUpdate);
     })();
   </script>
 </body>

@@ -16,6 +16,15 @@ router.get('/orders/shipping-policy', authenticate, authorize('customer'), (req,
 router.patch('/orders/:orderCode/cancel', authenticate, authorize('customer'), (req, res, next) => (
   realtimeController.cancelOrder(req, res, next)
 ));
+router.post('/orders/:orderCode/reviews/:target', authenticate, authorize('customer'), (req, res, next) => (
+  realtimeController.submitOrderReview(req, res, next)
+));
+router.get('/orders/reviews', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.getOrderReviews(req, res, next)
+));
+router.get('/chat/conversations', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.getChatConversations(req, res, next)
+));
 router.get('/chat/:customerId', authenticate, authorize('admin', 'customer'), (req, res, next) => (
   realtimeController.getChatHistory(req, res, next)
 ));

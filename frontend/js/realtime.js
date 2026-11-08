@@ -22,15 +22,15 @@ function appendChatMessage(container, message, currentUser) {
   if (message.id && [...container.querySelectorAll('[data-message-id]')]
     .some((element) => element.dataset.messageId === String(message.id))) return;
   const row = document.createElement('div');
-  row.className = `live-chat-message${String(message.senderId) === String(currentUser?.id) ? ' mine' : ''}`;
+  row.className = `live-chat-message${String(message.senderId) === String(currentUser?.id) ? ' mine' : ''}${message.senderRole === 'ai' ? ' assistant' : ''}`;
   if (message.id) row.dataset.messageId = String(message.id);
-  row.textContent = message.message;
+  row.textContent = message.senderRole === 'ai' ? `🤖 Trợ lý AI: ${message.message}` : message.message;
   container.appendChild(row);
   container.scrollTop = container.scrollHeight;
 }
 
 function mountLiveChat(user, socket) {
-  if (!user || document.getElementById('live-chat-launcher')) return;
+  if (!user || user.role === 'admin' || document.getElementById('live-chat-launcher')) return;
 
   const isAdmin = user.role === 'admin';
   const launcher = document.createElement('button');
@@ -79,12 +79,16 @@ function mountLiveChat(user, socket) {
 
   launcher.addEventListener('click', () => {
     panel.classList.toggle('open');
+    launcher.hidden = panel.classList.contains('open');
     if (!panel.classList.contains('open')) return;
     const customerId = isAdmin ? targetInput.value.trim() : String(user.id);
     loadHistory(customerId);
     panel.querySelector('input[name="message"]').focus();
   });
-  panel.querySelector('.live-chat-header button').addEventListener('click', () => panel.classList.remove('open'));
+  panel.querySelector('.live-chat-header button').addEventListener('click', () => {
+    panel.classList.remove('open');
+    launcher.hidden = false;
+  });
   targetInput?.addEventListener('change', () => {
     historyCustomerId = '';
     loadHistory(targetInput.value.trim());
@@ -141,18 +145,20 @@ function mountLiveChat(user, socket) {
   const style = document.createElement('style');
   style.textContent = `
     #live-chat-launcher{position:fixed;right:22px;bottom:22px;z-index:1100;padding:12px 18px;border:0;border-radius:28px;background:#f28a24;color:#fff;font:600 14px Arial,sans-serif;box-shadow:0 6px 24px #0003;cursor:pointer}
-    #live-chat-panel{display:none;position:fixed;right:22px;bottom:78px;z-index:1101;width:min(360px,calc(100vw - 32px));height:430px;max-height:70vh;background:#fff;border:1px solid #eee;border-radius:16px;box-shadow:0 12px 40px #0003;overflow:hidden}
+    #live-chat-panel{display:none;position:fixed;right:18px;bottom:15px;z-index:1101;width:min(494px,calc(100vw - 32px));height:590px;max-height:calc(100vh - 92px);background:#fff;border:1px solid #eee;border-radius:20px;box-shadow:0 12px 40px #0003;overflow:hidden}
     #live-chat-panel.open{display:flex;flex-direction:column}
-    .live-chat-header{display:flex;justify-content:space-between;align-items:center;padding:14px 16px;background:#f28a24;color:#fff}
+    .live-chat-header{display:flex;justify-content:space-between;align-items:center;padding:22px;background:#f28a24;color:#fff;font-size:20px}
     .live-chat-header button{font-size:22px;color:#fff;cursor:pointer}
     .live-chat-customer{padding:10px 12px;font-size:12px}
     .live-chat-customer input{width:100%;margin-top:5px;padding:8px;border:1px solid #ddd;border-radius:8px}
     .live-chat-messages{flex:1;overflow:auto;padding:12px;background:#fafafa}
-    .live-chat-message{width:fit-content;max-width:85%;margin:0 0 8px;padding:9px 12px;border-radius:12px;background:#eee;overflow-wrap:anywhere;white-space:pre-wrap}
+    .live-chat-message{width:fit-content;max-width:85%;margin:0 0 8px;padding:10px 13px;border-radius:12px;background:#eee;font-size:18px;overflow-wrap:anywhere;white-space:pre-wrap}
     .live-chat-message.mine{margin-left:auto;background:#fff0df}
-    .live-chat-form{display:flex;gap:8px;padding:10px;border-top:1px solid #eee}
-    .live-chat-form input{flex:1;min-width:0;padding:10px;border:1px solid #ddd;border-radius:8px}
-    .live-chat-form button{padding:0 14px;border-radius:8px;background:#f28a24;color:#fff;font-weight:700}
+    .live-chat-message.assistant{background:#fff}
+    .live-chat-form{display:flex;gap:10px;padding:14px;border-top:1px solid #eee}
+    .live-chat-form input{flex:1;min-width:0;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:18px}
+    .live-chat-form button{padding:0 17px;border-radius:10px;background:#f28a24;color:#fff;font-size:18px;font-weight:700}
+    @media(max-width:480px){#live-chat-panel{right:12px;bottom:12px;width:calc(100vw - 24px);height:min(590px,calc(100vh - 90px))}}
   `;
   document.head.appendChild(style);
 }
@@ -195,6 +201,9 @@ window.initFastfoodRealtime = function initFastfoodRealtime(user = null) {
       });
       socket.on('order:updated', (update) => {
         window.dispatchEvent(new CustomEvent('fastfood:order-updated', { detail: update }));
+      });
+      socket.on('payment:updated', (update) => {
+        window.dispatchEvent(new CustomEvent('fastfood:payment-updated', { detail: update }));
       });
       socket.on('realtime:error', (error) => {
         window.UIComponents?.showToast(error.message || 'Đã xảy ra lỗi realtime.', 'error');

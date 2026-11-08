@@ -38,6 +38,26 @@ document.addEventListener('DOMContentLoaded', () => {
       delivered: 'Đã giao',
       cancelled: 'Đã hủy',
     })[normalizeStatus(order.status)] || order.statusText || order.status || 'Đang xử lý';
+    const saveReviewedOrder = (reviewedOrder) => {
+      orders = orders.map(order => String(order.id) === String(reviewedOrder.id) ? reviewedOrder : order);
+      StorageManager.set(StorageManager.KEYS.ORDERS, orders);
+      renderHistory();
+      const activeOrder = StorageManager.getActiveOrder();
+      if (String(activeOrder?.id) === String(reviewedOrder.id)) {
+        if (getOrderGroup(reviewedOrder) === 'delivered') {
+          StorageManager.remove(StorageManager.KEYS.ACTIVE_ORDER);
+        } else {
+          StorageManager.set(StorageManager.KEYS.ACTIVE_ORDER, reviewedOrder);
+        }
+      }
+    };
+    const promptForReview = (preferredOrder) => {
+      const order = preferredOrder || orders.find(item => getOrderGroup(item) === 'delivered'
+        && (!item.driverReview || !item.restaurantReview));
+      if (order && getOrderGroup(order) === 'delivered') {
+        window.OrderReviewFlow?.start(order, { apiUrl, token: authToken, onSaved: saveReviewedOrder });
+      }
+    };
     const renderHistory = () => {
       const counts = {
         active: orders.filter(order => getOrderGroup(order) === 'active').length,
@@ -50,6 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
         ['delivered', 'Đã giao thành công'],
         ['cancelled', 'Đã hủy'],
       ].filter(([key]) => key !== 'cancelled' || counts.cancelled > 0);
+      const renderReview = (label, review) => {
+        if (!review) return '';
+        const rating = Math.max(0, Math.min(5, Math.floor(Number(review.rating) || 0)));
+        const stars = `${'★'.repeat(rating)}${'☆'.repeat(5 - rating)}`;
+        return `
+          <div style="font-size:0.85rem; color:var(--text-secondary); margin-top:0.35rem;">
+            <strong>${label}:</strong> <span style="color:#f5a623;">${stars}</span>
+            ${review.comment ? `<span> ${escapeHtml(review.comment)}</span>` : ''}
+          </div>
+        `;
+      };
 
       historyContainer.innerHTML = `
         <div class="order-history-tabs" role="tablist" aria-label="Lọc đơn hàng">
@@ -63,33 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ${visibleOrders.length ? visibleOrders.map(order => {
           const group = getOrderGroup(order);
           const status = getStatusText(order);
-          const savedRating = order.rating;
           const orderId = escapeHtml(order.id);
           const items = Array.isArray(order.items) ? order.items : [];
-          const ratingSection = group !== 'delivered' ? '' : savedRating?.submittedAt
-            ? `
-              <div class="order-rating">
-                <h5>⭐ Đánh giá của bạn</h5>
-                <p class="rating-summary">Quán: <strong>${'★'.repeat(savedRating.restaurant || 0)}</strong>
-                  · ${items.map((item, index) => `${escapeHtml(item.name)}: <strong>${'★'.repeat(savedRating.items?.[index] || 0)}</strong>`).join(' · ')}</p>
-              </div>
-            `
-            : `
-              <form class="order-rating" data-rating-form="${orderId}">
-                <h5>⭐ Đơn đã giao! Hãy đánh giá món ăn và quán nhé</h5>
-                <div class="rating-row">
-                  <span class="rating-label">Quán ${escapeHtml(order.restaurantName)}</span>
-                  ${renderRatingStars(order.id, 'restaurant', 0)}
-                </div>
-                ${items.map((item, index) => `
-                  <div class="rating-row">
-                    <span class="rating-label">${escapeHtml(item.name)}</span>
-                    ${renderRatingStars(order.id, 'item', index)}
-                  </div>
-                `).join('')}
-                <button type="submit" class="btn btn-primary btn-sm">Gửi đánh giá</button>
-              </form>
-            `;
+          const paymentMethod = String(order.paymentMethod || '').toLowerCase();
+          const paymentStatus = String(order.paymentStatus || 'pending').toLowerCase();
+          const paymentLabel = paymentMethod === 'momo' ? 'MoMo'
+            : paymentMethod === 'banking' ? 'QR ngân hàng' : 'COD';
+          const paymentStatusLabel = paymentStatus === 'completed' ? 'Đã thanh toán'
+            : paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chờ thanh toán';
 
           return `
             <article class="card" style="margin-bottom:1.5rem;">
@@ -116,12 +128,20 @@ document.addEventListener('DOMContentLoaded', () => {
                   </div>
                 `).join('')}
               </div>
-              ${ratingSection}
+              <p style="font-size:0.85rem; color:var(--text-muted);">Thanh toán: ${paymentLabel} · ${paymentStatusLabel}</p>
+              ${group === 'delivered' ? `
+                <div aria-label="Đánh giá đơn hàng" style="border-top:1px dashed var(--border-color); padding-top:0.75rem; margin-top:0.75rem;">
+                  ${renderReview('Tài xế', order.driverReview) || '<div style="font-size:0.85rem; color:var(--text-muted);">Tài xế: Chưa đánh giá</div>'}
+                  ${renderReview('Quán ăn', order.restaurantReview) || '<div style="font-size:0.85rem; color:var(--text-muted); margin-top:0.35rem;">Quán ăn: Chưa đánh giá</div>'}
+                </div>
+              ` : ''}
               <div style="display:flex; justify-content:flex-end; flex-wrap:wrap; gap:0.75rem; border-top:1px dashed var(--border-color); padding-top:1rem; margin-top:1rem;">
-                ${group !== 'cancelled' ? `
+                ${group === 'active' ? `
                   <a href="./order-tracking.html?id=${encodeURIComponent(order.id)}" class="btn btn-outline btn-sm">
                     🚚 Theo Dõi Đơn Hàng
                   </a>
+                ` : ''}
+                ${group !== 'cancelled' ? `
                   <button type="button" class="btn btn-primary btn-sm" data-reorder-id="${orderId}">
                     🔁 Đặt Lại Đơn Này
                   </button>
@@ -138,17 +158,6 @@ document.addEventListener('DOMContentLoaded', () => {
         `}
       `;
     };
-
-    const renderRatingStars = (orderId, target, itemIndex) => `
-      <div class="rating-stars" role="group" aria-label="Chọn số sao"
-        data-rating-order="${escapeHtml(orderId)}" data-rating-target="${target}"
-        ${target === 'item' ? `data-item-index="${itemIndex}"` : ''}>
-        ${[1, 2, 3, 4, 5].map(value => `
-          <button type="button" class="rating-star" aria-label="${value} sao" aria-pressed="false"
-            data-rating-value="${value}">★</button>
-        `).join('')}
-      </div>
-    `;
 
     historyContainer.innerHTML = `
       <div class="state-box">
@@ -175,44 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      const star = event.target.closest('[data-rating-value]');
-      if (!star) return;
-      const value = Number(star.dataset.ratingValue);
-      const group = star.closest('.rating-stars');
-      group.querySelectorAll('.rating-star').forEach(button => {
-        const selected = Number(button.dataset.ratingValue) <= value;
-        button.classList.toggle('is-selected', selected);
-        button.setAttribute('aria-pressed', String(Number(button.dataset.ratingValue) === value));
-      });
-    });
-
-    historyContainer.addEventListener('submit', (event) => {
-      const form = event.target.closest('[data-rating-form]');
-      if (!form) return;
-      event.preventDefault();
-
-      const restaurantRating = form.querySelector('.rating-stars[data-rating-target="restaurant"] .rating-star[aria-pressed="true"]');
-      const itemRatings = [...form.querySelectorAll('.rating-stars[data-rating-target="item"]')].map(group =>
-        group.querySelector('.rating-star[aria-pressed="true"]')
-      );
-      if (!restaurantRating || itemRatings.some(rating => !rating)) {
-        UIComponents.showToast('Vui lòng chấm sao cho quán và tất cả món ăn trước khi gửi.', 'warning');
-        return;
-      }
-
-      const order = orders.find(item => String(item.id) === form.dataset.ratingForm);
-      if (!order) {
-        UIComponents.showToast('Không tìm thấy đơn hàng để lưu đánh giá.', 'error');
-        return;
-      }
-      order.rating = {
-        restaurant: Number(restaurantRating.dataset.ratingValue),
-        items: itemRatings.map(rating => Number(rating.dataset.ratingValue)),
-        submittedAt: new Date().toISOString(),
-      };
-      StorageManager.set(StorageManager.KEYS.ORDERS, orders);
-      renderHistory();
-      UIComponents.showToast('Cảm ơn bạn đã đánh giá món ăn và quán!', 'success');
     });
 
     async function syncOrders() {
@@ -234,11 +205,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const activeOrder = StorageManager.getActiveOrder();
         const currentActiveOrder = orders.find(order => String(order.id) === String(activeOrder?.id));
         if (currentActiveOrder) {
-          StorageManager.set(StorageManager.KEYS.ACTIVE_ORDER, currentActiveOrder);
+          if (getOrderGroup(currentActiveOrder) === 'delivered') {
+            StorageManager.remove(StorageManager.KEYS.ACTIVE_ORDER);
+          } else {
+            StorageManager.set(StorageManager.KEYS.ACTIVE_ORDER, currentActiveOrder);
+          }
         } else if (activeOrder) {
           StorageManager.remove(StorageManager.KEYS.ACTIVE_ORDER);
         }
         renderHistory();
+        promptForReview();
       } catch (error) {
         historyContainer.innerHTML = `
           <div class="state-box">
@@ -302,6 +278,23 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       StorageManager.set(StorageManager.KEYS.ORDERS, orders);
       renderHistory();
+      if (getOrderGroup(orders[index]) === 'delivered') promptForReview(orders[index]);
+    });
+
+    window.addEventListener('fastfood:payment-updated', (event) => {
+      const update = event.detail;
+      if (!update?.orderCode) return;
+      const index = orders.findIndex(order => String(order.id).replace(/^#/, '') === String(update.orderCode));
+      if (index < 0) {
+        syncOrders();
+        return;
+      }
+      orders[index] = { ...orders[index], paymentStatus: update.paymentStatus };
+      StorageManager.set(StorageManager.KEYS.ORDERS, orders);
+      renderHistory();
+      UIComponents.showToast(update.paymentStatus === 'completed'
+        ? `Đã xác nhận thanh toán đơn ${update.orderCode}.`
+        : `Thanh toán đơn ${update.orderCode} chưa thành công.`, update.paymentStatus === 'completed' ? 'success' : 'warning');
     });
 
     if (authToken) syncOrders();

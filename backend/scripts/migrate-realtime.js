@@ -33,6 +33,19 @@ async function migrateRealtimeTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
     await connection.query(`
+      ALTER TABLE chat_messages
+        MODIFY sender_id BIGINT UNSIGNED NULL,
+        MODIFY sender_role ENUM('admin', 'customer', 'ai') NOT NULL
+    `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS chat_automation (
+        customer_id BIGINT UNSIGNED PRIMARY KEY,
+        paused_until TIMESTAMP NULL DEFAULT NULL,
+        CONSTRAINT fk_chat_automation_customer
+          FOREIGN KEY (customer_id) REFERENCES users (id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
+    await connection.query(`
       CREATE TABLE IF NOT EXISTS realtime_orders (
         id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
         order_code VARCHAR(30) NOT NULL UNIQUE,
@@ -46,8 +59,26 @@ async function migrateRealtimeTables() {
         INDEX idx_realtime_orders_status (status)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     `);
+    await connection.query(`
+      CREATE TABLE IF NOT EXISTS realtime_payments (
+        order_code VARCHAR(30) PRIMARY KEY,
+        payment_method ENUM('banking', 'momo') NOT NULL,
+        request_id VARCHAR(64) NOT NULL,
+        amount BIGINT UNSIGNED NOT NULL,
+        status ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+        provider_transaction_id VARCHAR(100) NULL UNIQUE,
+        payment_url TEXT NULL,
+        qr_url TEXT NULL,
+        paid_at TIMESTAMP NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        CONSTRAINT fk_realtime_payments_order
+          FOREIGN KEY (order_code) REFERENCES realtime_orders (order_code) ON DELETE CASCADE,
+        INDEX idx_realtime_payments_status (status)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    `);
 
-    console.log('Đã tạo/kiểm tra các bảng website_content, chat_messages và realtime_orders.');
+    console.log('Đã tạo/kiểm tra các bảng realtime và thanh toán.');
   } catch (error) {
     console.error('[Realtime migration failed]', error.message);
     process.exitCode = 1;

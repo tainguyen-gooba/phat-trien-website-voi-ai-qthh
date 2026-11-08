@@ -4,6 +4,9 @@ const path = require('path');
 // Load .env from backend root
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
+const momoEnvironment = process.env.MOMO_ENV
+  || (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox');
+
 const config = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT || '5000', 10),
@@ -29,7 +32,25 @@ const config = {
   cors: {
     origin: process.env.CORS_ORIGIN || '*',
   },
+
+  payments: {
+    publicUrl: process.env.PAYMENT_PUBLIC_URL || '',
+    momo: {
+      environment: momoEnvironment === 'production' ? 'production' : 'sandbox',
+      partnerCode: process.env.MOMO_PARTNER_CODE || '',
+      accessKey: process.env.MOMO_ACCESS_KEY || '',
+      secretKey: process.env.MOMO_SECRET_KEY || '',
+      endpoint: process.env.MOMO_API_URL || (momoEnvironment === 'production'
+        ? 'https://payment.momo.vn/v2/gateway/api/create'
+        : 'https://test-payment.momo.vn/v2/gateway/api/create'),
+    },
+    sepay: {
+      apiKey: process.env.SEPAY_API_KEY || '',
+      bankCode: process.env.SEPAY_BANK_CODE || '',
+      accountNumber: process.env.SEPAY_ACCOUNT_NUMBER || '',
+      accountName: process.env.SEPAY_ACCOUNT_NAME || '',
+    },
+  },
 };
 
 module.exports = config;
-

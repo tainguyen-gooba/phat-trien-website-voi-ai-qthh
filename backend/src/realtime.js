@@ -13,6 +13,30 @@ const ORDER_STATUSES = {
   'Đã hủy': 'cancelled',
 };
 
+function buildChatAssistantReply(message) {
+  const normalized = message.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').toLowerCase();
+
+  if (/\b(chao|xin chao|hello|hi|alo)\b/.test(normalized)) {
+    return 'Chào bạn! Mình là trợ lý FASTFOOD. Bạn cần hỗ trợ về thực đơn, đặt hàng, giao hàng hay khuyến mãi?';
+  }
+  if (/(don hang|order|theo doi|trang thai|ma don)/.test(normalized)) {
+    return 'Bạn có thể xem trạng thái đơn trong mục “Đơn hàng” sau khi đăng nhập. Nếu cần hỗ trợ thêm, hãy gửi mã đơn để nhân viên kiểm tra nhé.';
+  }
+  if (/(giao hang|phi ship|van chuyen|thoi gian giao)/.test(normalized)) {
+    return 'Phí và thời gian giao hàng phụ thuộc vào địa chỉ nhận và quán bạn chọn. Bạn hãy nhập địa chỉ khi đặt món để xem thông tin chính xác nhé.';
+  }
+  if (/(mon an|thuc don|menu|gia|san pham|mon nao)/.test(normalized)) {
+    return 'Bạn có thể xem thực đơn và giá món tại mục “Món ăn”. Hãy cho mình biết bạn đang tìm món hoặc quán nào để mình hướng dẫn cụ thể hơn nhé.';
+  }
+  if (/(khuyen mai|ma giam|voucher|giam gia)/.test(normalized)) {
+    return 'Các mã giảm giá hiện có sẽ được hiển thị ở bước thanh toán. Bạn nhớ kiểm tra điều kiện áp dụng và thời hạn của mã nhé.';
+  }
+  if (/(nhan vien|admin|nguoi that|gap nguoi)/.test(normalized)) {
+    return 'Mình đã ghi nhận yêu cầu. Nhân viên FASTFOOD sẽ tiếp tục hỗ trợ bạn trong cuộc trò chuyện này.';
+  }
+  return 'Mình đã nhận được tin nhắn. Bạn có thể cho mình biết thêm bạn cần hỗ trợ về món ăn, đơn hàng hay giao hàng không?';
+}
+
 function createRealtimeServer(httpServer) {
   const io = new Server(httpServer, {
     cors: {
@@ -92,6 +116,7 @@ function createRealtimeServer(httpServer) {
         return;
       }
 
+      let connection;
       try {
         if (user.role === 'admin') {
           const [customers] = await pool.execute(
@@ -106,11 +131,29 @@ function createRealtimeServer(httpServer) {
           }
         }
 
-        const [result] = await pool.execute(
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+        await connection.execute(
+          `INSERT IGNORE INTO chat_automation (customer_id) VALUES (?)`,
+          [customerId]
+        );
+        if (user.role === 'admin') {
+          await connection.execute(
+            `UPDATE chat_automation
+             SET paused_until = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE)
+             WHERE customer_id = ?`,
+            [customerId]
+          );
+        }
+        const [result] = await connection.execute(
           `INSERT INTO chat_messages (customer_id, sender_id, sender_role, message)
            VALUES (?, ?, ?, ?)`,
           [customerId, user.id, user.role, message]
         );
+        await connection.commit();
+        connection.release();
+        connection = null;
+
         const chatMessage = {
           id: result.insertId,
           customerId: String(customerId),
@@ -144,8 +187,66 @@ function createRealtimeServer(httpServer) {
           });
         }
 
+        if (user.role === 'customer') {
+          const scheduleAssistantReply = () => {
+            setTimeout(async () => {
+              let assistantConnection;
+              try {
+                assistantConnection = await pool.getConnection();
+                await assistantConnection.beginTransaction();
+                const [automationRows] = await assistantConnection.execute(
+                  `SELECT paused_until AS pausedUntil
+                   FROM chat_automation
+                   WHERE customer_id = ?
+                   FOR UPDATE`,
+                  [customerId]
+                );
+                const pausedUntil = automationRows[0]?.pausedUntil;
+                if (pausedUntil && new Date(pausedUntil).getTime() > Date.now()) {
+                  await assistantConnection.commit();
+                  return;
+                }
+
+                const reply = buildChatAssistantReply(message);
+                const [assistantResult] = await assistantConnection.execute(
+                  `INSERT INTO chat_messages (customer_id, sender_id, sender_role, message)
+                   VALUES (?, NULL, 'ai', ?)`,
+                  [customerId, reply]
+                );
+                await assistantConnection.commit();
+                io.to(`user:${customerId}`).emit('chat:new', {
+                  id: assistantResult.insertId,
+                  customerId: String(customerId),
+                  senderId: null,
+                  senderRole: 'ai',
+                  message: reply,
+                  createdAt: new Date().toISOString(),
+                });
+                io.to('admins').emit('chat:new', {
+                  id: assistantResult.insertId,
+                  customerId: String(customerId),
+                  senderId: null,
+                  senderRole: 'ai',
+                  message: reply,
+                  createdAt: new Date().toISOString(),
+                });
+              } catch (error) {
+                if (assistantConnection) await assistantConnection.rollback();
+                logger.error('Không thể tạo phản hồi tự động cho chat.', { message: error.message });
+              } finally {
+                if (assistantConnection) assistantConnection.release();
+              }
+            }, 700);
+          };
+          scheduleAssistantReply();
+        }
+
         acknowledge({ success: true, message: chatMessage });
       } catch (error) {
+        if (connection) {
+          await connection.rollback();
+          connection.release();
+        }
         logger.error('Không thể gửi tin nhắn realtime.', { message: error.message });
         acknowledge({ success: false, message: 'Không thể gửi tin nhắn.' });
       }

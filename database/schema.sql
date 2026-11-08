@@ -351,13 +351,19 @@ CREATE TABLE IF NOT EXISTS `website_content` (
 CREATE TABLE IF NOT EXISTS `chat_messages` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `customer_id` BIGINT UNSIGNED NOT NULL,
-  `sender_id` BIGINT UNSIGNED NOT NULL,
-  `sender_role` ENUM('admin', 'customer') NOT NULL,
+  `sender_id` BIGINT UNSIGNED NULL,
+  `sender_role` ENUM('admin', 'customer', 'ai') NOT NULL,
   `message` VARCHAR(1000) NOT NULL,
   `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   CONSTRAINT `fk_chat_customer` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   CONSTRAINT `fk_chat_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   INDEX `idx_chat_customer_id` (`customer_id`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `chat_automation` (
+  `customer_id` BIGINT UNSIGNED PRIMARY KEY,
+  `paused_until` TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT `fk_chat_automation_customer` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS `realtime_orders` (
@@ -371,6 +377,23 @@ CREATE TABLE IF NOT EXISTS `realtime_orders` (
   CONSTRAINT `fk_realtime_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   INDEX `idx_realtime_orders_user` (`user_id`, `id`),
   INDEX `idx_realtime_orders_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS `realtime_payments` (
+  `order_code` VARCHAR(30) PRIMARY KEY,
+  `payment_method` ENUM('banking', 'momo') NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `amount` BIGINT UNSIGNED NOT NULL,
+  `status` ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+  `provider_transaction_id` VARCHAR(100) NULL UNIQUE,
+  `payment_url` TEXT NULL,
+  `qr_url` TEXT NULL,
+  `paid_at` TIMESTAMP NULL,
+  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_realtime_payments_order`
+    FOREIGN KEY (`order_code`) REFERENCES `realtime_orders` (`order_code`) ON DELETE CASCADE,
+  INDEX `idx_realtime_payments_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- -------------------------------------------------------------------

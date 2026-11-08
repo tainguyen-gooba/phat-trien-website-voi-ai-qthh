@@ -124,6 +124,11 @@ document.addEventListener('DOMContentLoaded', () => {
         selectedPayment = radio.value;
       }
     });
+    card.querySelector('input[type="radio"]')?.addEventListener('change', (event) => {
+      document.querySelectorAll('.payment-method-card').forEach(c => c.classList.remove('active'));
+      event.currentTarget.closest('.payment-method-card')?.classList.add('active');
+      selectedPayment = event.currentTarget.value;
+    });
   });
 
   // Submit Order Form
@@ -161,7 +166,19 @@ document.addEventListener('DOMContentLoaded', () => {
           address: customerDetails.address,
           notes,
         },
-        items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, toppings: i.selectedToppings })),
+        items: cart.map((item) => {
+          const selectedToppings = Array.isArray(item.selectedToppings) ? item.selectedToppings : [];
+          const toppingTotal = selectedToppings.reduce((sum, topping) => sum + (Number(topping.price) || 0), 0);
+          return {
+            productId: String(item.productId || ''),
+            name: item.name,
+            qty: item.qty,
+            basePrice: Number.isSafeInteger(item.basePrice) ? item.basePrice : item.price - toppingTotal,
+            price: item.price,
+            selectedToppings,
+          };
+        }),
+        couponCode: appliedCoupon?.code || '',
         paymentMethod: selectedPayment.toUpperCase(),
         subtotal: currentBill.subtotal,
         shippingFee: currentBill.shippingFee,
@@ -224,6 +241,36 @@ document.addEventListener('DOMContentLoaded', () => {
       StorageManager.addOrder(newOrder);
       CartController.clearCart();
       StorageManager.remove(StorageManager.KEYS.COUPON);
+
+      if (selectedPayment !== 'cod') {
+        const gateway = selectedPayment === 'momo' ? 'momo' : 'bank';
+        try {
+          const paymentResponse = await fetch(`${apiUrl}/payments/${gateway}/initiate`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Accept: 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ orderCode }),
+          });
+          const paymentResult = await paymentResponse.json();
+          if (!paymentResponse.ok || !paymentResult.success || !paymentResult.data) {
+            throw new Error(paymentResult.message || 'Không thể khởi tạo thanh toán.');
+          }
+          if (selectedPayment === 'momo' && paymentResult.data.paymentUrl) {
+            window.location.assign(paymentResult.data.paymentUrl);
+          } else {
+            window.location.assign(`./payment.html?orderCode=${encodeURIComponent(orderCode)}`);
+          }
+        } catch (error) {
+          UIComponents.showToast(`Đơn ${orderCode} đã lưu. ${error.message}`, 'error', 5000);
+          window.setTimeout(() => {
+            window.location.assign(`./payment.html?orderCode=${encodeURIComponent(orderCode)}`);
+          }, 1200);
+        }
+        return;
+      }
 
       UIComponents.showToast('Đặt hàng thành công! Đang chuyển đến trang theo dõi...', 'success');
 

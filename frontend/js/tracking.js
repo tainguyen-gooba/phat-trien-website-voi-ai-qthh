@@ -72,6 +72,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const statusHeading = order.statusText || 'Đang giao đến bạn';
   const normalizedStatuses = [order.status, order.statusText]
     .map(status => String(status || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/đ/g, 'd'));
+  if (normalizedStatuses.some(status => status === 'delivered' || status.includes('da giao')
+    || status.includes('giao thanh cong') || status === 'completed')) {
+    StorageManager.remove(StorageManager.KEYS.ACTIVE_ORDER);
+    container.innerHTML = `
+      <div class="state-box">
+        <h3 class="state-title">Đơn hàng đã giao thành công</h3>
+        <p class="state-desc">Cảm ơn bạn đã đặt hàng tại FASTFOOD.</p>
+        <a href="./order-history.html" class="btn btn-primary">Xem đơn hàng của tôi</a>
+      </div>
+    `;
+    window.OrderReviewFlow?.start(order, {
+      apiUrl,
+      token: sessionStorage.getItem('fastfood_auth_token') || '',
+      onSaved: (reviewedOrder) => {
+        const orders = StorageManager.getOrders().map(item => (
+          String(item.id) === String(reviewedOrder.id) ? reviewedOrder : item
+        ));
+        StorageManager.set(StorageManager.KEYS.ORDERS, orders);
+      },
+    });
+    return;
+  }
   const canCancelOrder = normalizedStatuses.some(status => (
     status === 'pending' || status === 'preparing'
     || status.includes('cho xac nhan') || status.includes('dang chuan bi')
@@ -242,6 +264,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     })[update.displayStatus] || order.statusStep;
     const orders = StorageManager.getOrders().map((item) => item.id === order.id ? order : item);
     StorageManager.set(StorageManager.KEYS.ORDERS, orders);
+    if (order.status === 'delivered' || order.statusText === 'Đã giao') {
+      StorageManager.remove(StorageManager.KEYS.ACTIVE_ORDER);
+    }
     window.location.reload();
   });
 });

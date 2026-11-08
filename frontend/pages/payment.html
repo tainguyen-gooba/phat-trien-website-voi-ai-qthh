@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thanh toán đơn hàng - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+  <style>
+    .payment-page { max-width: 620px; margin: 3rem auto; padding: 1.5rem; }
+    .payment-panel { padding: 2rem; border-radius: 18px; background: #fff; box-shadow: 0 12px 40px #1d273315; text-align: center; }
+    .payment-panel h1 { margin: 0 0 .75rem; }
+    .payment-amount { margin: 1rem 0; color: var(--primary-color); font-size: 1.7rem; font-weight: 800; }
+    .payment-status { margin: 1rem 0; color: var(--text-secondary); }
+    .payment-qr { display: block; width: min(300px, 100%); margin: 1.25rem auto; border: 1px solid var(--border-color); border-radius: 12px; }
+    .payment-details { margin: 1rem auto; color: var(--text-secondary); line-height: 1.8; }
+    .payment-actions { display: flex; justify-content: center; gap: .75rem; flex-wrap: wrap; margin-top: 1.25rem; }
+  </style>
+</head>
+<body>
+  <div id="site-header"></div>
+  <main class="container payment-page">
+    <section class="payment-panel" aria-live="polite">
+      <h1>Thanh toán đơn hàng</h1>
+      <p id="payment-order"></p>
+      <p id="payment-amount" class="payment-amount"></p>
+      <p id="payment-status" class="payment-status">Đang kiểm tra giao dịch...</p>
+      <div id="payment-content"></div>
+      <div class="payment-actions" id="payment-actions"></div>
+    </section>
+  </main>
+  <div id="site-footer"></div>
+  <script src="../js/storage.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/payment.js"></script>
+</body>
+</html>

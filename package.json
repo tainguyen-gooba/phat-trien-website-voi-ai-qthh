@@ -1,0 +1,21 @@
+{
+  "name": "fast-food-qtnhhh",
+  "version": "1.0.0",
+  "description": "FASTFOOD - Food Delivery Platform",
+  "scripts": {
+    "start": "npm --prefix phat-trien-website-voi-ai-qthh/backend start",
+    "dev": "npm --prefix phat-trien-website-voi-ai-qthh/backend run dev",
+    "db:test": "npm --prefix phat-trien-website-voi-ai-qthh/backend run db:test",
+    "db:init": "npm --prefix phat-trien-website-voi-ai-qthh/backend run db:init",
+    "backend:install": "npm --prefix phat-trien-website-voi-ai-qthh/backend install"
+  },
+  "keywords": [
+    "fastfood",
+    "delivery",
+    "nodejs",
+    "express"
+  ],
+  "author": "FASTFOOD Team",
+  "license": "ISC"
+}
+

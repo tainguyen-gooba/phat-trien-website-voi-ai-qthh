@@ -141,6 +141,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     🚚 Theo Dõi Đơn Hàng
                   </a>
                 ` : ''}
+                ${group === 'delivered' && (!order.driverReview || !order.restaurantReview) ? `
+                  <button type="button" class="btn btn-outline btn-sm" data-review-order-id="${orderId}" style="color:var(--primary-color); border-color:var(--primary-color);">
+                    ⭐ Đánh Giá Đơn Hàng
+                  </button>
+                ` : ''}
                 ${group !== 'cancelled' ? `
                   <button type="button" class="btn btn-primary btn-sm" data-reorder-id="${orderId}">
                     🔁 Đặt Lại Đơn Này
@@ -181,6 +186,17 @@ document.addEventListener('DOMContentLoaded', () => {
       const reorderButton = event.target.closest('[data-reorder-id]');
       if (reorderButton) {
         reOrder(reorderButton.dataset.reorderId);
+        return;
+      }
+
+      const reviewButton = event.target.closest('[data-review-order-id]');
+      if (reviewButton) {
+        const orderId = reviewButton.dataset.reviewOrderId;
+        const targetOrder = orders.find(item => String(item.id) === String(orderId));
+        if (targetOrder) {
+          sessionStorage.removeItem(`fastfood-review-deferred-${targetOrder.id}`);
+          window.OrderReviewFlow?.start(targetOrder, { apiUrl, token: authToken, onSaved: saveReviewedOrder });
+        }
         return;
       }
 

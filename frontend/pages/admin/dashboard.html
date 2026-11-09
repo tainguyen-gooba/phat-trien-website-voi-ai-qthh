@@ -653,6 +653,45 @@
     .reviews-empty { grid-column: 1 / -1; padding: 42px 18px; color: #999; font-size: 12px; text-align: center; }
     .chart-live-note { margin: 9px 0 0; color: #999; font-size: 9px; line-height: 1.5; }
 
+    .nav-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: var(--orange);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1.2;
+      animation: badge-pulse 1.8s infinite;
+    }
+    @keyframes badge-pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.1); box-shadow: 0 0 8px rgba(249, 115, 22, 0.6); }
+    }
+    .review-card.just-added {
+      animation: review-pulse 3s ease-out;
+      border-color: var(--orange);
+    }
+    @keyframes review-pulse {
+      0% { transform: translateY(-4px) scale(1.01); box-shadow: 0 0 0 4px rgba(249, 115, 22, .25); border-color: var(--orange); }
+      50% { box-shadow: 0 0 0 4px rgba(249, 115, 22, .15); border-color: var(--orange); }
+      100% { transform: translateY(0) scale(1); box-shadow: none; border-color: #f0ece8; }
+    }
+    .new-tag {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 6px;
+      border-radius: 6px;
+      background: var(--orange-pale);
+      color: var(--orange-dark);
+      font-size: 9px;
+      font-weight: 800;
+      vertical-align: middle;
+    }
+
     @keyframes dashboard-enter {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -781,7 +820,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 9h8M8 13h5"/></svg>Tin nhắn khách hàng
         </button>
         <button class="nav-item" type="button" data-section="reviews">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>Đánh giá khách hàng
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><span>Đánh giá khách hàng</span>
+          <span class="nav-badge" id="reviews-nav-badge" hidden>Mới</span>
         </button>
       </nav>
       <div class="sidebar-bottom">
@@ -932,15 +972,30 @@
             </form>
             <p id="admin-chat-feedback" role="status"></p>
           </section>
-          <section class="reviews-panel" id="reviews-section" aria-label="Đánh giá khách hàng" hidden>
-            <header class="reviews-panel-heading">
-              <div><h2>Nhận xét &amp; đánh giá gần đây</h2><p>Đánh giá từ khách sau khi hoàn thành đơn hàng</p></div>
-              <span class="reviews-count" id="reviews-count">0 đánh giá</span>
-            </header>
-            <div class="reviews-list" id="reviews-list" aria-live="polite">
-              <p class="reviews-empty">Đang tải đánh giá...</p>
+        </section>
+        <section class="reviews-panel" id="reviews-section" aria-label="Đánh giá khách hàng" hidden>
+          <header class="reviews-panel-heading">
+            <div>
+              <h2>Nhận xét &amp; đánh giá gần đây</h2>
+              <p>Đánh giá từ khách sau khi hoàn thành đơn hàng (tự động cập nhật thời gian thực)</p>
             </div>
-          </section>
+            <div style="display:flex; align-items:center; gap:10px;">
+              <select class="filter-select" id="reviews-filter" aria-label="Lọc đánh giá" style="min-width:140px; height:36px;">
+                <option value="all">Tất cả đánh giá</option>
+                <option value="driver">Tài xế</option>
+                <option value="restaurant">Quán ăn</option>
+                <option value="5">5 sao ★★★★★</option>
+                <option value="4">4 sao ★★★★☆</option>
+                <option value="3">3 sao ★★★☆☆</option>
+                <option value="2">2 sao ★★☆☆☆</option>
+                <option value="1">1 sao ★☆☆☆☆</option>
+              </select>
+              <span class="reviews-count" id="reviews-count">0 đánh giá</span>
+            </div>
+          </header>
+          <div class="reviews-list" id="reviews-list" aria-live="polite">
+            <p class="reviews-empty">Đang tải đánh giá...</p>
+          </div>
         </section>
       </div>
     </main>
@@ -1034,18 +1089,41 @@
       let renderedReviews = [];
       let reviewsLoaded = false;
       let reviewsRequestId = 0;
+
+      function updateReviewsBadge() {
+        const badge = document.getElementById('reviews-nav-badge');
+        if (badge && activeSection !== 'reviews') {
+          badge.hidden = false;
+        }
+      }
+
+      function clearReviewsBadge() {
+        const badge = document.getElementById('reviews-nav-badge');
+        if (badge) {
+          badge.hidden = true;
+        }
+      }
+
       liveSocket?.on('review:new', (review) => {
         const target = review.target === 'driver' ? 'tài xế' : 'quán ăn';
         showToast(`Đánh giá mới từ ${review.customerName || 'khách hàng'} cho ${target}: ${review.rating}/5 sao.`);
-        const key = `${review.orderCode}:${review.target}`;
-        pendingReviewEvents.set(key, review);
-        if (reviewsUiReady) {
-          if (reviewsLoaded) {
-            renderedReviews = mergeReviews(renderedReviews, [review]);
-            renderOrderReviews(renderedReviews);
-          }
-          loadOrderReviews();
+        const cleanCode = String(review.orderCode || '').replace(/^#/, '');
+        const normalizedReview = {
+          ...review,
+          orderCode: cleanCode,
+          isNew: true,
+        };
+        const key = `${cleanCode}:${review.target}`;
+        pendingReviewEvents.set(key, normalizedReview);
+        renderedReviews = mergeReviews(renderedReviews, [normalizedReview]);
+        reviewsLoaded = true;
+
+        if (reviewsUiReady && activeSection === 'reviews') {
+          renderOrderReviews(renderedReviews);
+        } else {
+          updateReviewsBadge();
         }
+        loadOrderReviews({ silent: true });
       });
       const adminApiUrl = window.location.port === '5000'
         ? `${window.location.origin}/api/v1`
@@ -1069,6 +1147,7 @@
         liveSocket.on('connect', () => {
           setRealtimeStatus(true);
           if (dashboardReady) refreshOrders();
+          if (activeSection === 'reviews') loadOrderReviews({ silent: true });
         });
         liveSocket.on('disconnect', () => setRealtimeStatus(false));
         liveSocket.on('order:new', ({ order } = {}) => {
@@ -1305,9 +1384,14 @@
         window.setTimeout(() => toast.remove(), 3400);
       }
 
-      async function loadOrderReviews() {
+      let reviewFilterValue = 'all';
+      let reviewSearchTerm = '';
+
+      async function loadOrderReviews(options = {}) {
         const requestId = ++reviewsRequestId;
-        if (!reviewsLoaded) reviewsList.innerHTML = '<p class="reviews-empty">Đang tải đánh giá...</p>';
+        if (!reviewsLoaded && !options.silent) {
+          reviewsList.innerHTML = '<p class="reviews-empty">Đang tải đánh giá...</p>';
+        }
         try {
           const response = await fetch(`${adminApiUrl}/realtime/orders/reviews`, {
             headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
@@ -1320,17 +1404,20 @@
           renderedReviews = mergeReviews(result.data, [...pendingReviewEvents.values()]);
           pendingReviewEvents.clear();
           reviewsLoaded = true;
-          renderOrderReviews(renderedReviews);
+          if (activeSection === 'reviews' || options.forceRender) {
+            renderOrderReviews(renderedReviews);
+          }
         } catch (error) {
           if (requestId !== reviewsRequestId) return;
           const pendingReviews = [...pendingReviewEvents.values()];
-          if (reviewsLoaded || pendingReviews.length) {
+          if (renderedReviews.length || pendingReviews.length) {
             renderedReviews = mergeReviews(renderedReviews, pendingReviews);
             pendingReviewEvents.clear();
             reviewsLoaded = true;
-            renderOrderReviews(renderedReviews);
-            showToast('Không thể làm mới danh sách đánh giá; các đánh giá realtime vẫn được giữ lại.', true);
-          } else {
+            if (activeSection === 'reviews') {
+              renderOrderReviews(renderedReviews);
+            }
+          } else if (!options.silent) {
             reviewsList.innerHTML = '';
             const message = document.createElement('p');
             message.className = 'reviews-empty';
@@ -1345,7 +1432,14 @@
         const byOrderAndTarget = new Map();
         groups.flat().forEach((review) => {
           if (review?.orderCode && ['driver', 'restaurant'].includes(review.target)) {
-            byOrderAndTarget.set(`${review.orderCode}:${review.target}`, review);
+            const cleanCode = String(review.orderCode).replace(/^#/, '');
+            const existing = byOrderAndTarget.get(`${cleanCode}:${review.target}`);
+            byOrderAndTarget.set(`${cleanCode}:${review.target}`, {
+              ...existing,
+              ...review,
+              orderCode: cleanCode,
+              isNew: review.isNew || existing?.isNew || false,
+            });
           }
         });
         return [...byOrderAndTarget.values()].sort((first, second) => (
@@ -1355,31 +1449,54 @@
 
       function renderOrderReviews(reviews) {
         renderedReviews = reviews;
-        reviewsCount.textContent = `${reviews.length} đánh giá`;
+        let filtered = reviews;
+        if (reviewFilterValue === 'driver' || reviewFilterValue === 'restaurant') {
+          filtered = filtered.filter((r) => r.target === reviewFilterValue);
+        } else if (['1', '2', '3', '4', '5'].includes(reviewFilterValue)) {
+          filtered = filtered.filter((r) => Number(r.rating) === Number(reviewFilterValue));
+        }
+        if (reviewSearchTerm) {
+          filtered = filtered.filter((r) =>
+            String(r.orderCode || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
+            || String(r.customerName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
+            || String(r.restaurantName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
+            || String(r.comment || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
+          );
+        }
+
+        reviewsCount.textContent = `${filtered.length} / ${reviews.length} đánh giá`;
         reviewsList.replaceChildren();
-        if (!reviews.length) {
+        if (!filtered.length) {
           const empty = document.createElement('p');
           empty.className = 'reviews-empty';
-          empty.textContent = 'Chưa có đánh giá nào từ khách hàng.';
+          empty.textContent = reviews.length === 0
+            ? 'Chưa có đánh giá nào từ khách hàng.'
+            : 'Không tìm thấy đánh giá phù hợp với tìm kiếm hoặc bộ lọc.';
           reviewsList.appendChild(empty);
           return;
         }
 
-        reviews.forEach((review) => {
+        filtered.forEach((review) => {
           const card = document.createElement('article');
-          card.className = 'review-card';
+          card.className = `review-card${review.isNew ? ' just-added' : ''}`;
           const top = document.createElement('div');
           top.className = 'review-card-top';
           const customer = document.createElement('div');
           customer.className = 'review-customer';
           const name = document.createElement('strong');
           name.textContent = review.customerName || 'Khách hàng';
+          if (review.isNew) {
+            const newTag = document.createElement('span');
+            newTag.className = 'new-tag';
+            newTag.textContent = 'MỚI';
+            name.appendChild(newTag);
+          }
           const order = document.createElement('span');
-          order.textContent = `Đơn ${review.orderCode || ''}`;
+          order.textContent = `Đơn #${review.orderCode || ''}`;
           customer.append(name, order);
           const target = document.createElement('span');
           target.className = 'review-target';
-          target.textContent = review.target === 'driver' ? 'Tài xế' : `Quán · ${review.restaurantName || ''}`;
+          target.textContent = review.target === 'driver' ? '🛵 Tài xế' : `🏪 Quán · ${review.restaurantName || ''}`;
           top.append(customer, target);
 
           const stars = document.createElement('div');
@@ -1399,6 +1516,11 @@
           reviewsList.appendChild(card);
         });
       }
+
+      document.getElementById('reviews-filter')?.addEventListener('change', (event) => {
+        reviewFilterValue = event.target.value;
+        renderOrderReviews(renderedReviews);
+      });
 
       function toOrderRecord(order) {
         const orderDate = new Date(order.createdAt || '');
@@ -1807,7 +1929,11 @@
           chatInbox.hidden = !isMessages;
           reviewsSection.hidden = isMessages;
           window.adminChatInbox?.setActive(isMessages);
-          if (!isMessages) loadOrderReviews();
+          if (!isMessages) {
+            clearReviewsBadge();
+            renderOrderReviews(renderedReviews);
+            loadOrderReviews({ silent: renderedReviews.length > 0 });
+          }
           return;
         }
         chatInbox.hidden = true;
@@ -1992,13 +2118,23 @@
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (activeSection === 'messages' || activeSection === 'reviews') return;
+        if (activeSection === 'messages') return;
+        if (activeSection === 'reviews') {
+          reviewSearchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
+          renderOrderReviews(renderedReviews);
+          return;
+        }
         searchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
         currentPage = 1;
         renderTable();
       });
       document.getElementById('search-input').addEventListener('input', (event) => {
-        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'reviews') {
+        if (activeSection === 'reviews') {
+          reviewSearchTerm = event.target.value.trim().toLocaleLowerCase('vi');
+          renderOrderReviews(renderedReviews);
+          return;
+        }
+        if (!event.target.value && activeSection !== 'messages') {
           searchTerm = '';
           currentPage = 1;
           renderTable();
@@ -2159,8 +2295,23 @@
       });
       backdrop.addEventListener('click', closeMobileMenu);
 
+      const urlParams = new URLSearchParams(window.location.search);
+      const initialSection = urlParams.get('section') || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
+      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews')) {
+        const targetBtn = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
+        if (targetBtn) {
+          activeSection = initialSection;
+          document.querySelectorAll('.nav-item').forEach((item) => {
+            item.classList.toggle('active', item === targetBtn);
+            if (item === targetBtn) item.setAttribute('aria-current', 'page');
+            else item.removeAttribute('aria-current');
+          });
+        }
+      }
+
       document.getElementById('today-label').textContent = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
       renderAll();
+      loadOrderReviews({ silent: true });
       dashboardReady = true;
       pendingOrderEvents.forEach((event) => {
         if (event.type === 'new') handleNewOrder(event.order);

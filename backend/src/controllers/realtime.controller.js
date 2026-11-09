@@ -3,9 +3,12 @@ const { pool } = require('../config/db.config');
 const HTTP_STATUS = require('../constants/httpStatusCodes');
 const { normalizeCustomerProfile } = require('../utils/customer-profile.validation');
 
-const isValidOrderCode = (orderCode) => /^FF\d{4}$/.test(orderCode)
-  || /^FF-[A-Z0-9]{6,8}$/.test(orderCode)
-  || /^FF-\d{8}-\d{4}$/.test(orderCode);
+const isValidOrderCode = (orderCode) => {
+  const clean = typeof orderCode === 'string' ? orderCode.replace(/^#/, '').trim() : '';
+  return /^FF\d{4}$/.test(clean)
+    || /^FF-[A-Z0-9]{6,8}$/.test(clean)
+    || /^FF-\d{8}-\d{4}$/.test(clean);
+};
 const STATIC_COUPONS = {
   FASTFOOD20: { discount: 20000, minOrder: 60000 },
   FREESHIP: { discount: 18000, minOrder: 100000 },
@@ -396,7 +399,8 @@ class RealtimeController extends BaseController {
   }
 
   async submitOrderReview(req, res, next) {
-    const orderCode = typeof req.params.orderCode === 'string' ? req.params.orderCode.trim() : '';
+    const rawOrderCode = typeof req.params.orderCode === 'string' ? req.params.orderCode.trim() : '';
+    const orderCode = rawOrderCode.replace(/^#/, '');
     const target = req.params.target;
     const rating = Number(req.body?.rating);
     const comment = typeof req.body?.comment === 'string' ? req.body.comment.trim() : '';
@@ -415,10 +419,10 @@ class RealtimeController extends BaseController {
       const [rows] = await connection.execute(
         `SELECT order_code, order_data, status
          FROM realtime_orders
-         WHERE order_code = ? AND user_id = ?
+         WHERE (order_code = ? OR order_code = ?) AND user_id = ?
          LIMIT 1
          FOR UPDATE`,
-        [orderCode, req.user.id]
+        [orderCode, `#${orderCode}`, req.user.id]
       );
       const row = rows[0];
       if (!row) {
@@ -445,13 +449,14 @@ class RealtimeController extends BaseController {
         submittedAt: new Date().toISOString(),
       };
       await connection.execute(
-        'UPDATE realtime_orders SET order_data = ? WHERE order_code = ? AND user_id = ?',
-        [JSON.stringify(orderData), orderCode, req.user.id]
+        'UPDATE realtime_orders SET order_data = ? WHERE (order_code = ? OR order_code = ?) AND user_id = ?',
+        [JSON.stringify(orderData), orderCode, `#${orderCode}`, req.user.id]
       );
+      const cleanOrderCode = String(row.order_code).replace(/^#/, '');
       const review = {
-        orderCode,
+        orderCode: cleanOrderCode,
         customerId: String(req.user.id),
-        customerName: orderData.recipient?.name || 'Khách hàng',
+        customerName: orderData.recipient?.name || req.user.fullName || 'Khách hàng',
         restaurantName: orderData.restaurantName || 'FASTFOOD Partner',
         target,
         rating,
@@ -466,7 +471,7 @@ class RealtimeController extends BaseController {
          FROM users u
          INNER JOIN roles r ON r.id = u.role_id
          WHERE r.name = 'admin'`,
-        [title, content, JSON.stringify({ type: 'review', orderCode, target, rating })]
+        [title, content, JSON.stringify({ type: 'review', orderCode: cleanOrderCode, target, rating })]
       );
       await connection.commit();
       transactionStarted = false;
@@ -476,7 +481,7 @@ class RealtimeController extends BaseController {
         title,
         content,
         type: 'review',
-        orderCode,
+        orderCode: cleanOrderCode,
         target,
         rating,
       });
@@ -502,8 +507,8 @@ class RealtimeController extends BaseController {
         `SELECT o.order_code AS orderCode, o.order_data AS orderData, o.created_at AS createdAt,
                 u.id AS customerId, u.full_name AS customerName
          FROM realtime_orders o
-         INNER JOIN users u ON u.id = o.user_id
-         WHERE o.status = 'delivered'
+         LEFT JOIN users u ON u.id = o.user_id
+         WHERE (o.status = 'delivered' OR JSON_CONTAINS_PATH(o.order_data, 'one', '$.driverReview') OR JSON_CONTAINS_PATH(o.order_data, 'one', '$.restaurantReview'))
            AND (
              JSON_CONTAINS_PATH(o.order_data, 'one', '$.driverReview')
              OR JSON_CONTAINS_PATH(o.order_data, 'one', '$.restaurantReview')
@@ -513,12 +518,13 @@ class RealtimeController extends BaseController {
       );
       const reviews = rows.flatMap((row) => {
         const orderData = typeof row.orderData === 'string' ? JSON.parse(row.orderData) : row.orderData;
+        const cleanOrderCode = String(row.orderCode).replace(/^#/, '');
         return ['driver', 'restaurant'].flatMap((target) => {
           const review = orderData[`${target}Review`];
           return review ? [{
-            orderCode: row.orderCode,
-            customerId: String(row.customerId),
-            customerName: row.customerName,
+            orderCode: cleanOrderCode,
+            customerId: String(row.customerId || orderData.userId || ''),
+            customerName: row.customerName || orderData.recipient?.name || 'Khách hàng',
             restaurantName: orderData.restaurantName || 'FASTFOOD Partner',
             target,
             rating: Number(review.rating),

@@ -80,6 +80,7 @@ const FASTFOOD_DATA = {
       promo: 'GIẢM 25K',
       isVerified: true,
       tags: ['Burger Bò Úc', 'Gà Giòn Cay', 'Khoai Tây Lắc'],
+      isLiked: false,
     },
     {
       id: 'res-2',
@@ -97,6 +98,7 @@ const FASTFOOD_DATA = {
       promo: 'FREESHIP',
       isVerified: true,
       tags: ['Cơm Sườn Nướng', 'Bì Chả Trứng', 'Canh Khổ Qua'],
+      isLiked: false,
     },
     {
       id: 'res-3',
@@ -114,6 +116,7 @@ const FASTFOOD_DATA = {
       promo: 'MUA 1 TẶNG 1',
       isVerified: true,
       tags: ['Trà Đen Macchiato', 'Trân Châu Hoàng Gia', 'Trà Trái Cây'],
+      isLiked: false,
     },
     {
       id: 'res-4',
@@ -131,6 +134,7 @@ const FASTFOOD_DATA = {
       promo: 'GIẢM 50K',
       isVerified: true,
       tags: ['Pizza Hải Sản', 'Mì Ý Sốt Bò Bằm', 'Bánh Tỏi'],
+      isLiked: false,
     },
     {
       id: 'res-5',
@@ -148,6 +152,7 @@ const FASTFOOD_DATA = {
       promo: 'MÓN VIỆT',
       isVerified: true,
       tags: ['Phở Bò', 'Nước Dùng Ninh Xương'],
+      isLiked: false,
     },
     {
       id: 'res-6',
@@ -165,6 +170,7 @@ const FASTFOOD_DATA = {
       promo: 'SUSHI TƯƠI',
       isVerified: true,
       tags: ['Sushi Cá Hồi', 'Món Nhật'],
+      isLiked: false,
     },
     {
       id: 'res-7',
@@ -182,6 +188,7 @@ const FASTFOOD_DATA = {
       promo: 'GÀ GIÒN MỚI NÓNG',
       isVerified: true,
       tags: ['Burger Gà', 'Sốt Bơ Đặc Biệt'],
+      isLiked: false,
     },
     {
       id: 'res-8',
@@ -199,6 +206,7 @@ const FASTFOOD_DATA = {
       promo: 'NƯỚNG MỖI NGÀY',
       isVerified: true,
       tags: ['Bánh Croissant', 'Bánh Ngọt'],
+      isLiked: false,
     },
     {
       id: 'res-9',
@@ -216,6 +224,7 @@ const FASTFOOD_DATA = {
       promo: 'BỮA SÁNG',
       isVerified: true,
       tags: ['Pancake', 'Bữa Sáng'],
+      isLiked: false,
     },
     {
       id: 'res-10',
@@ -233,6 +242,7 @@ const FASTFOOD_DATA = {
       promo: 'GÀ RÁN GIÒN',
       isVerified: true,
       tags: ['Gà Rán', 'Món Ăn Nóng'],
+      isLiked: false,
     },
     {
       id: 'res-11',
@@ -250,6 +260,7 @@ const FASTFOOD_DATA = {
       promo: 'SALAD TƯƠI',
       isVerified: true,
       tags: ['Salad', 'Món Ăn Healthy'],
+      isLiked: false,
     },
     {
       id: 'res-12',
@@ -267,6 +278,7 @@ const FASTFOOD_DATA = {
       promo: 'MÌ Ý TƯƠI',
       isVerified: true,
       tags: ['Mì Ý', 'Món Ý'],
+      isLiked: false,
     },
     {
       id: 'res-13',
@@ -284,6 +296,7 @@ const FASTFOOD_DATA = {
       promo: 'ĂN VẶT',
       isVerified: true,
       tags: ['Khoai Tây Chiên', 'Ăn Vặt'],
+      isLiked: false,
     },
   ],
 
@@ -310,6 +323,7 @@ const FASTFOOD_DATA = {
         { name: 'Thịt xông khói giòn (Bacon)', price: 15000 },
         { name: 'Trứng ốp la lòng đào', price: 8000 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-2',
@@ -332,6 +346,7 @@ const FASTFOOD_DATA = {
         { name: 'Chén mỡ hành tép mỡ giòn', price: 5000 },
         { name: 'Canh rong biển thịt bằm', price: 10000 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-3',
@@ -354,6 +369,7 @@ const FASTFOOD_DATA = {
         { name: 'Trân châu trắng giòn hoàng gia', price: 10000 },
         { name: 'Thạch pudding trứng mịn', price: 10000 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-4',
@@ -375,6 +391,7 @@ const FASTFOOD_DATA = {
         { name: 'Sốt chấm phô mai cay', price: 8000 },
         { name: 'Khoai tây chiên nhỏ', price: 15000 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-5',
@@ -396,6 +413,7 @@ const FASTFOOD_DATA = {
         { name: 'Viền phô mai xúc xích cao cấp', price: 35000 },
         { name: 'Gấp đôi phô mai nướng', price: 25000 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-6',
@@ -417,6 +435,7 @@ const FASTFOOD_DATA = {
         { name: 'Bơ quả tươi cắt lát', price: 15000 },
         { name: 'Hạt hạnh nhân rang giòn', price: 10000 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-7',
@@ -437,6 +456,7 @@ const FASTFOOD_DATA = {
       toppings: [
         { name: 'Bánh mì bơ tỏi nướng giòn', price: 12000 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-8',
@@ -457,6 +477,7 @@ const FASTFOOD_DATA = {
       toppings: [
         { name: 'Sốt chấm tương ớt cay nồng', price: 0 },
       ],
+      isLiked: false,
     },
     {
       id: 'prod-9',
@@ -475,6 +496,7 @@ const FASTFOOD_DATA = {
       isFlashDeal: false,
       description: 'Bánh phở mềm, thịt bò tái và nạm bò ăn kèm nước dùng ninh xương thơm ngọt, rau thơm và chanh tươi.',
       toppings: [{ name: 'Thêm thịt bò', price: 20000 }],
+      isLiked: false,
     },
     {
       id: 'prod-10',
@@ -493,6 +515,7 @@ const FASTFOOD_DATA = {
       isFlashDeal: false,
       description: 'Cơm sushi dẻo thơm cuộn cá hồi tươi và bơ chín béo nhẹ, dùng kèm gừng hồng và nước tương Nhật.',
       toppings: [{ name: 'Thêm sashimi cá hồi', price: 30000 }],
+      isLiked: false,
     },
     {
       id: 'prod-11',
@@ -511,6 +534,7 @@ const FASTFOOD_DATA = {
       isFlashDeal: false,
       description: 'Burger gà giòn rụm, rau tươi và sốt bơ béo nhẹ trong chiếc bánh mềm nóng.',
       toppings: [{ name: 'Thêm phô mai', price: 10000 }],
+      isLiked: false,
     },
     {
       id: 'prod-12',
@@ -529,6 +553,7 @@ const FASTFOOD_DATA = {
       isFlashDeal: false,
       description: 'Bánh croissant nhiều lớp cán bơ thơm, nướng vàng giòn bên ngoài và mềm xốp bên trong.',
       toppings: [{ name: 'Mứt dâu nhà làm', price: 8000 }],
+      isLiked: false,
     },
     {
       id: 'prod-13',
@@ -547,6 +572,7 @@ const FASTFOOD_DATA = {
       isFlashDeal: false,
       description: 'Pancake mềm xốp ăn cùng mật ong thơm dịu, bơ lạt và trái cây tươi theo mùa.',
       toppings: [{ name: 'Thêm kem tươi', price: 10000 }],
+      isLiked: false,
     },
   ],
 
@@ -831,3 +857,51 @@ window.getFastfoodRestaurantUrlForProduct = getRestaurantUrlForProduct;
 window.getFastfoodProductUrl = getProductUrl;
 window.getFastfoodRestaurantUrl = getRestaurantUrl;
 window.isFastfoodExternalUrl = isExternalWebsiteUrl;
+
+/* ============================================================
+   PERSISTENCE: Lưu trạng thái YÊU THÍCH vào localStorage
+   ============================================================ */
+const FAVORITE_STORAGE_KEY = 'fastfood-favorites-v1';
+
+function loadFavoritesFromStorage() {
+  try {
+    const raw = localStorage.getItem(FAVORITE_STORAGE_KEY);
+    if (!raw) return { products: [], restaurants: [] };
+    const parsed = JSON.parse(raw);
+    // Áp dụng isLiked vào products
+    if (Array.isArray(parsed.products)) {
+      parsed.products.forEach(id => {
+        const p = FASTFOOD_DATA.products.find(x => x.id === id);
+        if (p) p.isLiked = true;
+      });
+    }
+    // Áp dụng isLiked vào restaurants
+    if (Array.isArray(parsed.restaurants)) {
+      parsed.restaurants.forEach(id => {
+        const r = FASTFOOD_DATA.restaurants.find(x => x.id === id);
+        if (r) r.isLiked = true;
+      });
+    }
+  } catch (e) {
+    console.error('Không thể đọc yêu thích từ localStorage:', e);
+  }
+}
+
+function saveFavoritesToStorage() {
+  try {
+    const likedProducts = FASTFOOD_DATA.products.filter(p => p.isLiked).map(p => p.id);
+    const likedRestaurants = FASTFOOD_DATA.restaurants.filter(r => r.isLiked).map(r => r.id);
+    localStorage.setItem(FAVORITE_STORAGE_KEY, JSON.stringify({
+      products: likedProducts,
+      restaurants: likedRestaurants,
+    }));
+  } catch (e) {
+    console.error('Không thể lưu yêu thích vào localStorage:', e);
+  }
+}
+
+// Khôi phục trạng thái yêu thích khi tải trang
+loadFavoritesFromStorage();
+
+// Expose để các trang khác có thể gọi
+window.saveFavoritesToStorage = saveFavoritesToStorage;

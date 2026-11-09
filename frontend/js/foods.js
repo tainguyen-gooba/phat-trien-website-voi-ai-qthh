@@ -106,9 +106,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${product.oldPrice ? `<span class="product-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
               </div>
 
-              <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">
-                +
-              </button>
+              <button class="favorite-btn" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
+              <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">+</button>
             </div>
           </div>
         </div>
@@ -146,6 +145,27 @@ document.addEventListener('DOMContentLoaded', () => {
       priceFilter = e.target.value;
       renderList();
     });
+  });
+
+  // Favorite button event delegation
+  document.body.addEventListener('click', (e) => {
+    const favBtn = e.target.closest('.favorite-btn[data-product-id]');
+    if (!favBtn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const productId = favBtn.dataset.productId;
+    const product = FASTFOOD_DATA.products.find(p => p.id === productId);
+    if (!product) return;
+
+    product.isLiked = !product.isLiked;
+    favBtn.classList.toggle('is-liked', product.isLiked);
+    favBtn.textContent = product.isLiked ? '♥' : '♡';
+    favBtn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
+    favBtn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
+    UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
+    UIComponents.updateFavoriteBadge();
   });
 
   renderList();

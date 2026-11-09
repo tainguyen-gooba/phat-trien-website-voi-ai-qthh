@@ -31,6 +31,55 @@ document.addEventListener('DOMContentLoaded', () => {
   // 7. Render đánh giá khách hàng
   renderReviews();
 
+  // Favorite button event delegation (products & restaurants)
+  document.body.addEventListener('click', (e) => {
+    const favBtn = e.target.closest('.favorite-btn');
+    if (!favBtn) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (favBtn.dataset.productId) {
+      const productId = favBtn.dataset.productId;
+      const product = FASTFOOD_DATA.products.find(p => p.id === productId);
+      if (!product) return;
+      product.isLiked = !product.isLiked;
+      favBtn.classList.toggle('is-liked', product.isLiked);
+      favBtn.textContent = product.isLiked ? '♥' : '♡';
+      favBtn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
+      favBtn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
+      UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
+      UIComponents.updateFavoriteBadge();
+    } else if (favBtn.dataset.resId) {
+      const resId = favBtn.dataset.resId;
+      const res = FASTFOOD_DATA.restaurants.find(r => r.id === resId);
+      if (!res) return;
+      res.isLiked = !res.isLiked;
+      favBtn.classList.toggle('is-liked', res.isLiked);
+      favBtn.textContent = res.isLiked ? '♥' : '♡';
+      favBtn.setAttribute('title', res.isLiked ? 'Bỏ yêu thích' : 'Yêu thích quán này');
+      favBtn.setAttribute('aria-label', res.isLiked ? 'Đã yêu thích quán này' : 'Yêu thích quán này');
+      UIComponents.showToast(res.isLiked ? 'Đã thêm quán vào yêu thích!' : 'Đã bỏ yêu thích quán!', 'info', 2500);
+      UIComponents.updateFavoriteBadge();
+    }
+  });
+
+  // Restaurant card click - show detail view on home page too
+  const featuredRestaurantsContainer = document.getElementById('featured-restaurants-container');
+  if (featuredRestaurantsContainer) {
+    featuredRestaurantsContainer.addEventListener('click', (event) => {
+      const favoriteBtn = event.target.closest('.favorite-btn');
+      if (favoriteBtn) return;
+
+      const card = event.target.closest('.restaurant-card[data-res-id]');
+      if (card) {
+        const resId = card.getAttribute('data-res-id');
+        // Navigate to restaurants page with the restaurant highlighted
+        window.location.href = `./restaurants.html?res=${resId}`;
+      }
+    });
+  }
+
 });
 
 function startFlashDealsTimer() {
@@ -129,9 +178,8 @@ function createProductCardHtml(product) {
             ${product.oldPrice ? `<span class="product-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
           </div>
 
-          <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">
-            +
-          </button>
+          <button class="favorite-btn" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
+          <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">+</button>
         </div>
       </div>
     </div>
@@ -144,14 +192,15 @@ function renderFeaturedRestaurants() {
   if (!container) return;
 
   container.innerHTML = FASTFOOD_DATA.restaurants.map(res => `
-    <a class="restaurant-card" href="${UIComponents.escapeHtml(window.getFastfoodRestaurantUrl(res))}" ${window.isFastfoodExternalUrl(res.url) ? 'target="_blank" rel="noopener noreferrer"' : ''}>
+    <div class="restaurant-card" data-res-id="${res.id}" style="cursor:pointer;">
       <div class="restaurant-banner-wrap">
         <img src="${res.banner}" alt="${res.name}" class="restaurant-banner" loading="lazy">
         <span class="restaurant-badge-promo">${res.promo}</span>
+        <button class="favorite-btn restaurant-favorite ${res.isLiked ? 'is-liked' : ''}" data-res-id="${res.id}" title="${res.isLiked ? 'Bỏ yêu thích' : 'Yêu thích quán này'}" aria-label="${res.isLiked ? 'Đã yêu thích quán này' : 'Yêu thích quán này'}">${res.isLiked ? '♥' : '♡'}</button>
       </div>
 
       <div class="restaurant-body">
-        <h4 class="restaurant-name">${res.name}</h4>
+        <h4 class="restaurant-name">${UIComponents.escapeHtml(res.name)}</h4>
         <div class="restaurant-tags">${res.tags.join(' • ')}</div>
         <div style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.75rem;">📍 ${UIComponents.escapeHtml(res.address)}</div>
 
@@ -161,7 +210,7 @@ function renderFeaturedRestaurants() {
           <span>📍 ${res.distance}</span>
         </div>
       </div>
-    </a>
+    </div>
   `).join('');
 }
 

@@ -163,6 +163,14 @@ const UIComponents = {
           </a>
           ` : ''}
 
+          <!-- Favorite / Yêu thích Link -->
+          ${!isAdmin ? `
+          <a href="./favorites.html" class="favorite-nav-btn" title="Yêu thích của bạn">
+            ♡
+            <span id="nav-favorite-badge" class="cart-counter" style="display:none;">0</span>
+          </a>
+          ` : ''}
+
           <!-- User Session / Login -->
           ${user && user.isLoggedIn ? `
             <a href="./profile.html" class="user-menu-pill" title="Hồ sơ tài khoản">
@@ -204,6 +212,30 @@ const UIComponents = {
         badge.style.display = count > 0 ? 'flex' : 'none';
       }
     });
+
+    // Update favorite nav badge
+    this.updateFavoriteBadge = function() {
+      const likedProducts = (window.FASTFOOD_DATA && window.FASTFOOD_DATA.products) || [];
+      const likedRestaurants = (window.FASTFOOD_DATA && window.FASTFOOD_DATA.restaurants) || [];
+      const totalLiked = likedProducts.filter(p => p.isLiked).length + likedRestaurants.filter(r => r.isLiked).length;
+
+      const badge = document.getElementById('nav-favorite-badge');
+      if (badge) {
+        badge.textContent = totalLiked;
+        badge.style.display = totalLiked > 0 ? 'flex' : 'none';
+      }
+
+      const favBtn = document.querySelector('.favorite-nav-btn');
+      if (favBtn) {
+        if (totalLiked > 0) {
+          favBtn.classList.add('is-liked');
+          favBtn.textContent = '♥';
+        } else {
+          favBtn.classList.remove('is-liked');
+          favBtn.textContent = '♡';
+        }
+      }
+    };
   },
 
   initRealtime(user) {

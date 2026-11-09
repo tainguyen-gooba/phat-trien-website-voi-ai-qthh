@@ -83,10 +83,40 @@
           </label>
         </div>
 
-        <!-- Restaurants Grid -->
-        <div class="restaurant-results" id="restaurant-results-count" aria-live="polite"></div>
-        <div class="restaurants-grid" id="restaurants-grid-container">
-          <!-- Rendered by restaurants.js -->
+        <!-- Restaurant List View -->
+        <div class="restaurant-list-view" id="restaurant-list-view">
+          <div class="restaurant-results" id="restaurant-results-count" aria-live="polite"></div>
+          <div class="restaurants-grid" id="restaurants-grid-container">
+            <!-- Rendered by restaurants.js -->
+          </div>
+        </div>
+
+        <!-- Restaurant Detail View (shows dishes when clicking a restaurant) -->
+        <div class="restaurant-detail-view" id="restaurant-detail-view">
+          <div class="restaurant-detail-header">
+            <div class="restaurant-detail-info">
+              <button class="back-arrow-btn" id="back-to-list-btn" type="button">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg>
+                Quay lại danh sách
+              </button>
+              <h2 class="restaurant-detail-name" id="detail-restaurant-name">Tên Quán</h2>
+              <div class="restaurant-detail-meta">
+                <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg> <span id="detail-restaurant-address">Địa chỉ</span></span>
+                <span>★ <span id="detail-restaurant-rating">0</span> (<span id="detail-restaurant-review-count">0</span>+)</span>
+                <span>🛵 <span id="detail-restaurant-delivery">0 phút</span></span>
+              </div>
+              <div class="restaurant-detail-tags" id="detail-restaurant-tags"></div>
+            </div>
+            <button class="favorite-btn" id="detail-restaurant-favorite" title="Yêu thích quán này">
+              ♡
+            </button>
+          </div>
+          <div class="restaurant-detail-products">
+            <h3 style="font-size:1.1rem; font-weight:800; margin-bottom:1rem; color:var(--text-main);">Thực đơn của quán</h3>
+            <div class="restaurant-detail-products-grid" id="restaurant-detail-products-grid">
+              <!-- Rendered by restaurants.js -->
+            </div>
+          </div>
         </div>
       </section>
 

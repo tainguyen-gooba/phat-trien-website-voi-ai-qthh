@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yêu thích của bạn - FASTFOOD</title>
+  <link rel="icon" type="image/svg+xml" href="../assets/images/logo.svg">
+  
+  <!-- Google Fonts: Plus Jakarta Sans & Be Vietnam Pro -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/variables.css">
+  <link rel="stylesheet" href="../css/reset.css">
+  <link rel="stylesheet" href="../css/base.css">
+  <link rel="stylesheet" href="../css/components.css">
+  <link rel="stylesheet" href="../css/pages.css">
+  <link rel="stylesheet" href="../css/responsive.css">
+</head>
+<body>
+
+  <div id="site-header"></div>
+
+  <!-- Page Header -->
+  <div class="page-header-bar">
+    <div class="container">
+      <div class="breadcrumb">
+        <a href="./home.html">Trang chủ</a> <span>/</span> <span>Yêu thích</span>
+      </div>
+      <h1 class="page-title">Món Ăn & Quán Ăn Yêu Thích</h1>
+      <p class="restaurants-page-intro">Các món ăn và quán ăn bạn đã đánh dấu yêu thích.</p>
+    </div>
+  </div>
+
+  <main class="container">
+    <section class="favorites-section" aria-label="Danh sách yêu thích">
+      <div class="favorites-empty" id="favorites-empty" style="display:none;">
+        <div class="empty-icon">💔</div>
+        <h3>Chưa có món ăn hoặc quán ăn yêu thích nào</h3>
+        <p>Hãy bấm vào biểu tượng tim trên các card để lưu lại những món và quán bạn thích.</p>
+        <a href="./home.html" class="btn btn-primary">Khám phá ngay</a>
+      </div>
+
+      <div class="favorites-content" id="favorites-content">
+        <div class="favorites-tabs">
+          <button class="fav-tab active" data-tab="products">Món Ăn Yêu Thích</button>
+          <button class="fav-tab" data-tab="restaurants">Quán Ăn Yêu Thích</button>
+        </div>
+
+        <!-- Favorite Products -->
+        <div class="fav-tab-panel active" id="fav-products">
+          <div class="fav-products-count" id="fav-products-count">0 món ăn</div>
+          <div class="grid grid-cols-3" id="favorite-products-grid">
+            <!-- Rendered by favorites.js -->
+          </div>
+        </div>
+
+        <!-- Favorite Restaurants -->
+        <div class="fav-tab-panel" id="fav-restaurants">
+          <div class="fav-products-count" id="fav-restaurants-count">0 quán ăn</div>
+          <div class="restaurants-grid" id="favorite-restaurants-grid">
+            <!-- Rendered by favorites.js -->
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="site-footer"></div>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/storage.js"></script>
+  <script src="../js/cart.js"></script>
+  <script src="../js/components.js"></script>
+  <script src="../js/favorites.js"></script>
+</body>
+</html>

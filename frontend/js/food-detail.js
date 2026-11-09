@@ -3,6 +3,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Đồng bộ trạng thái yêu thích từ localStorage trước khi render
+  if (typeof window.loadFavoritesFromStorage === 'function') {
+    window.loadFavoritesFromStorage();
+  }
+
   UIComponents.renderHeader('foods');
   UIComponents.renderFooter();
 
@@ -88,11 +93,32 @@ document.addEventListener('DOMContentLoaded', () => {
               <button class="btn btn-primary btn-lg" id="btn-buy-now">
                 ⚡ Mua Ngay
               </button>
+
+              <button class="favorite-btn ${product.isLiked ? 'is-liked' : ''}" id="btn-favorite-detail" style="width:48px; height:48px; font-size:1.4rem;" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">
+                ${product.isLiked ? '♥' : '♡'}
+              </button>
             `}
           </div>
         </div>
       </div>
     `;
+
+    // Nút yêu thích chi tiết món
+    const favDetailBtn = document.getElementById('btn-favorite-detail');
+    if (favDetailBtn) {
+      favDetailBtn.addEventListener('click', () => {
+        product.isLiked = !product.isLiked;
+        favDetailBtn.classList.toggle('is-liked', product.isLiked);
+        favDetailBtn.textContent = product.isLiked ? '♥' : '♡';
+        favDetailBtn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
+        favDetailBtn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
+        if (typeof window.saveFavoritesToStorage === 'function') {
+          window.saveFavoritesToStorage();
+        }
+        UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
+        UIComponents.updateFavoriteBadge();
+      });
+    }
 
     // Recalculate price on topping check
     function updateTotalPrice() {
@@ -175,10 +201,30 @@ document.addEventListener('DOMContentLoaded', () => {
           <a href="./food-detail.html?id=${encodeURIComponent(p.id)}" class="product-title">${UIComponents.escapeHtml(p.name)}</a>
           <div class="product-bottom-row">
             <span class="product-price">${UIComponents.formatVND(p.price)}</span>
+            <button class="favorite-btn ${p.isLiked ? 'is-liked' : ''}" data-product-id="${p.id}" title="${p.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}">${p.isLiked ? '♥' : '♡'}</button>
             <button class="btn-add-cart" onclick="UIComponents.openFoodModal('${p.id}')">+</button>
           </div>
         </div>
       </div>
     `).join('');
+
+    relatedContainer.addEventListener('click', (e) => {
+      const favBtn = e.target.closest('.favorite-btn[data-product-id]');
+      if (!favBtn) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const pId = favBtn.dataset.productId;
+      const item = FASTFOOD_DATA.products.find(x => String(x.id) === String(pId));
+      if (!item) return;
+      item.isLiked = !item.isLiked;
+      favBtn.classList.toggle('is-liked', item.isLiked);
+      favBtn.textContent = item.isLiked ? '♥' : '♡';
+      favBtn.setAttribute('title', item.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
+      if (typeof window.saveFavoritesToStorage === 'function') {
+        window.saveFavoritesToStorage();
+      }
+      UIComponents.showToast(item.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
+      UIComponents.updateFavoriteBadge();
+    });
   }
 });

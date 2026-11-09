@@ -4,10 +4,10 @@
  */
 
 const UIComponents = {
-  // Format tiền tệ VNĐ (ví dụ: 69.000 đ)
+  // Format tiền tệ VNĐ (ví dụ: 69.000 đ - dùng non-breaking space để không bị rớt dòng chữ đ)
   formatVND(amount) {
-    if (isNaN(amount) || amount === null) return '0 đ';
-    return new Intl.NumberFormat('vi-VN').format(amount) + ' đ';
+    if (isNaN(amount) || amount === null) return '0\u00A0đ';
+    return new Intl.NumberFormat('vi-VN').format(amount) + '\u00A0đ';
   },
 
   formatDateTime(value) {
@@ -215,6 +215,10 @@ const UIComponents = {
 
     // Update favorite nav badge
     this.updateFavoriteBadge = function() {
+      if (typeof window.saveFavoritesToStorage === 'function') {
+        window.saveFavoritesToStorage();
+      }
+
       const likedProducts = (window.FASTFOOD_DATA && window.FASTFOOD_DATA.products) || [];
       const likedRestaurants = (window.FASTFOOD_DATA && window.FASTFOOD_DATA.restaurants) || [];
       const totalLiked = likedProducts.filter(p => p.isLiked).length + likedRestaurants.filter(r => r.isLiked).length;
@@ -236,6 +240,19 @@ const UIComponents = {
         }
       }
     };
+
+    // Khởi tạo badge số lượng yêu thích ngay khi nạp header
+    this.updateFavoriteBadge();
+
+    // Lắng nghe thay đổi storage từ các tab khác để đồng bộ real-time
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'fastfood-favorites-v1') {
+        if (typeof window.loadFavoritesFromStorage === 'function') {
+          window.loadFavoritesFromStorage();
+        }
+        this.updateFavoriteBadge();
+      }
+    });
   },
 
   initRealtime(user) {

@@ -3,6 +3,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Đồng bộ trạng thái yêu thích từ localStorage trước khi render
+  if (typeof window.loadFavoritesFromStorage === 'function') {
+    window.loadFavoritesFromStorage();
+  }
+
   // Render Header & Footer
   UIComponents.renderHeader('home');
   UIComponents.renderFooter();
@@ -41,24 +46,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (favBtn.dataset.productId) {
       const productId = favBtn.dataset.productId;
-      const product = FASTFOOD_DATA.products.find(p => p.id === productId);
+      const product = FASTFOOD_DATA.products.find(p => String(p.id) === String(productId));
       if (!product) return;
       product.isLiked = !product.isLiked;
-      favBtn.classList.toggle('is-liked', product.isLiked);
-      favBtn.textContent = product.isLiked ? '♥' : '♡';
-      favBtn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
-      favBtn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
+
+      // Đồng bộ trạng thái trên tất cả các nút của cùng món ăn trên trang (ví dụ vừa ở Flash Deals vừa ở Best Sellers)
+      document.querySelectorAll(`.favorite-btn[data-product-id="${productId}"]`).forEach(btn => {
+        btn.classList.toggle('is-liked', product.isLiked);
+        btn.textContent = product.isLiked ? '♥' : '♡';
+        btn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
+        btn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
+      });
+
+      if (typeof window.saveFavoritesToStorage === 'function') {
+        window.saveFavoritesToStorage();
+      }
       UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
       UIComponents.updateFavoriteBadge();
     } else if (favBtn.dataset.resId) {
       const resId = favBtn.dataset.resId;
-      const res = FASTFOOD_DATA.restaurants.find(r => r.id === resId);
+      const res = FASTFOOD_DATA.restaurants.find(r => String(r.id) === String(resId));
       if (!res) return;
       res.isLiked = !res.isLiked;
-      favBtn.classList.toggle('is-liked', res.isLiked);
-      favBtn.textContent = res.isLiked ? '♥' : '♡';
-      favBtn.setAttribute('title', res.isLiked ? 'Bỏ yêu thích' : 'Yêu thích quán này');
-      favBtn.setAttribute('aria-label', res.isLiked ? 'Đã yêu thích quán này' : 'Yêu thích quán này');
+
+      // Đồng bộ trạng thái trên tất cả các nút của cùng quán ăn trên trang
+      document.querySelectorAll(`.favorite-btn[data-res-id="${resId}"]`).forEach(btn => {
+        btn.classList.toggle('is-liked', res.isLiked);
+        btn.textContent = res.isLiked ? '♥' : '♡';
+        btn.setAttribute('title', res.isLiked ? 'Bỏ yêu thích' : 'Yêu thích quán này');
+        btn.setAttribute('aria-label', res.isLiked ? 'Đã yêu thích quán này' : 'Yêu thích quán này');
+      });
+
+      if (typeof window.saveFavoritesToStorage === 'function') {
+        window.saveFavoritesToStorage();
+      }
       UIComponents.showToast(res.isLiked ? 'Đã thêm quán vào yêu thích!' : 'Đã bỏ yêu thích quán!', 'info', 2500);
       UIComponents.updateFavoriteBadge();
     }
@@ -178,7 +199,7 @@ function createProductCardHtml(product) {
             ${product.oldPrice ? `<span class="product-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
           </div>
 
-          <button class="favorite-btn" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
+          <button class="favorite-btn ${product.isLiked ? 'is-liked' : ''}" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
           <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">+</button>
         </div>
       </div>

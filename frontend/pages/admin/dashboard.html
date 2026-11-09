@@ -512,6 +512,281 @@
     #admin-chat-feedback { min-height: 17px; margin: 0; padding: 0 13px 8px; color: #56805d; font-size: 10px; }
     #admin-chat-feedback.error { color: #b94a48; }
 
+    /* --- AI Copilot Toolbar in Admin Chat --- */
+    .admin-chat-ai-bar {
+      padding: 9px 13px;
+      background: linear-gradient(135deg, #fff7ed 0%, #fffaf5 100%);
+      border-top: 1px solid #fed7aa;
+      border-bottom: 1px solid #ffedd5;
+    }
+    .ai-bar-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 7px;
+    }
+    .ai-bar-title {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: #9a3412;
+      font-weight: 750;
+    }
+    .ai-bar-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ai-action-btn {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 6px;
+      border: 1px solid #f97316;
+      background: #f97316;
+      color: #fff;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all .15s ease;
+    }
+    .ai-action-btn:hover { background: #ea580c; transform: translateY(-1px); }
+    .ai-action-btn.secondary {
+      background: #fff;
+      color: #c2410c;
+      border-color: #fdba74;
+    }
+    .ai-action-btn.secondary:hover { background: #fff7ed; }
+    .ai-quick-chips {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+    }
+    .quick-chip-label { font-size: 10px; color: #9a3412; font-weight: 600; white-space: nowrap; }
+    .ai-chip {
+      padding: 3px 8px;
+      font-size: 10px;
+      border-radius: 12px;
+      border: 1px solid #fed7aa;
+      background: #fff;
+      color: #7c2d12;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s ease;
+    }
+    .ai-chip:hover {
+      background: #f97316;
+      color: #fff;
+      border-color: #f97316;
+    }
+
+    /* --- Dedicated Admin AI Chatbot Panel --- */
+    .ai-bot-panel {
+      border: 1px solid #eee;
+      border-radius: 17px;
+      background: #fff;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 210px);
+      min-height: 520px;
+    }
+    .ai-bot-panel[hidden] { display: none !important; }
+    .ai-bot-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    .ai-bot-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+      color: #fff;
+    }
+    .ai-bot-header-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .ai-avatar-wrap {
+      position: relative;
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #ec4899 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    }
+    .ai-status-indicator.online {
+      position: absolute;
+      bottom: -2px;
+      right: -2px;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #22c55e;
+      border: 2px solid #1e1b4b;
+    }
+    .ai-bot-header h2 { margin: 0; font-size: 16px; font-weight: 800; color: #fff; letter-spacing: .2px; }
+    .ai-bot-header p { margin: 3px 0 0; font-size: 11px; color: #cbd5e1; }
+    .ai-clear-btn {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 700;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+    .ai-clear-btn:hover { background: rgba(255, 255, 255, 0.25); }
+
+    .ai-bot-chat-window {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .ai-chat-bubble {
+      width: fit-content;
+      max-width: min(85%, 760px);
+      padding: 14px 18px;
+      border-radius: 16px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+      animation: modal-enter .25s ease both;
+    }
+    .ai-chat-bubble.assistant {
+      align-self: flex-start;
+      border-left: 4px solid #8b5cf6;
+      background: #ffffff;
+    }
+    .ai-chat-bubble.user {
+      align-self: flex-end;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #fff;
+      border: none;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+    }
+    .ai-chat-bubble.user p { color: #fff !important; }
+    .ai-chat-bubble.user strong { color: #fff !important; }
+    .ai-chat-bubble.user .bubble-time { color: rgba(255, 255, 255, 0.8) !important; }
+    .bubble-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      font-size: 11px;
+      color: #64748b;
+    }
+    .bubble-avatar { font-size: 14px; }
+    .bubble-header strong { color: #1e293b; font-weight: 700; }
+    .bubble-time { margin-left: auto; font-size: 10px; color: #94a3b8; }
+    .bubble-body {
+      font-size: 13px;
+      line-height: 1.65;
+      color: #334155;
+    }
+    .bubble-body p { margin: 0 0 8px; }
+    .bubble-body p:last-child { margin-bottom: 0; }
+    .bubble-body ul { margin: 6px 0 10px 18px; padding: 0; }
+    .bubble-body li { margin-bottom: 4px; }
+    .bubble-body blockquote {
+      margin: 8px 0;
+      padding: 8px 12px;
+      background: #f1f5f9;
+      border-left: 3px solid #f97316;
+      border-radius: 0 8px 8px 0;
+      font-style: italic;
+    }
+    .ai-prompt-suggestions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed #e2e8f0;
+    }
+    .prompt-chip {
+      padding: 6px 12px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 20px;
+      border: 1px solid #cbd5e1;
+      background: #f8fafc;
+      color: #334155;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .prompt-chip:hover {
+      background: #8b5cf6;
+      color: #fff;
+      border-color: #8b5cf6;
+      transform: translateY(-1px);
+    }
+
+    .ai-bot-input-form {
+      display: flex;
+      gap: 10px;
+      padding: 14px 18px;
+      background: #fff;
+      border-top: 1px solid #e2e8f0;
+    }
+    .ai-bot-input-form input {
+      flex: 1;
+      height: 44px;
+      padding: 0 16px;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      outline: none;
+      font-size: 13px;
+      transition: border-color .15s ease;
+    }
+    .ai-bot-input-form input:focus {
+      border-color: #8b5cf6;
+      box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.12);
+    }
+    .ai-bot-input-form button {
+      padding: 0 20px;
+      height: 44px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
+      transition: all .15s ease;
+    }
+    .ai-bot-input-form button:hover {
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      transform: translateY(-1px);
+    }
+    .ai-bot-input-form button:disabled {
+      opacity: .6;
+      cursor: wait;
+    }
+
     .section-purpose {
       display: flex;
       align-items: center;
@@ -819,6 +1094,10 @@
         <button class="nav-item" type="button" data-section="messages">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 5h16v12H9l-5 4z"/><path d="M8 9h8M8 13h5"/></svg>Tin nhắn khách hàng
         </button>
+        <button class="nav-item" type="button" data-section="ai-bot">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 2a2 2 0 0 1 2 2v2a8 8 0 0 1 8 8v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a8 8 0 0 1 8-8V4a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1.5"/><circle cx="15" cy="13" r="1.5"/><path d="M10 17h4"/></svg><span>Trợ lý AI Chatbot</span>
+          <span class="nav-badge" style="background:linear-gradient(135deg, #8b5cf6, #ec4899); color:#fff; font-weight:800;">AI</span>
+        </button>
         <button class="nav-item" type="button" data-section="reviews">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><span>Đánh giá khách hàng</span>
           <span class="nav-badge" id="reviews-nav-badge" hidden>Mới</span>
@@ -966,12 +1245,94 @@
               <p id="chat-assistant-status">Trợ lý AI sẽ tự trả lời tin nhắn mới của khách.</p>
             </header>
             <div class="admin-chat-messages" id="admin-chat-messages" aria-live="polite"></div>
+            <!-- AI Copilot Support Toolbar for Admin -->
+            <div class="admin-chat-ai-bar" id="admin-chat-ai-bar">
+              <div class="ai-bar-header">
+                <div class="ai-bar-title">
+                  <span class="ai-sparkle">✨</span>
+                  <strong>Trợ lý AI Hỗ trợ Trả lời</strong>
+                  <span class="ai-intent-tag" id="ai-detected-intent" style="display:none;"></span>
+                </div>
+                <div class="ai-bar-controls">
+                  <button type="button" class="ai-action-btn" id="btn-ai-suggest-reply" title="AI phân tích tin nhắn khách và soạn sẵn câu trả lời">
+                    ✨ Gợi ý câu trả lời AI
+                  </button>
+                  <button type="button" class="ai-action-btn secondary" id="btn-toggle-ai-automation" title="Bật hoặc tạm dừng AI tự động trả lời cho khách này">
+                    🤖 Bật AI tự động
+                  </button>
+                </div>
+              </div>
+              <div class="ai-quick-chips" id="ai-quick-chips">
+                <span class="quick-chip-label">Trả lời nhanh:</span>
+                <button type="button" class="ai-chip" data-text="Dạ chào bạn, FASTFOOD đã nhận được yêu cầu và đang xử lý ngay cho bạn đây ạ!">⚡ Chào & Nhận xử lý</button>
+                <button type="button" class="ai-chip" data-text="Đơn hàng của bạn đang được quán chuẩn bị nóng hổi và sắp bàn giao cho tài xế rồi bạn nhé!">🍳 Quán đang làm món</button>
+                <button type="button" class="ai-chip" data-text="Tài xế FASTFOOD đang trên đường giao đến bạn, bạn chú ý điện thoại trong 5-10 phút tới nhé!">🛵 Đang giao hàng</button>
+                <button type="button" class="ai-chip" data-text="FASTFOOD chân thành xin lỗi bạn vì sự bất tiện này. Mình xin gửi tặng bạn mã giảm giá FASTFOOD20 cho lần đặt tiếp theo ạ!">🎁 Xin lỗi & Tặng mã</button>
+              </div>
+            </div>
             <form class="admin-chat-form" id="admin-chat-form">
               <input name="message" maxlength="1000" placeholder="Nhập tin nhắn..." autocomplete="off" required>
               <button type="submit">Gửi</button>
             </form>
             <p id="admin-chat-feedback" role="status"></p>
           </section>
+        </section>
+        <!-- Section Trợ lý AI Chatbot Quản trị dành cho Admin -->
+        <section class="ai-bot-panel" id="ai-bot-section" aria-label="Trợ lý AI Chatbot Quản trị" hidden>
+          <div class="ai-bot-container">
+            <header class="ai-bot-header">
+              <div class="ai-bot-header-left">
+                <div class="ai-avatar-wrap">
+                  <span class="ai-avatar-icon">🤖</span>
+                  <span class="ai-status-indicator online"></span>
+                </div>
+                <div>
+                  <h2>FASTFOOD AI Co-pilot (Trợ Lý Quản Trị)</h2>
+                  <p>Trợ lý AI chuyên biệt cho Admin • Tư vấn kinh doanh, chính sách vận hành & CSKH 24/7</p>
+                </div>
+              </div>
+              <div class="ai-bot-header-right">
+                <button type="button" class="ai-clear-btn" id="btn-clear-ai-history" title="Làm mới cuộc trò chuyện">
+                  🔄 Đoạn chat mới
+                </button>
+              </div>
+            </header>
+
+            <div class="ai-bot-chat-window" id="ai-bot-messages" aria-live="polite">
+              <!-- Tin nhắn mở đầu của AI -->
+              <article class="ai-chat-bubble assistant">
+                <div class="bubble-header">
+                  <span class="bubble-avatar">🤖</span>
+                  <strong>Trợ lý AI FASTFOOD</strong>
+                  <span class="bubble-time">Sẵn sàng</span>
+                </div>
+                <div class="bubble-body">
+                  <p>Xin chào <strong>Quản trị viên</strong>! Tôi là <strong>FASTFOOD AI Co-pilot</strong>, trợ lý ảo thông minh đồng hành cùng bạn trong việc quản lý và phát triển nền tảng đặt đồ ăn.</p>
+                  <p>Bạn có thể hỏi tôi bất kỳ nghiệp vụ nào:</p>
+                  <ul>
+                    <li>📊 <strong>Doanh thu & Vận hành:</strong> Phân tích giờ cao điểm, xu hướng đặt món của các quán Buôn Ma Thuột.</li>
+                    <li>📋 <strong>Chính sách hệ thống:</strong> Quy tắc tăng 3% phí ship khi hủy đơn, điều kiện áp dụng mã giảm giá.</li>
+                    <li>✍️ <strong>Soạn thảo nội dung:</strong> Viết tin nhắn CSKH, kịch bản giải quyết khiếu nại, thông báo ưu đãi.</li>
+                    <li>🍔 <strong>Thực đơn & Quán ăn:</strong> Quản lý danh sách 33 món ăn, giá tiền và tùy chọn topping.</li>
+                  </ul>
+                </div>
+                <div class="ai-prompt-suggestions" id="ai-starter-prompts">
+                  <button type="button" class="prompt-chip" data-prompt="Phân tích tình hình doanh thu và các giờ cao điểm đặt món">📈 Phân tích doanh thu & Giờ cao điểm</button>
+                  <button type="button" class="prompt-chip" data-prompt="Chính sách phí giao hàng và quy tắc tăng 3% khi khách hủy đơn như thế nào?">📋 Chính sách phí ship & Hủy đơn</button>
+                  <button type="button" class="prompt-chip" data-prompt="Soạn mẫu thông báo khuyến mãi giảm giá 50K cuối tuần cho khách">✍️ Soạn tin nhắn khuyến mãi cuối tuần</button>
+                  <button type="button" class="prompt-chip" data-prompt="Hướng dẫn quy trình chuẩn xử lý khi khách hàng đánh giá 1 sao vì đồ ăn giao trễ">🛡️ Cách xử lý khiếu nại khách hàng 1 sao</button>
+                </div>
+              </article>
+            </div>
+
+            <form class="ai-bot-input-form" id="ai-bot-form">
+              <input type="text" id="ai-bot-input" placeholder="Hỏi Trợ lý AI bất kỳ điều gì về quản trị, đơn hàng, chính sách..." autocomplete="off" required>
+              <button type="submit" id="ai-bot-send-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:16px;height:16px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                <span>Gửi câu hỏi</span>
+              </button>
+            </form>
+          </div>
         </section>
         <section class="reviews-panel" id="reviews-section" aria-label="Đánh giá khách hàng" hidden>
           <header class="reviews-panel-heading">
@@ -1017,6 +1378,7 @@
   <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
   <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/data.js"></script>
   <script src="/js/realtime.js"></script>
   <script src="/js/admin-chat.js"></script>
   <script>
@@ -1265,30 +1627,58 @@
         },
       };
       const seedData = {
-        restaurants: [
-          { id: 'res-1', name: 'Burger King Station - Buôn Ma Thuột', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-          { id: 'res-2', name: 'Cơm Tấm Sài Gòn Xưa - Buôn Ma Thuột', address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-          { id: 'res-3', name: 'Tiệm Trà Sữa GongCha Tea & Coffee', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-          { id: 'res-4', name: 'Pizza Hut Italia - Buôn Ma Thuột', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-        ],
+        restaurants: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.restaurants))
+          ? window.FASTFOOD_DATA.restaurants.map((r) => ({
+              id: r.id,
+              name: r.name,
+              address: r.address,
+              url: '',
+              status: 'Đang hoạt động',
+            }))
+          : [
+              { id: 'res-1', name: 'Burger King Station - Buôn Ma Thuột', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+              { id: 'res-2', name: 'Cơm Tấm Sài Gòn Xưa - Buôn Ma Thuột', address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+              { id: 'res-3', name: 'Tiệm Trà Sữa GongCha Tea & Coffee', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+              { id: 'res-4', name: 'Pizza Hut Italia - Buôn Ma Thuột', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
+            ],
         categories: [
-          { id: 'cat-1', name: 'Cơm & Món Việt', description: 'Món ăn Việt Nam', itemCount: 18, status: 'Đang hoạt động' },
-          { id: 'cat-2', name: 'Burger & Gà rán', description: 'Đồ ăn nhanh', itemCount: 12, status: 'Đang hoạt động' },
-          { id: 'cat-3', name: 'Trà sữa & Đồ uống', description: 'Thức uống giải khát', itemCount: 15, status: 'Đang hoạt động' },
-          { id: 'cat-4', name: 'Pizza & Mỳ Ý', description: 'Ẩm thực Ý', itemCount: 9, status: 'Đang hoạt động' },
-          { id: 'cat-5', name: 'Ăn vặt & Tráng miệng', description: 'Món ăn nhẹ', itemCount: 14, status: 'Đã ẩn' },
-          { id: 'cat-6', name: 'Salad & Healthy', description: 'Món ăn lành mạnh', itemCount: 8, status: 'Đang hoạt động' },
+          { id: 'cat-1', name: 'Cơm & Món Việt', description: 'Món ăn Việt Nam', itemCount: 40, status: 'Đang hoạt động' },
+          { id: 'cat-2', name: 'Burger & Gà rán', description: 'Đồ ăn nhanh', itemCount: 60, status: 'Đang hoạt động' },
+          { id: 'cat-3', name: 'Trà sữa & Đồ uống', description: 'Thức uống giải khát', itemCount: 20, status: 'Đang hoạt động' },
+          { id: 'cat-4', name: 'Pizza & Mỳ Ý', description: 'Ẩm thực Ý', itemCount: 40, status: 'Đang hoạt động' },
+          { id: 'cat-5', name: 'Ăn vặt & Tráng miệng', description: 'Món ăn nhẹ', itemCount: 60, status: 'Đang hoạt động' },
+          { id: 'cat-6', name: 'Salad & Healthy', description: 'Món ăn lành mạnh', itemCount: 20, status: 'Đang hoạt động' },
+          { id: 'cat-7', name: 'Sushi & Món Nhật', description: 'Ẩm thực Nhật Bản', itemCount: 20, status: 'Đang hoạt động' },
         ],
-        products: [
-          { id: 'prd-1', name: 'Burger Bò Nướng Phô Mai', category: 'Burger & Gà rán', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 69000, status: 'Đang bán', toppings: [{ name: 'Thêm phô mai lát Cheddar', price: 10000 }, { name: 'Thịt xông khói giòn (Bacon)', price: 15000 }, { name: 'Trứng ốp la lòng đào', price: 8000 }] },
-          { id: 'prd-2', name: 'Cơm Tấm Sườn Bì Chả', category: 'Cơm & Món Việt', restaurant: 'Cơm Tấm Sài Gòn Xưa', address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 55000, status: 'Đang bán', toppings: [{ name: 'Thêm chả trứng hấp', price: 10000 }, { name: 'Thêm sườn nướng mật ong', price: 25000 }, { name: 'Canh rong biển súp', price: 8000 }] },
-          { id: 'prd-3', name: 'Trà Sữa Trân Châu Hoàng Gia', category: 'Trà sữa & Đồ uống', restaurant: 'GongCha Tea & Coffee', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 45000, status: 'Đang bán', toppings: [{ name: 'Trân châu đen dẻo', price: 5000 }, { name: 'Trân châu trắng giòn', price: 8000 }, { name: 'Kem cheese béo ngậy', price: 12000 }] },
-          { id: 'prd-4', name: 'Pizza Hải Sản Đặc Biệt', category: 'Pizza & Mỳ Ý', restaurant: 'Pizza Hut Italia', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 159000, status: 'Tạm hết', toppings: [{ name: 'Gấp đôi phô mai Mozzarella', price: 25000 }, { name: 'Thêm xúc xích Ý cay', price: 20000 }] },
-          { id: 'prd-5', name: 'Gà Rán Giòn Sốt Cay', category: 'Burger & Gà rán', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 75000, status: 'Đang bán', toppings: [{ name: 'Sốt cay Hàn Quốc thêm', price: 8000 }, { name: 'Phô mai tuyết rắc', price: 10000 }] },
-          { id: 'prd-6', name: 'Salad Bơ Cá Hồi', category: 'Salad & Healthy', restaurant: 'Green Bowl Kitchen', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 89000, status: 'Đang bán', toppings: [{ name: 'Thêm sốt mè rang', price: 5000 }, { name: 'Thêm ức gà nướng áp chảo', price: 18000 }] },
-          { id: 'prd-7', name: 'Mỳ Ý Sốt Bò Bằm', category: 'Pizza & Mỳ Ý', restaurant: 'Pizza Hut Italia', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 99000, status: 'Đang bán', toppings: [{ name: 'Thêm phô mai Parmesan', price: 12000 }, { name: 'Bánh mì bơ tỏi ăn kèm', price: 10000 }] },
-          { id: 'prd-8', name: 'Khoai Tây Lắc Phô Mai', category: 'Ăn vặt & Tráng miệng', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1573080496219-bb080dd4f877?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 35000, status: 'Tạm hết', toppings: [{ name: 'Lắc bột rong biển', price: 5000 }, { name: 'Sốt chấm mayonnaise tỏi', price: 5000 }] },
-        ],
+        products: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.products) && window.FASTFOOD_DATA.products.length)
+          ? window.FASTFOOD_DATA.products.map((p) => {
+              const catMap = {
+                com: 'Cơm & Món Việt',
+                burger: 'Burger & Gà rán',
+                'tra-sua': 'Trà sữa & Đồ uống',
+                pizza: 'Pizza & Mỳ Ý',
+                sushi: 'Sushi & Món Nhật',
+                healthy: 'Salad & Healthy',
+                'an-vat': 'Ăn vặt & Tráng miệng',
+              };
+              const address = window.getFastfoodRestaurantAddressForProduct ? window.getFastfoodRestaurantAddressForProduct(p) : 'Buôn Ma Thuột, Đắk Lắk';
+              return {
+                id: p.id,
+                name: p.name,
+                category: catMap[p.category] || 'Ăn vặt & Tráng miệng',
+                restaurant: p.restaurantName,
+                address: address,
+                image: p.image,
+                url: '',
+                restaurantUrl: '',
+                price: p.price,
+                status: 'Đang bán',
+                toppings: Array.isArray(p.toppings) ? p.toppings : [],
+              };
+            })
+          : [
+              { id: 'prd-1', name: 'Burger Bò Nướng Phô Mai', category: 'Burger & Gà rán', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 69000, status: 'Đang bán', toppings: [{ name: 'Thêm phô mai lát Cheddar', price: 10000 }, { name: 'Thịt xông khói giòn (Bacon)', price: 15000 }, { name: 'Trứng ốp la lòng đào', price: 8000 }] },
+            ],
         orders: [],
         users: [
           { id: 'usr-1', name: 'Nguyễn Minh Anh', email: 'minhanh@gmail.com', phone: '0901 234 567', role: 'Khách hàng', status: 'Đang hoạt động' },
@@ -1361,6 +1751,7 @@
       const tableBody = document.getElementById('table-body');
       const filterSelect = document.getElementById('status-filter');
       const chatInbox = document.getElementById('chat-inbox');
+      const aiBotSection = document.getElementById('ai-bot-section');
       const tablePanel = document.getElementById('table-title').closest('.table-panel');
       const reviewsSection = document.getElementById('reviews-section');
       const reviewsList = document.getElementById('reviews-list');
@@ -1912,14 +2303,22 @@
       function renderSection() {
         const section = sections[activeSection];
         const addButton = document.getElementById('add-button');
-        if (activeSection === 'messages' || activeSection === 'reviews') {
+        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot') {
           const isMessages = activeSection === 'messages';
-          const sectionTitle = isMessages ? 'Tin nhắn khách hàng' : 'Đánh giá khách hàng';
-          document.getElementById('breadcrumb').textContent = sectionTitle;
+          const isReviews = activeSection === 'reviews';
+          const isAiBot = activeSection === 'ai-bot';
+          let sectionTitle = 'Tin nhắn khách hàng';
+          let sectionDesc = 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.';
+          if (isReviews) {
+            sectionTitle = 'Đánh giá khách hàng';
+            sectionDesc = 'Nhận thông báo tức thì và theo dõi nhận xét của khách sau khi hoàn thành đơn.';
+          } else if (isAiBot) {
+            sectionTitle = 'Trợ lý AI Chatbot Quản Trị';
+            sectionDesc = 'Trợ lý ảo thông minh giải đáp nghiệp vụ, tư vấn doanh thu & hỗ trợ vận hành FASTFOOD.';
+          }
+          document.getElementById('breadcrumb').textContent = isAiBot ? 'Trợ lý AI Chatbot' : sectionTitle;
           document.getElementById('page-title').textContent = sectionTitle;
-          document.getElementById('page-description').textContent = isMessages
-            ? 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.'
-            : 'Nhận thông báo tức thì và theo dõi nhận xét của khách sau khi hoàn thành đơn.';
+          document.getElementById('page-description').textContent = sectionDesc;
           addButton.hidden = true;
           addButton.style.display = 'none';
           document.getElementById('dashboard-stats').hidden = true;
@@ -1927,9 +2326,10 @@
           document.getElementById('sales-analytics').hidden = true;
           tablePanel.hidden = true;
           chatInbox.hidden = !isMessages;
-          reviewsSection.hidden = isMessages;
+          reviewsSection.hidden = !isReviews;
+          if (aiBotSection) aiBotSection.hidden = !isAiBot;
           window.adminChatInbox?.setActive(isMessages);
-          if (!isMessages) {
+          if (isReviews) {
             clearReviewsBadge();
             renderOrderReviews(renderedReviews);
             loadOrderReviews({ silent: renderedReviews.length > 0 });
@@ -1938,6 +2338,7 @@
         }
         chatInbox.hidden = true;
         reviewsSection.hidden = true;
+        if (aiBotSection) aiBotSection.hidden = true;
         tablePanel.hidden = false;
         window.adminChatInbox?.setActive(false);
         const collection = section.collection;
@@ -2118,7 +2519,7 @@
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (activeSection === 'messages') return;
+        if (activeSection === 'messages' || activeSection === 'ai-bot') return;
         if (activeSection === 'reviews') {
           reviewSearchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
           renderOrderReviews(renderedReviews);
@@ -2134,7 +2535,7 @@
           renderOrderReviews(renderedReviews);
           return;
         }
-        if (!event.target.value && activeSection !== 'messages') {
+        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot') {
           searchTerm = '';
           currentPage = 1;
           renderTable();
@@ -2297,7 +2698,7 @@
 
       const urlParams = new URLSearchParams(window.location.search);
       const initialSection = urlParams.get('section') || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
-      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews')) {
+      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot')) {
         const targetBtn = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
         if (targetBtn) {
           activeSection = initialSection;
@@ -2308,6 +2709,185 @@
           });
         }
       }
+
+      // === Trợ lý AI Co-pilot Chatbot Section Logic ===
+      const aiBotMessages = document.getElementById('ai-bot-messages');
+      const aiBotForm = document.getElementById('ai-bot-form');
+      const aiBotInput = document.getElementById('ai-bot-input');
+      const aiBotSendBtn = document.getElementById('ai-bot-send-btn');
+      const btnClearAi = document.getElementById('btn-clear-ai-history');
+
+      function formatAiMarkdown(text) {
+        if (!text) return '';
+        let escaped = escapeHtml(text);
+        escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        const lines = escaped.split('\n');
+        const formatted = [];
+        let inList = false;
+        lines.forEach((line) => {
+          const trimmed = line.trim();
+          if (trimmed.startsWith('- ') || trimmed.startsWith('• ')) {
+            if (!inList) {
+              formatted.push('<ul>');
+              inList = true;
+            }
+            formatted.push(`<li>${trimmed.replace(/^[-•]\s*/, '')}</li>`);
+          } else if (trimmed.startsWith('&gt; ') || trimmed.startsWith('> ')) {
+            if (inList) {
+              formatted.push('</ul>');
+              inList = false;
+            }
+            formatted.push(`<blockquote>${trimmed.replace(/^(&gt;|>)\s*/, '')}</blockquote>`);
+          } else {
+            if (inList) {
+              formatted.push('</ul>');
+              inList = false;
+            }
+            if (trimmed) {
+              formatted.push(`<p>${trimmed}</p>`);
+            }
+          }
+        });
+        if (inList) formatted.push('</ul>');
+        return formatted.join('');
+      }
+
+      const defaultAiWelcomeHtml = `
+        <article class="ai-chat-bubble assistant">
+          <div class="bubble-header">
+            <span class="bubble-avatar">🤖</span>
+            <strong>Trợ lý AI FASTFOOD</strong>
+            <span class="bubble-time">Sẵn sàng</span>
+          </div>
+          <div class="bubble-body">
+            <p>Xin chào <strong>Quản trị viên</strong>! Tôi là <strong>FASTFOOD AI Co-pilot</strong>, trợ lý ảo thông minh đồng hành cùng bạn trong việc quản lý và phát triển nền tảng đặt đồ ăn.</p>
+            <p>Bạn có thể hỏi tôi bất kỳ nghiệp vụ nào:</p>
+            <ul>
+              <li>📊 <strong>Doanh thu & Vận hành:</strong> Phân tích giờ cao điểm, xu hướng đặt món của các quán Buôn Ma Thuột.</li>
+              <li>📋 <strong>Chính sách hệ thống:</strong> Quy tắc tăng 3% phí ship khi hủy đơn, điều kiện áp dụng mã giảm giá.</li>
+              <li>✍️ <strong>Soạn thảo nội dung:</strong> Viết tin nhắn CSKH, kịch bản giải quyết khiếu nại, thông báo ưu đãi.</li>
+              <li>🍔 <strong>Thực đơn & Quán ăn:</strong> Quản lý danh sách 33 món ăn, giá tiền và tùy chọn topping.</li>
+            </ul>
+          </div>
+          <div class="ai-prompt-suggestions" id="ai-starter-prompts">
+            <button type="button" class="prompt-chip" data-prompt="Phân tích tình hình doanh thu và các giờ cao điểm đặt món">📈 Phân tích doanh thu & Giờ cao điểm</button>
+            <button type="button" class="prompt-chip" data-prompt="Chính sách phí giao hàng và quy tắc tăng 3% khi khách hủy đơn như thế nào?">📋 Chính sách phí ship & Hủy đơn</button>
+            <button type="button" class="prompt-chip" data-prompt="Soạn mẫu thông báo khuyến mãi giảm giá 50K cuối tuần cho khách">✍️ Soạn tin nhắn khuyến mãi cuối tuần</button>
+            <button type="button" class="prompt-chip" data-prompt="Hướng dẫn quy trình chuẩn xử lý khi khách hàng đánh giá 1 sao vì đồ ăn giao trễ">🛡️ Cách xử lý khiếu nại khách hàng 1 sao</button>
+          </div>
+        </article>
+      `;
+
+      btnClearAi?.addEventListener('click', () => {
+        if (!aiBotMessages) return;
+        aiBotMessages.innerHTML = defaultAiWelcomeHtml;
+        showToast('Đã bắt đầu phiên làm việc mới với Trợ lý AI.');
+      });
+
+      aiBotMessages?.addEventListener('click', (event) => {
+        const chip = event.target.closest('.prompt-chip');
+        if (!chip) return;
+        const promptText = chip.dataset.prompt;
+        if (promptText && aiBotInput && aiBotForm) {
+          aiBotInput.value = promptText;
+          aiBotForm.dispatchEvent(new Event('submit', { cancelable: true }));
+        }
+      });
+
+      aiBotForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const prompt = aiBotInput?.value.trim();
+        if (!prompt || !aiBotMessages) return;
+
+        const nowStr = new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date());
+
+        // Render user message
+        const userBubble = document.createElement('article');
+        userBubble.className = 'ai-chat-bubble user';
+        userBubble.innerHTML = `
+          <div class="bubble-header">
+            <span class="bubble-avatar">👨‍💼</span>
+            <strong>Bạn (Admin)</strong>
+            <span class="bubble-time">${nowStr}</span>
+          </div>
+          <div class="bubble-body">
+            <p>${escapeHtml(prompt)}</p>
+          </div>
+        `;
+        aiBotMessages.appendChild(userBubble);
+        aiBotInput.value = '';
+        aiBotMessages.scrollTop = aiBotMessages.scrollHeight;
+
+        // Render thinking indicator
+        const thinkingBubble = document.createElement('article');
+        thinkingBubble.className = 'ai-chat-bubble assistant';
+        thinkingBubble.innerHTML = `
+          <div class="bubble-header">
+            <span class="bubble-avatar">🤖</span>
+            <strong>Trợ lý AI FASTFOOD</strong>
+            <span class="bubble-time">Đang suy nghĩ...</span>
+          </div>
+          <div class="bubble-body">
+            <p><em>✨ Đang phân tích dữ liệu và soạn câu trả lời chuyên sâu...</em></p>
+          </div>
+        `;
+        aiBotMessages.appendChild(thinkingBubble);
+        aiBotMessages.scrollTop = aiBotMessages.scrollHeight;
+        if (aiBotSendBtn) aiBotSendBtn.disabled = true;
+
+        try {
+          const apiUrl = window.location.port === '5000'
+            ? `${window.location.origin}/api/v1`
+            : 'http://localhost:5000/api/v1';
+          const response = await fetch(`${apiUrl}/realtime/chat/ai/copilot`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify({ prompt }),
+          });
+          const result = await response.json();
+          thinkingBubble.remove();
+          if (!response.ok || !result.success) {
+            throw new Error(result.message || 'Không thể nhận phản hồi từ Trợ lý AI.');
+          }
+
+          const replyHtml = formatAiMarkdown(result.data?.reply || 'Tôi đã ghi nhận yêu cầu của bạn.');
+          const replyBubble = document.createElement('article');
+          replyBubble.className = 'ai-chat-bubble assistant';
+          replyBubble.innerHTML = `
+            <div class="bubble-header">
+              <span class="bubble-avatar">🤖</span>
+              <strong>Trợ lý AI FASTFOOD</strong>
+              <span class="bubble-time">${new Intl.DateTimeFormat('vi-VN', { hour: '2-digit', minute: '2-digit' }).format(new Date())}</span>
+            </div>
+            <div class="bubble-body">
+              ${replyHtml}
+            </div>
+          `;
+          aiBotMessages.appendChild(replyBubble);
+          aiBotMessages.scrollTop = aiBotMessages.scrollHeight;
+        } catch (err) {
+          thinkingBubble.remove();
+          const errBubble = document.createElement('article');
+          errBubble.className = 'ai-chat-bubble assistant';
+          errBubble.innerHTML = `
+            <div class="bubble-header">
+              <span class="bubble-avatar">⚠️</span>
+              <strong style="color:#e11d48;">Lỗi Trợ lý AI</strong>
+            </div>
+            <div class="bubble-body">
+              <p style="color:#e11d48;">Rất tiếc: ${escapeHtml(err.message)}</p>
+            </div>
+          `;
+          aiBotMessages.appendChild(errBubble);
+          aiBotMessages.scrollTop = aiBotMessages.scrollHeight;
+        } finally {
+          if (aiBotSendBtn) aiBotSendBtn.disabled = false;
+          aiBotInput?.focus();
+        }
+      });
 
       document.getElementById('today-label').textContent = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
       renderAll();

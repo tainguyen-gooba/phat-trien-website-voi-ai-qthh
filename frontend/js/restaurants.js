@@ -3,6 +3,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Đồng bộ trạng thái yêu thích từ localStorage trước khi render
+  if (typeof window.loadFavoritesFromStorage === 'function') {
+    window.loadFavoritesFromStorage();
+  }
+
   UIComponents.renderHeader('restaurants');
   UIComponents.renderFooter();
 
@@ -123,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <img src="${product.image}" alt="${UIComponents.escapeHtml(product.name)}" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.style.visibility='hidden';">
             ${discountPercent > 0 ? `<span class="product-tag-discount">-${discountPercent}%</span>` : ''}
             <span class="product-tag-time">⏱️ ${product.time}</span>
-            <button class="favorite-btn" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
+            <button class="favorite-btn ${product.isLiked ? 'is-liked' : ''}" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
           </div>
           <div class="product-info">
             <div class="product-meta-row">
@@ -137,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="product-price">${UIComponents.formatVND(product.price)}</span>
                 ${product.oldPrice ? `<span class="product-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
               </div>
-              <button class="favorite-btn product-card-favorite" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
+              <button class="favorite-btn product-card-favorite ${product.isLiked ? 'is-liked' : ''}" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
               <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">+</button>
             </div>
           </div>
@@ -222,6 +227,9 @@ document.addEventListener('DOMContentLoaded', () => {
       detailFavorite.setAttribute('aria-label', res.isLiked ? 'Đã yêu thích quán này' : 'Yêu thích quán này');
     }
 
+    if (typeof window.saveFavoritesToStorage === 'function') {
+      window.saveFavoritesToStorage();
+    }
     UIComponents.showToast(res.isLiked ? 'Đã thêm vào yêu thích!' : 'Đã bỏ yêu thích!', 'info', 2500);
     UIComponents.updateFavoriteBadge();
   });
@@ -247,6 +255,9 @@ document.addEventListener('DOMContentLoaded', () => {
         cardFavorite.textContent = res.isLiked ? '♥' : '♡';
       }
 
+      if (typeof window.saveFavoritesToStorage === 'function') {
+        window.saveFavoritesToStorage();
+      }
       UIComponents.showToast(res.isLiked ? 'Đã thêm vào yêu thích!' : 'Đã bỏ yêu thích!', 'info', 2500);
       UIComponents.updateFavoriteBadge();
     });
@@ -270,6 +281,9 @@ document.addEventListener('DOMContentLoaded', () => {
     favoriteBtn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
     favoriteBtn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
 
+    if (typeof window.saveFavoritesToStorage === 'function') {
+      window.saveFavoritesToStorage();
+    }
     UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
     UIComponents.updateFavoriteBadge();
   });

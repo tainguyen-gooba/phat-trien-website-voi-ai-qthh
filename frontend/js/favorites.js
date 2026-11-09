@@ -4,6 +4,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Đồng bộ trạng thái yêu thích từ localStorage trước khi render
+  if (typeof window.loadFavoritesFromStorage === 'function') {
+    window.loadFavoritesFromStorage();
+  }
+
   UIComponents.renderHeader('favorites');
   UIComponents.renderFooter();
 
@@ -147,10 +152,13 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
 
     const productId = favBtn.getAttribute('data-product-id');
-    const product = FASTFOOD_DATA.products.find(p => p.id === productId);
+    const product = FASTFOOD_DATA.products.find(p => String(p.id) === String(productId));
     if (!product) return;
 
     product.isLiked = false;
+    if (typeof window.saveFavoritesToStorage === 'function') {
+      window.saveFavoritesToStorage();
+    }
     renderFavorites();
     UIComponents.showToast('Đã bỏ yêu thích món ăn!', 'info', 2500);
   });
@@ -164,10 +172,13 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
 
     const resId = favBtn.getAttribute('data-res-id');
-    const res = FASTFOOD_DATA.restaurants.find(r => r.id === resId);
+    const res = FASTFOOD_DATA.restaurants.find(r => String(r.id) === String(resId));
     if (!res) return;
 
     res.isLiked = false;
+    if (typeof window.saveFavoritesToStorage === 'function') {
+      window.saveFavoritesToStorage();
+    }
     renderFavorites();
     UIComponents.showToast('Đã bỏ yêu thích quán ăn!', 'info', 2500);
   });

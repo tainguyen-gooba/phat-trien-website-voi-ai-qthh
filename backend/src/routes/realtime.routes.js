@@ -25,6 +25,15 @@ router.get('/orders/reviews', authenticate, authorize('admin'), (req, res, next)
 router.get('/chat/conversations', authenticate, authorize('admin'), (req, res, next) => (
   realtimeController.getChatConversations(req, res, next)
 ));
+router.post('/chat/ai/suggest', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.getAISuggestion(req, res, next)
+));
+router.post('/chat/ai/copilot', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.consultAICopilot(req, res, next)
+));
+router.patch('/chat/:customerId/automation', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.toggleChatAutomation(req, res, next)
+));
 router.get('/chat/:customerId', authenticate, authorize('admin', 'customer'), (req, res, next) => (
   realtimeController.getChatHistory(req, res, next)
 ));

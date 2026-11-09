@@ -3,6 +3,11 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
+  // Đồng bộ trạng thái yêu thích từ localStorage trước khi render
+  if (typeof window.loadFavoritesFromStorage === 'function') {
+    window.loadFavoritesFromStorage();
+  }
+
   UIComponents.renderHeader('foods');
   UIComponents.renderFooter();
 
@@ -106,7 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${product.oldPrice ? `<span class="product-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
               </div>
 
-              <button class="favorite-btn" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
+              <button class="favorite-btn ${product.isLiked ? 'is-liked' : ''}" data-product-id="${product.id}" title="${product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}" aria-label="${product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này'}">${product.isLiked ? '♥' : '♡'}</button>
               <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">+</button>
             </div>
           </div>
@@ -156,14 +161,21 @@ document.addEventListener('DOMContentLoaded', () => {
     e.stopPropagation();
 
     const productId = favBtn.dataset.productId;
-    const product = FASTFOOD_DATA.products.find(p => p.id === productId);
+    const product = FASTFOOD_DATA.products.find(p => String(p.id) === String(productId));
     if (!product) return;
 
     product.isLiked = !product.isLiked;
-    favBtn.classList.toggle('is-liked', product.isLiked);
-    favBtn.textContent = product.isLiked ? '♥' : '♡';
-    favBtn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
-    favBtn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
+
+    document.querySelectorAll(`.favorite-btn[data-product-id="${productId}"]`).forEach(btn => {
+      btn.classList.toggle('is-liked', product.isLiked);
+      btn.textContent = product.isLiked ? '♥' : '♡';
+      btn.setAttribute('title', product.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này');
+      btn.setAttribute('aria-label', product.isLiked ? 'Đã yêu thích món này' : 'Yêu thích món này');
+    });
+
+    if (typeof window.saveFavoritesToStorage === 'function') {
+      window.saveFavoritesToStorage();
+    }
     UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
     UIComponents.updateFavoriteBadge();
   });

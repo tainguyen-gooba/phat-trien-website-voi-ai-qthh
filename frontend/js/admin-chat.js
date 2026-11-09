@@ -10,18 +10,31 @@
     const feedback = document.getElementById('admin-chat-feedback');
     const form = document.getElementById('admin-chat-form');
     const input = form.elements.message;
+
+    // AI Copilot Controls
+    const btnSuggest = document.getElementById('btn-ai-suggest-reply');
+    const btnToggleAuto = document.getElementById('btn-toggle-ai-automation');
+    const intentTag = document.getElementById('ai-detected-intent');
+    const quickChips = document.getElementById('ai-quick-chips');
+
     let conversations = [];
     let selectedCustomerId = '';
     let active = false;
     let historyRequestId = 0;
 
-    async function request(path) {
+    async function request(path, options = {}) {
       const response = await fetch(`${apiUrl}/realtime${path}`, {
-        headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+        ...options,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {}),
+        },
       });
       const result = await response.json();
       if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Không thể tải dữ liệu tin nhắn.');
+        throw new Error(result.message || 'Không thể xử lý yêu cầu.');
       }
       return result.data;
     }
@@ -39,8 +52,8 @@
 
       const sender = document.createElement('strong');
       sender.textContent = message.senderRole === 'admin'
-        ? 'Bạn'
-        : message.senderRole === 'ai' ? 'Trợ lý AI' : 'Khách hàng';
+        ? 'Bạn (Admin)'
+        : message.senderRole === 'ai' ? 'Trợ lý AI FASTFOOD' : 'Khách hàng';
       const content = document.createElement('p');
       content.textContent = message.message;
       bubble.append(sender, content);
@@ -48,10 +61,28 @@
       messageList.scrollTop = messageList.scrollHeight;
     }
 
-    function showAssistantStatus(conversation) {
+    function isAiPaused(conversation) {
       const pauseTime = conversation?.aiPausedUntil ? new Date(conversation.aiPausedUntil) : null;
-      if (pauseTime && pauseTime.getTime() > Date.now()) {
-        assistantStatus.textContent = `Trợ lý AI tạm dừng đến ${pauseTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`;
+      return Boolean(pauseTime && pauseTime.getTime() > Date.now());
+    }
+
+    function updateAutomationUI(conversation) {
+      const paused = isAiPaused(conversation);
+      if (btnToggleAuto) {
+        if (paused) {
+          btnToggleAuto.textContent = '🤖 Bật lại AI tự động';
+          btnToggleAuto.classList.remove('secondary');
+          btnToggleAuto.title = 'Hiện đang tạm dừng bot. Bấm để bật lại AI tự trả lời.';
+        } else {
+          btnToggleAuto.textContent = '⏸️ Tạm dừng AI (30p)';
+          btnToggleAuto.classList.add('secondary');
+          btnToggleAuto.title = 'Bấm để tạm dừng bot AI trả lời tự động cho khách này trong 30 phút.';
+        }
+      }
+
+      if (paused) {
+        const pauseTime = new Date(conversation.aiPausedUntil);
+        assistantStatus.textContent = `Trợ lý AI đang tạm dừng đến ${pauseTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`;
       } else {
         assistantStatus.textContent = 'Trợ lý AI sẽ tự trả lời tin nhắn mới của khách.';
       }
@@ -76,7 +107,7 @@
         const name = document.createElement('strong');
         name.textContent = conversation.customerName || `Khách hàng #${customerId}`;
         const preview = document.createElement('span');
-        preview.textContent = `${conversation.lastSenderRole === 'customer' ? 'Khách: ' : ''}${conversation.lastMessage}`;
+        preview.textContent = `${conversation.lastSenderRole === 'customer' ? 'Khách: ' : ''}${conversation.lastMessage || '...'}`;
         const email = document.createElement('small');
         email.textContent = conversation.email || `Mã khách hàng: ${customerId}`;
         button.append(name, preview, email);
@@ -87,9 +118,12 @@
     async function loadHistory(customerId) {
       const requestId = ++historyRequestId;
       messageList.replaceChildren();
+      if (intentTag) intentTag.style.display = 'none';
+
       const conversation = conversations.find((item) => String(item.customerId) === customerId);
       threadTitle.textContent = conversation?.customerName || `Khách hàng #${customerId}`;
-      showAssistantStatus(conversation);
+      updateAutomationUI(conversation);
+
       try {
         const messages = await request(`/chat/${encodeURIComponent(customerId)}`);
         if (requestId !== historyRequestId) return;
@@ -111,13 +145,128 @@
           const currentConversation = conversations.find((item) => String(item.customerId) === selectedCustomerId);
           if (currentConversation) {
             threadTitle.textContent = currentConversation.customerName || `Khách hàng #${selectedCustomerId}`;
-            showAssistantStatus(currentConversation);
+            updateAutomationUI(currentConversation);
           }
         }
       } catch (error) {
         showFeedback(error.message, true);
       }
     }
+
+    // --- AI Suggest Reply Button ---
+    btnSuggest?.addEventListener('click', async () => {
+      if (!selectedCustomerId) {
+        showFeedback('Vui lòng chọn một cuộc trò chuyện từ danh sách trước.', true);
+        return;
+      }
+
+      const conversation = conversations.find((item) => String(item.customerId) === selectedCustomerId);
+      // Tìm tin nhắn gần nhất của khách hàng
+      let lastCustomerMsg = '';
+      const allBubbles = Array.from(messageList.querySelectorAll('.admin-chat-message'));
+      for (let i = allBubbles.length - 1; i >= 0; i--) {
+        const b = allBubbles[i];
+        if (!b.classList.contains('outgoing') && !b.classList.contains('assistant')) {
+          const p = b.querySelector('p');
+          if (p && p.textContent.trim()) {
+            lastCustomerMsg = p.textContent.trim();
+            break;
+          }
+        }
+      }
+
+      if (!lastCustomerMsg && conversation?.lastSenderRole === 'customer') {
+        lastCustomerMsg = conversation.lastMessage;
+      }
+
+      if (!lastCustomerMsg) {
+        showFeedback('Chưa tìm thấy tin nhắn nào từ khách hàng để AI phân tích.', true);
+        return;
+      }
+
+      const originalBtnText = btnSuggest.innerHTML;
+      btnSuggest.disabled = true;
+      btnSuggest.innerHTML = '✨ Đang phân tích...';
+      showFeedback('Trợ lý AI đang phân tích ý định và chuẩn bị câu trả lời phù hợp...');
+
+      try {
+        const data = await request('/chat/ai/suggest', {
+          method: 'POST',
+          body: JSON.stringify({
+            customerMessage: lastCustomerMsg,
+            customerName: conversation?.customerName || 'bạn',
+          }),
+        });
+
+        const replyText = data?.suggestedReply || data?.suggestion;
+        if (replyText) {
+          input.value = replyText;
+          input.focus();
+          if (intentTag && (data.intentLabel || data.intent)) {
+            intentTag.style.display = 'inline-block';
+            intentTag.textContent = `🎯 ${data.intentLabel || data.intent}`;
+          }
+          showFeedback('✨ Đã điền câu trả lời gợi ý từ AI! Bạn có thể chỉnh sửa rồi bấm Gửi.');
+        } else {
+          showFeedback('Không thể tạo gợi ý câu trả lời, vui lòng thử lại.', true);
+        }
+      } catch (err) {
+        showFeedback(err.message || 'Lỗi khi gọi Trợ lý AI.', true);
+      } finally {
+        btnSuggest.disabled = false;
+        btnSuggest.innerHTML = originalBtnText;
+      }
+    });
+
+    // --- Quick reply chips ---
+    quickChips?.addEventListener('click', (event) => {
+      const chip = event.target.closest('.ai-chip');
+      if (!chip) return;
+      const text = chip.dataset.text;
+      if (text) {
+        input.value = text;
+        input.focus();
+        showFeedback('Đã chọn câu trả lời mẫu.');
+      }
+    });
+
+    // --- Toggle AI Automation Button ---
+    btnToggleAuto?.addEventListener('click', async () => {
+      if (!selectedCustomerId) {
+        showFeedback('Vui lòng chọn khách hàng trước.', true);
+        return;
+      }
+
+      const conversation = conversations.find((item) => String(item.customerId) === selectedCustomerId);
+      const currentlyPaused = isAiPaused(conversation);
+      const willEnable = currentlyPaused; // Nếu đang pause thì bấm để enable
+
+      btnToggleAuto.disabled = true;
+      try {
+        await request(`/chat/${encodeURIComponent(selectedCustomerId)}/automation`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            enabled: willEnable,
+            pauseMinutes: 30,
+          }),
+        });
+
+        if (conversation) {
+          if (willEnable) {
+            conversation.aiPausedUntil = null;
+          } else {
+            conversation.aiPausedUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+          }
+          updateAutomationUI(conversation);
+        }
+
+        showFeedback(willEnable ? '✅ Đã kích hoạt lại AI tự động trả lời cho khách này.' : '⏸️ Đã tạm dừng AI tự động trong 30 phút.');
+      } catch (err) {
+        showFeedback(err.message || 'Không thể thay đổi trạng thái AI.', true);
+      } finally {
+        btnToggleAuto.disabled = false;
+      }
+    });
 
     conversationList.addEventListener('click', (event) => {
       const button = event.target.closest('[data-customer-id]');
@@ -149,6 +298,7 @@
           return;
         }
         input.value = '';
+        if (intentTag) intentTag.style.display = 'none';
         showFeedback('Đã gửi trả lời. Trợ lý AI sẽ tạm dừng 10 phút.');
       });
     });

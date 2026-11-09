@@ -2,6 +2,7 @@ const BaseController = require('./base.controller');
 const { pool } = require('../config/db.config');
 const HTTP_STATUS = require('../constants/httpStatusCodes');
 const { normalizeCustomerProfile } = require('../utils/customer-profile.validation');
+const aiChatService = require('../services/ai-chat.service');
 
 const isValidOrderCode = (orderCode) => {
   const clean = typeof orderCode === 'string' ? orderCode.replace(/^#/, '').trim() : '';
@@ -616,6 +617,84 @@ class RealtimeController extends BaseController {
          ORDER BY c.id DESC`
       );
       return this.sendSuccess(res, 'Lấy danh sách hội thoại thành công.', rows, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * AI Gợi ý câu trả lời thông minh cho Admin khi hỗ trợ khách hàng
+   */
+  async getAISuggestion(req, res, next) {
+    try {
+      const { customerMessage, customerName } = req.body || {};
+      if (!customerMessage) {
+        return this.sendError(res, 'Vui lòng cung cấp nội dung tin nhắn của khách.', HTTP_STATUS.BAD_REQUEST);
+      }
+      const data = aiChatService.generateReplySuggestion({ customerMessage, customerName });
+      data.suggestedReply = data.suggestion;
+      return this.sendSuccess(res, 'Gợi ý phản hồi AI thành công.', data, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * Trợ lý Chatbot AI tư vấn nghiệp vụ & vận hành dành riêng cho Admin
+   */
+  async consultAICopilot(req, res, next) {
+    try {
+      const { prompt } = req.body || {};
+      if (!prompt || typeof prompt !== 'string' || !prompt.trim()) {
+        return this.sendError(res, 'Vui lòng nhập câu hỏi cho Trợ lý AI.', HTTP_STATUS.BAD_REQUEST);
+      }
+      const reply = aiChatService.consultAdminAssistant({ prompt });
+      return this.sendSuccess(res, 'Phản hồi từ Trợ lý AI Admin.', { reply }, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * Bật / Tắt chế độ AI Bot tự động trả lời cho từng khách hàng
+   */
+  async toggleChatAutomation(req, res, next) {
+    try {
+      const customerId = Number(req.params.customerId);
+      const { enabled, pauseMinutes = 30 } = req.body || {};
+
+      if (!Number.isSafeInteger(customerId) || customerId < 1) {
+        return this.sendError(res, 'Mã khách hàng không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
+      }
+
+      await pool.execute(
+        `INSERT IGNORE INTO chat_automation (customer_id) VALUES (?)`,
+        [customerId]
+      );
+
+      if (enabled) {
+        // Bật lại AI: xóa thời gian tạm dừng (paused_until = NULL)
+        await pool.execute(
+          `UPDATE chat_automation SET paused_until = NULL WHERE customer_id = ?`,
+          [customerId]
+        );
+      } else {
+        // Tạm dừng AI theo số phút
+        const minutes = Math.max(5, Math.min(1440, Number(pauseMinutes) || 30));
+        await pool.execute(
+          `UPDATE chat_automation
+           SET paused_until = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL ? MINUTE)
+           WHERE customer_id = ?`,
+          [minutes, customerId]
+        );
+      }
+
+      return this.sendSuccess(
+        res,
+        enabled ? 'Đã bật lại Trợ lý AI tự động.' : `Đã tạm dừng Trợ lý AI trong ${pauseMinutes} phút.`,
+        { enabled: Boolean(enabled) },
+        HTTP_STATUS.OK
+      );
     } catch (error) {
       return next(error);
     }

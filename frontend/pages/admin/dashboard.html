@@ -24,25 +24,6 @@
       font-family: "Plus Jakarta Sans", "Be Vietnam Pro", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
-    function handlePaymentUpdate(update) {
-      if (!update?.orderCode) return;
-      const record = data.orders.find((item) => String(item.id).replace(/^#/, '') === String(update.orderCode));
-      if (!record) {
-        refreshOrders();
-        return;
-      }
-      record.paymentStatus = update.paymentStatus;
-      record.paymentLabel = update.paymentStatus === 'completed'
-        ? 'Đã thanh toán'
-        : record.paymentMethod === 'momo' ? 'Chờ MoMo' : 'Chờ QR';
-      saveRealtimeSnapshot();
-      renderAll();
-      showToast(update.paymentStatus === 'completed'
-        ? `Đơn ${update.orderCode} đã thanh toán thành công.`
-        : `Thanh toán đơn ${update.orderCode} chưa thành công.`,
-      update.paymentStatus !== 'completed');
-    }
-
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--canvas); color: var(--ink); min-width: 320px; }
     button, input, select { font: inherit; }
@@ -585,6 +566,11 @@
       border-color: #f97316;
     }
 
+    .nav-badge-ai { background: linear-gradient(135deg, #8b5cf6, #ec4899); color: #fff; font-weight: 800; }
+    .reviews-controls { display: flex; align-items: center; gap: 10px; }
+    .reviews-filter-select { min-width: 140px; height: 36px; }
+    .ai-send-icon { width: 16px; height: 16px; }
+
     /* --- Dedicated Admin AI Chatbot Panel --- */
     .ai-bot-panel {
       border: 1px solid #eee;
@@ -1072,7 +1058,7 @@
         <span class="brand-name">FASTFOOD<small>ADMIN CONSOLE</small></span>
       </a>
       <p class="nav-label">Không gian làm việc</p>
-      <nav class="nav-list" id="navigation">
+      <nav class="nav-list" id="navigation" aria-label="Điều hướng chính">
         <button class="nav-item active" type="button" data-section="dashboard" aria-current="page">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="5" rx="2"/><rect x="13" y="10" width="8" height="11" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/></svg>Dashboard
         </button>
@@ -1096,7 +1082,7 @@
         </button>
         <button class="nav-item" type="button" data-section="ai-bot">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 2a2 2 0 0 1 2 2v2a8 8 0 0 1 8 8v4a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-4a8 8 0 0 1 8-8V4a2 2 0 0 1 2-2z"/><circle cx="9" cy="13" r="1.5"/><circle cx="15" cy="13" r="1.5"/><path d="M10 17h4"/></svg><span>Trợ lý AI Chatbot</span>
-          <span class="nav-badge" style="background:linear-gradient(135deg, #8b5cf6, #ec4899); color:#fff; font-weight:800;">AI</span>
+          <span class="nav-badge nav-badge-ai">AI</span>
         </button>
         <button class="nav-item" type="button" data-section="reviews">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg><span>Đánh giá khách hàng</span>
@@ -1187,7 +1173,7 @@
                   <h2 class="analytics-title">Doanh thu 7 ngày gần nhất</h2>
                   <p class="analytics-caption">Tổng giá trị đơn hàng chưa bị hủy theo từng ngày</p>
                 </div>
-                <div class="chart-summary" aria-label="Tổng quan doanh thu">
+                <div class="chart-summary">
                   <div class="chart-summary-item"><span>Tổng doanh thu</span><strong id="chart-total-revenue">0 đ</strong></div>
                   <div class="chart-summary-item"><span>Tổng đơn hàng</span><strong id="chart-total-orders">0</strong></div>
                 </div>
@@ -1235,7 +1221,7 @@
           </div>
         </section>
         <section class="chat-inbox" id="chat-inbox" aria-label="Hộp thư tin nhắn khách hàng" hidden>
-          <aside class="chat-inbox-panel">
+          <aside class="chat-inbox-panel" aria-label="Danh sách hội thoại khách hàng">
             <div class="chat-inbox-heading"><h2>Khách hàng</h2><p>Các cuộc trò chuyện gần đây</p></div>
             <div class="chat-conversation-list" id="chat-conversation-list" aria-live="polite"></div>
           </aside>
@@ -1251,7 +1237,7 @@
                 <div class="ai-bar-title">
                   <span class="ai-sparkle">✨</span>
                   <strong>Trợ lý AI Hỗ trợ Trả lời</strong>
-                  <span class="ai-intent-tag" id="ai-detected-intent" style="display:none;"></span>
+                  <span class="ai-intent-tag" id="ai-detected-intent" hidden></span>
                 </div>
                 <div class="ai-bar-controls">
                   <button type="button" class="ai-action-btn" id="btn-ai-suggest-reply" title="AI phân tích tin nhắn khách và soạn sẵn câu trả lời">
@@ -1264,14 +1250,14 @@
               </div>
               <div class="ai-quick-chips" id="ai-quick-chips">
                 <span class="quick-chip-label">Trả lời nhanh:</span>
-                <button type="button" class="ai-chip" data-text="Dạ chào bạn, FASTFOOD đã nhận được yêu cầu và đang xử lý ngay cho bạn đây ạ!">⚡ Chào & Nhận xử lý</button>
+                <button type="button" class="ai-chip" data-text="Dạ chào bạn, FASTFOOD đã nhận được yêu cầu và đang xử lý ngay cho bạn đây ạ!">⚡ Chào &amp; Nhận xử lý</button>
                 <button type="button" class="ai-chip" data-text="Đơn hàng của bạn đang được quán chuẩn bị nóng hổi và sắp bàn giao cho tài xế rồi bạn nhé!">🍳 Quán đang làm món</button>
                 <button type="button" class="ai-chip" data-text="Tài xế FASTFOOD đang trên đường giao đến bạn, bạn chú ý điện thoại trong 5-10 phút tới nhé!">🛵 Đang giao hàng</button>
-                <button type="button" class="ai-chip" data-text="FASTFOOD chân thành xin lỗi bạn vì sự bất tiện này. Mình xin gửi tặng bạn mã giảm giá FASTFOOD20 cho lần đặt tiếp theo ạ!">🎁 Xin lỗi & Tặng mã</button>
+                <button type="button" class="ai-chip" data-text="FASTFOOD chân thành xin lỗi bạn vì sự bất tiện này. Mình xin gửi tặng bạn mã giảm giá FASTFOOD20 cho lần đặt tiếp theo ạ!">🎁 Xin lỗi &amp; Tặng mã</button>
               </div>
             </div>
             <form class="admin-chat-form" id="admin-chat-form">
-              <input name="message" maxlength="1000" placeholder="Nhập tin nhắn..." autocomplete="off" required>
+              <input type="text" name="message" maxlength="1000" placeholder="Nhập tin nhắn..." autocomplete="off" required>
               <button type="submit">Gửi</button>
             </form>
             <p id="admin-chat-feedback" role="status"></p>
@@ -1288,7 +1274,7 @@
                 </div>
                 <div>
                   <h2>FASTFOOD AI Co-pilot (Trợ Lý Quản Trị)</h2>
-                  <p>Trợ lý AI chuyên biệt cho Admin • Tư vấn kinh doanh, chính sách vận hành & CSKH 24/7</p>
+                  <p>Trợ lý AI chuyên biệt cho Admin • Tư vấn kinh doanh, chính sách vận hành &amp; CSKH 24/7</p>
                 </div>
               </div>
               <div class="ai-bot-header-right">
@@ -1310,15 +1296,15 @@
                   <p>Xin chào <strong>Quản trị viên</strong>! Tôi là <strong>FASTFOOD AI Co-pilot</strong>, trợ lý ảo thông minh đồng hành cùng bạn trong việc quản lý và phát triển nền tảng đặt đồ ăn.</p>
                   <p>Bạn có thể hỏi tôi bất kỳ nghiệp vụ nào:</p>
                   <ul>
-                    <li>📊 <strong>Doanh thu & Vận hành:</strong> Phân tích giờ cao điểm, xu hướng đặt món của các quán Buôn Ma Thuột.</li>
+                    <li>📊 <strong>Doanh thu &amp; Vận hành:</strong> Phân tích giờ cao điểm, xu hướng đặt món của các quán Buôn Ma Thuột.</li>
                     <li>📋 <strong>Chính sách hệ thống:</strong> Quy tắc tăng 3% phí ship khi hủy đơn, điều kiện áp dụng mã giảm giá.</li>
                     <li>✍️ <strong>Soạn thảo nội dung:</strong> Viết tin nhắn CSKH, kịch bản giải quyết khiếu nại, thông báo ưu đãi.</li>
-                    <li>🍔 <strong>Thực đơn & Quán ăn:</strong> Quản lý danh sách 33 món ăn, giá tiền và tùy chọn topping.</li>
+                    <li>🍔 <strong>Thực đơn &amp; Quán ăn:</strong> Quản lý danh sách 260 món ăn, giá tiền và tùy chọn topping.</li>
                   </ul>
                 </div>
                 <div class="ai-prompt-suggestions" id="ai-starter-prompts">
-                  <button type="button" class="prompt-chip" data-prompt="Phân tích tình hình doanh thu và các giờ cao điểm đặt món">📈 Phân tích doanh thu & Giờ cao điểm</button>
-                  <button type="button" class="prompt-chip" data-prompt="Chính sách phí giao hàng và quy tắc tăng 3% khi khách hủy đơn như thế nào?">📋 Chính sách phí ship & Hủy đơn</button>
+                  <button type="button" class="prompt-chip" data-prompt="Phân tích tình hình doanh thu và các giờ cao điểm đặt món">📈 Phân tích doanh thu &amp; Giờ cao điểm</button>
+                  <button type="button" class="prompt-chip" data-prompt="Chính sách phí giao hàng và quy tắc tăng 3% khi khách hủy đơn như thế nào?">📋 Chính sách phí ship &amp; Hủy đơn</button>
                   <button type="button" class="prompt-chip" data-prompt="Soạn mẫu thông báo khuyến mãi giảm giá 50K cuối tuần cho khách">✍️ Soạn tin nhắn khuyến mãi cuối tuần</button>
                   <button type="button" class="prompt-chip" data-prompt="Hướng dẫn quy trình chuẩn xử lý khi khách hàng đánh giá 1 sao vì đồ ăn giao trễ">🛡️ Cách xử lý khiếu nại khách hàng 1 sao</button>
                 </div>
@@ -1328,7 +1314,7 @@
             <form class="ai-bot-input-form" id="ai-bot-form">
               <input type="text" id="ai-bot-input" placeholder="Hỏi Trợ lý AI bất kỳ điều gì về quản trị, đơn hàng, chính sách..." autocomplete="off" required>
               <button type="submit" id="ai-bot-send-btn">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" style="width:16px;height:16px;"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                <svg class="ai-send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                 <span>Gửi câu hỏi</span>
               </button>
             </form>
@@ -1340,8 +1326,8 @@
               <h2>Nhận xét &amp; đánh giá gần đây</h2>
               <p>Đánh giá từ khách sau khi hoàn thành đơn hàng (tự động cập nhật thời gian thực)</p>
             </div>
-            <div style="display:flex; align-items:center; gap:10px;">
-              <select class="filter-select" id="reviews-filter" aria-label="Lọc đánh giá" style="min-width:140px; height:36px;">
+            <div class="reviews-controls">
+              <select class="filter-select reviews-filter-select" id="reviews-filter" aria-label="Lọc đánh giá">
                 <option value="all">Tất cả đánh giá</option>
                 <option value="driver">Tài xế</option>
                 <option value="restaurant">Quán ăn</option>
@@ -2004,6 +1990,25 @@
         if (update.displayStatus !== 'Đã hủy') {
           showToast(`Đơn ${update.orderCode} đã cập nhật: ${update.displayStatus}.`);
         }
+      }
+
+      function handlePaymentUpdate(update) {
+        if (!update?.orderCode) return;
+        const record = data.orders.find((item) => String(item.id).replace(/^#/, '') === String(update.orderCode));
+        if (!record) {
+          refreshOrders();
+          return;
+        }
+        record.paymentStatus = update.paymentStatus;
+        record.paymentLabel = update.paymentStatus === 'completed'
+          ? 'Đã thanh toán'
+          : record.paymentMethod === 'momo' ? 'Chờ MoMo' : 'Chờ QR';
+        saveRealtimeSnapshot();
+        renderAll();
+        showToast(update.paymentStatus === 'completed'
+          ? `Đơn ${update.orderCode} đã thanh toán thành công.`
+          : `Thanh toán đơn ${update.orderCode} chưa thành công.`,
+        update.paymentStatus !== 'completed');
       }
 
       async function persist(collection) {
@@ -2763,15 +2768,15 @@
             <p>Xin chào <strong>Quản trị viên</strong>! Tôi là <strong>FASTFOOD AI Co-pilot</strong>, trợ lý ảo thông minh đồng hành cùng bạn trong việc quản lý và phát triển nền tảng đặt đồ ăn.</p>
             <p>Bạn có thể hỏi tôi bất kỳ nghiệp vụ nào:</p>
             <ul>
-              <li>📊 <strong>Doanh thu & Vận hành:</strong> Phân tích giờ cao điểm, xu hướng đặt món của các quán Buôn Ma Thuột.</li>
+              <li>📊 <strong>Doanh thu &amp; Vận hành:</strong> Phân tích giờ cao điểm, xu hướng đặt món của các quán Buôn Ma Thuột.</li>
               <li>📋 <strong>Chính sách hệ thống:</strong> Quy tắc tăng 3% phí ship khi hủy đơn, điều kiện áp dụng mã giảm giá.</li>
               <li>✍️ <strong>Soạn thảo nội dung:</strong> Viết tin nhắn CSKH, kịch bản giải quyết khiếu nại, thông báo ưu đãi.</li>
-              <li>🍔 <strong>Thực đơn & Quán ăn:</strong> Quản lý danh sách 33 món ăn, giá tiền và tùy chọn topping.</li>
+              <li>🍔 <strong>Thực đơn &amp; Quán ăn:</strong> Quản lý danh sách 260 món ăn, giá tiền và tùy chọn topping.</li>
             </ul>
           </div>
-          <div class="ai-prompt-suggestions" id="ai-starter-prompts">
-            <button type="button" class="prompt-chip" data-prompt="Phân tích tình hình doanh thu và các giờ cao điểm đặt món">📈 Phân tích doanh thu & Giờ cao điểm</button>
-            <button type="button" class="prompt-chip" data-prompt="Chính sách phí giao hàng và quy tắc tăng 3% khi khách hủy đơn như thế nào?">📋 Chính sách phí ship & Hủy đơn</button>
+          <div class="ai-prompt-suggestions">
+            <button type="button" class="prompt-chip" data-prompt="Phân tích tình hình doanh thu và các giờ cao điểm đặt món">📈 Phân tích doanh thu &amp; Giờ cao điểm</button>
+            <button type="button" class="prompt-chip" data-prompt="Chính sách phí giao hàng và quy tắc tăng 3% khi khách hủy đơn như thế nào?">📋 Chính sách phí ship &amp; Hủy đơn</button>
             <button type="button" class="prompt-chip" data-prompt="Soạn mẫu thông báo khuyến mãi giảm giá 50K cuối tuần cho khách">✍️ Soạn tin nhắn khuyến mãi cuối tuần</button>
             <button type="button" class="prompt-chip" data-prompt="Hướng dẫn quy trình chuẩn xử lý khi khách hàng đánh giá 1 sao vì đồ ăn giao trễ">🛡️ Cách xử lý khiếu nại khách hàng 1 sao</button>
           </div>

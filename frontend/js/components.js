@@ -64,7 +64,7 @@ const UIComponents = {
     };
   },
 
-  // Hiển thị Toast thông báo
+  // Hiển thị Toast thông báonpm
   showToast(message, type = 'info', duration = 4500) {
     let container = document.getElementById('toast-container');
     if (!container) {
@@ -78,7 +78,7 @@ const UIComponents = {
     const toast = document.createElement('div');
     toast.className = `toast toast-${type}`;
     toast.setAttribute('role', type === 'error' ? 'alert' : 'status');
-    
+
     const icons = {
       success: '✅',
       error: '❌',
@@ -214,7 +214,7 @@ const UIComponents = {
     });
 
     // Update favorite nav badge
-    this.updateFavoriteBadge = function() {
+    this.updateFavoriteBadge = function () {
       if (typeof window.saveFavoritesToStorage === 'function') {
         window.saveFavoritesToStorage();
       }

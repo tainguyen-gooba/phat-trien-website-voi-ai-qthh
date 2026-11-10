@@ -178,6 +178,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
     UIComponents.updateFavoriteBadge();
+    window.saveFavoritesToStorage?.();
   });
 
   renderList();

@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
       UIComponents.updateFavoriteBadge();
+      window.saveFavoritesToStorage?.();
     } else if (favBtn.dataset.resId) {
       const resId = favBtn.dataset.resId;
       const res = FASTFOOD_DATA.restaurants.find(r => String(r.id) === String(resId));
@@ -82,6 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       UIComponents.showToast(res.isLiked ? 'Đã thêm quán vào yêu thích!' : 'Đã bỏ yêu thích quán!', 'info', 2500);
       UIComponents.updateFavoriteBadge();
+      window.saveFavoritesToStorage?.();
     }
   });
 

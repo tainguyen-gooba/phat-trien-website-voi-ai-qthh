@@ -37,6 +37,12 @@ const UIComponents = {
     })[char]);
   },
 
+  renderImageCredit(product) {
+    const credit = product?.imageCredit;
+    if (!credit?.author || !credit?.license || !credit?.source || !credit?.licenseUrl) return '';
+    return `<span class="product-image-credit">Ảnh: <a href="${this.escapeHtml(credit.source)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(credit.author)}</a> · <a href="${this.escapeHtml(credit.licenseUrl)}" target="_blank" rel="noopener noreferrer">${this.escapeHtml(credit.license)}</a></span>`;
+  },
+
   validateCustomerDetails({ fullName, phone, address } = {}) {
     const name = String(fullName || '').trim().replace(/\s+/g, ' ');
     const normalizedPhone = String(phone || '').trim().replace(/[\s().-]/g, '').replace(/^\+?84/, '0');
@@ -435,6 +441,7 @@ const UIComponents = {
         <!-- Hero Image Header with Gradient & Close Button -->
         <div class="modal-hero-wrap">
           <img src="${product.image}" alt="${this.escapeHtml(product.name)}" class="modal-hero-img" onerror="this.onerror=null; this.style.visibility='hidden';">
+          ${this.renderImageCredit(product)}
           <div class="modal-hero-overlay"></div>
           <button class="modal-close-btn" type="button" title="Đóng cửa sổ" onclick="UIComponents.closeFoodModal()">✕</button>
         </div>

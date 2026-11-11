@@ -147,6 +147,7 @@ class ProductRecommendationService {
       discountPercent,
       description: item.description || '',
       image: normalizeImageUrl(item.image),
+      imageCredit: item.imageCredit || null,
       rating: Number(item.rating || 4.8),
       reviews: Number(item.reviews || 0),
       time: item.time || '15 - 20 phút',

@@ -541,6 +541,7 @@ class ChatController extends BaseController {
           discountPercent: p.discountPercent,
           restaurantName: p.restaurantName,
           image: p.image,
+          imageCredit: p.imageCredit,
         })),
         order: contextData.orderLookup?.found ? contextData.orderLookup : null,
       };

@@ -1322,7 +1322,13 @@ const FASTFOOD_DATA = {
         "rating": 4.8,
         "reviews": 55,
         "time": "15 - 20 phút",
-        "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=600&auto=format&fit=crop&q=80",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f1/Meng_Hui%27s_Baked_squid_stuffed_with_rice_and_pinenuts_in_tomato_sauce_%282448208587%29.jpg/960px-Meng_Hui%27s_Baked_squid_stuffed_with_rice_and_pinenuts_in_tomato_sauce_%282448208587%29.jpg",
+        "imageCredit": {
+            "author": "Alpha",
+            "license": "CC BY-SA 2.0",
+            "source": "https://commons.wikimedia.org/wiki/File:Meng_Hui%27s_Baked_squid_stuffed_with_rice_and_pinenuts_in_tomato_sauce_(2448208587).jpg",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0/"
+        },
         "isBestSeller": false,
         "isFlashDeal": false,
         "description": "Mực ống tươi dày mình nhồi thịt bằm mộc nhĩ nấm hương, sốt cà chua chua thanh dậy mùi tiêu hành.",
@@ -2518,7 +2524,13 @@ const FASTFOOD_DATA = {
         "rating": 4.7,
         "reviews": 76,
         "time": "15 - 20 phút",
-        "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=600&auto=format&fit=crop&q=80",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/4/40/Deep-fried_Calamari_Rings.jpg/960px-Deep-fried_Calamari_Rings.jpg",
+        "imageCredit": {
+            "author": "Ceeseven",
+            "license": "CC BY-SA 4.0",
+            "source": "https://commons.wikimedia.org/wiki/File:Deep-fried_Calamari_Rings.jpg",
+            "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/"
+        },
         "isBestSeller": false,
         "isFlashDeal": false,
         "description": "Từng khoanh mực tươi tẩm bột chiên giòn rụm bên ngoài nhưng bên trong mực vẫn mềm mọng nước, chấm cùng sốt tartar chanh tươi.",
@@ -7150,7 +7162,13 @@ const FASTFOOD_DATA = {
         "rating": 4.7,
         "reviews": 75,
         "time": "12 - 18 phút",
-        "image": "https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=600&auto=format&fit=crop&q=80",
+        "image": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/09/Squid_Ball.jpg/960px-Squid_Ball.jpg",
+        "imageCredit": {
+            "author": "Bim24",
+            "license": "CC BY 4.0",
+            "source": "https://commons.wikimedia.org/wiki/File:Squid_Ball.jpg",
+            "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+        },
         "isBestSeller": false,
         "isFlashDeal": false,
         "description": "Chả mực tươi quết nhuyễn chiên vàng ruộm ngào qua sốt nước mắm tỏi ớt kẹo sệt cay the the thơm nức.",

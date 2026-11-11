@@ -513,6 +513,7 @@
         discountPercent: p.oldPrice && p.oldPrice > p.price ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0,
         restaurantName: p.restaurantName || 'FASTFOOD',
         image: p.image,
+        imageCredit: p.imageCredit,
       }));
 
       return { reply, products: formattedProducts };
@@ -691,6 +692,7 @@
           <div class="ff-product-card">
             <div class="ff-card-thumb-wrap">
               <img src="${this.escapeHtml(imgSrc)}" alt="${this.escapeHtml(p.name)}" class="ff-card-thumb" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_FOOD_IMG}'" />
+              ${window.UIComponents?.renderImageCredit(p) || ''}
               ${discountBadge}
             </div>
             <div class="ff-card-info">

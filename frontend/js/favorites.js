@@ -72,6 +72,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="product-card">
             <div class="product-thumb-wrap">
               <img src="${product.image}" alt="${UIComponents.escapeHtml(product.name)}" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.style.visibility='hidden';">
+              ${UIComponents.renderImageCredit(product)}
               ${discountPercent > 0 ? `<span class="product-tag-discount">-${discountPercent}%</span>` : ''}
               <span class="product-tag-time">⏱️ ${product.time}</span>
               <button class="favorite-btn is-liked" data-product-id="${product.id}" title="Bỏ yêu thích" aria-label="Đã yêu thích món này">♥</button>

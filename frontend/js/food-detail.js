@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Ảnh món ăn -->
         <div class="food-gallery-main">
           <img src="${product.image}" alt="${UIComponents.escapeHtml(product.name)}" class="food-gallery-img" onerror="this.onerror=null; this.style.visibility='hidden';">
+          ${UIComponents.renderImageCredit(product)}
         </div>
 
         <!-- Chi tiết thông tin -->

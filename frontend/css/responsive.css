@@ -223,10 +223,12 @@
   }
 
   #toast-container {
-    left: 1rem;
+    left: auto;
     right: 1rem;
-    top: calc(var(--header-height) + 0.75rem);
-    width: auto;
+    top: 1rem;
+    width: min(420px, calc(100vw - 2rem));
+    max-width: calc(100vw - 2rem);
+    z-index: 999999;
   }
 
   .toast {

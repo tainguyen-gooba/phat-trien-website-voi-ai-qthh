@@ -864,3 +864,18 @@
   }
 }
 
+/* Đảm bảo nút Trò chuyện trực tiếp (Live Chat CSKH) không bị đè lên nút Chatbot AI */
+#live-chat-launcher {
+  right: 102px !important;
+  bottom: 30px !important;
+  z-index: 99990 !important;
+}
+
+@media (max-width: 640px) {
+  #live-chat-launcher {
+    right: 16px !important;
+    bottom: 92px !important;
+  }
+}
+
+

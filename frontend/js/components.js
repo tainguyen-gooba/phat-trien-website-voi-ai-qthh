@@ -264,7 +264,7 @@ const UIComponents = {
     if (window.fastfoodRealtimeScriptLoading) return;
     window.fastfoodRealtimeScriptLoading = true;
     const script = document.createElement('script');
-    script.src = '../js/realtime.js';
+    script.src = '/js/realtime.js';
     script.onload = () => window.initFastfoodRealtime?.(user);
     script.onerror = () => {
       window.fastfoodRealtimeScriptLoading = false;

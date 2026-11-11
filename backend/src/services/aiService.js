@@ -6,10 +6,18 @@
 
 class AIService {
   constructor() {
-    this.geminiApiKey = process.env.GEMINI_API_KEY || '';
-    this.openaiApiKey = process.env.OPENAI_API_KEY || '';
+    this.geminiApiKey = this.cleanApiKey(process.env.GEMINI_API_KEY);
+    this.openaiApiKey = this.cleanApiKey(process.env.OPENAI_API_KEY);
     this.geminiModel = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
     this.openaiModel = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  }
+
+  cleanApiKey(rawKey) {
+    const key = String(rawKey || '').trim();
+    if (!key || /^your_/i.test(key) || /placeholder|example|changeme/i.test(key) || key.length < 16) {
+      return '';
+    }
+    return key;
   }
 
   /**
@@ -230,22 +238,73 @@ ${orderContextText}
       const ord = contextData.orderLookup;
       if (ord.found) {
         if (ord.isAuthorized) {
-          const totalStr = new Intl.NumberFormat('vi-VN').format(ord.totalAmount) + 'đ';
-          return `📦 **Thông tin đơn hàng #${ord.orderCode} của ${customerName}:**\n\n`
-            + `• **Trạng thái:** ${ord.displayStatus}\n`
-            + `• **Tổng thanh toán:** ${totalStr}\n`
-            + `• **Phương thức:** ${ord.paymentMethod === 'cod' ? 'Tiền mặt khi nhận (COD)' : 'Chuyển khoản QR / MoMo'}\n`
-            + `• **Thanh toán:** ${ord.paymentStatus === 'completed' ? 'Đã thanh toán ✅' : 'Chưa thanh toán ⏳'}\n\n`
-            + `Bạn có thể bấm vào trang **Theo dõi đơn** để cập nhật lộ trình di chuyển của tài xế theo thời gian thực nhé! 🛵💨`;
+          const totalStr = new Intl.NumberFormat('vi-VN').format(ord.totalAmount || 0) + 'đ';
+          const lines = [
+            `📦 **Thông tin đơn hàng #${ord.orderCode} của ${customerName}:**`,
+            '',
+            `• **Trạng thái:** ${ord.displayStatus}`,
+            `• **Quán ăn:** ${ord.restaurantName || 'FASTFOOD Partner'}`,
+            `• **Món đặt:** ${ord.itemsSummary || 'Đơn hàng FASTFOOD'}`,
+            `• **Tổng thanh toán:** ${totalStr}`,
+          ];
+          if (ord.paymentMethod) {
+            lines.push(`• **Phương thức:** ${ord.paymentMethod === 'cod' ? 'Tiền mặt khi nhận (COD)' : 'Chuyển khoản QR / MoMo'}`);
+          }
+          lines.push('', 'Bạn có thể bấm vào trang **Theo dõi đơn** để cập nhật lộ trình di chuyển của tài xế theo thời gian thực nhé! 🛵💨');
+          return lines.join('\n');
+        } else if (ord.orderCode === 'CHƯA_ĐĂNG_NHẬP') {
+          return `🔒 Để bảo mật thông tin đơn hàng cá nhân, ${customerName} vui lòng **đăng nhập** hoặc gửi kèm **mã đơn hàng** (ví dụ: \`FF7298\`) để mình tra cứu giúp bạn ngay nhé!`;
         } else {
           return `🔒 Đơn hàng **#${ord.orderCode}** đã được ghi nhận trên hệ thống. Vì lý do bảo mật quyền riêng tư, vui lòng đăng nhập tài khoản đã đặt đơn để xem chi tiết đầy đủ bạn nhé!`;
         }
       } else {
-        return `Dạ FASTFOOD không tìm thấy đơn hàng nào có mã **#${contextData.searchedOrderCode || 'này'}**. Bạn vui lòng kiểm tra lại mã đơn (thường có dạng FFxxxx như FF7298) trong lịch sử đặt hàng nhé!`;
+        return `Dạ FASTFOOD không tìm thấy đơn hàng nào có mã **#${contextData.searchedOrderCode || 'này'}**. Bạn vui lòng kiểm tra lại mã đơn (thường có dạng FFxxxx) trong lịch sử đặt hàng nhé!`;
       }
     }
 
-    // 2. Hỏi ngân sách (Dưới 50k, 30k, 100k...)
+    // 2. Chính sách phí ship & Giao hàng
+    if (/(phi ship|giao hang|van chuyen|bao nhieu tien ship|bao xa)/.test(normalized)) {
+      return `🛵 **Chính sách giao hàng của FASTFOOD tại Buôn Ma Thuột:**\n\n`
+        + `• **Phí ship tiêu chuẩn:** 18.000đ cho mọi đơn hàng trong khu vực nội thành.\n`
+        + `• **Ưu đãi Freeship:** Đơn hàng từ **100.000đ** được MIỄN PHÍ GIAO HÀNG (giảm tối đa 18.000đ) khi nhập mã **FREESHIP**.\n`
+        + `• **Thời gian giao:** Trung bình chỉ từ 15 - 25 phút. Đồ ăn được giữ trong thùng giữ nhiệt chuyên dụng đảm bảo luôn nóng sốt chuẩn vị khi tới tay bạn! ✨`;
+    }
+
+    // 3. Mã giảm giá / Voucher
+    if (/(ma giam gia|voucher|coupon|code giam|ma uu dai)/.test(normalized)) {
+      const coupons = contextData.policies?.coupons || [];
+      let text = `🎟️ **Danh sách mã giảm giá đang áp dụng tại FASTFOOD:**\n\n`;
+      coupons.forEach((c) => {
+        text += `• Mã **${c.code}**: Giảm **${c.discount}** (${c.note})\n`;
+      });
+      text += `\n💡 Bạn chỉ cần nhập mã tại bước **Giỏ hàng / Thanh toán** để được trừ tiền trực tiếp nhé!`;
+      return text;
+    }
+
+    // 4. Giờ mở cửa / Hotline / Chính sách hủy đơn
+    if (/(gio mo cua|may gio|hoat dong|hotline|tong dai|lien he|huy don)/.test(normalized)) {
+      return `ℹ️ **Thông tin hỗ trợ khách hàng FASTFOOD:**\n\n`
+        + `• **Giờ hoạt động:** ${contextData.policies?.operatingHours || '06:00 - 23:00 hàng ngày'}\n`
+        + `• **Khu vực phục vụ:** ${contextData.policies?.location || 'Thành phố Buôn Ma Thuột, Đắk Lắk'}\n`
+        + `• **Hotline CSKH:** ${contextData.policies?.hotline || '1900 6868'}\n`
+        + `• **Chính sách hủy đơn:** ${contextData.policies?.cancellationPolicy?.rule || 'Hủy miễn phí trước khi quán chế biến.'}`;
+    }
+
+    // 5. Hỏi về Combo / Khuyến mãi (ưu tiên trước budget nếu có từ combo/set)
+    if (/(combo|set|giam gia nhieu|khuyen mai|uu dai|flash deal)/.test(normalized)) {
+      if (contextData.products && contextData.products.length > 0) {
+        let text = `🎁 Dạ ${customerName}, các gói **Combo & Món ưu đãi tiết kiệm** nhất đang có tại FASTFOOD:\n\n`;
+        contextData.products.slice(0, 5).forEach((p, idx) => {
+          const curPrice = new Intl.NumberFormat('vi-VN').format(p.price) + 'đ';
+          const oldPrice = p.hasDiscount ? ` (Giá gốc: ${new Intl.NumberFormat('vi-VN').format(p.originalPrice)}đ, giảm -${p.discountPercent}%)` : '';
+          text += `${idx + 1}. **${p.name}**\n   💰 Chỉ còn: **${curPrice}**${oldPrice}\n   🏪 Quán: ${p.restaurantName}\n`;
+        });
+        text += `\n🛵 Đơn từ 100K nhập thêm mã **FREESHIP** để được giao tận nơi hoàn toàn miễn phí nhé!`;
+        return text;
+      }
+    }
+
+    // 6. Hỏi ngân sách (Dưới 50k, 30k, 100k...)
     const cleanNoDots = normalized.replace(/\./g, '');
     const budgetMatch = cleanNoDots.match(/duoi\s*(\d+)\s*(k|000)?/);
     if (budgetMatch || /(duoi 50|gia re|tiet kiem|it tien|binh dan)/.test(normalized)) {
@@ -260,46 +319,25 @@ ${orderContextText}
         let text = `🎉 Dạ ${customerName}, FASTFOOD gợi ý cho bạn những món siêu ngon giá hạt dẻ **dưới ${formattedMax}** hôm nay nè:\n\n`;
         contextData.products.slice(0, 5).forEach((p, idx) => {
           const pPrice = new Intl.NumberFormat('vi-VN').format(p.price) + 'đ';
-          text += `${idx + 1}. **${p.name}** – ${pPrice} (${p.restaurantName})\n   _${p.description.slice(0, 70)}..._\n`;
+          const shortDesc = p.description ? `${p.description.slice(0, 70)}...` : 'Món ngon được yêu thích tại quán';
+          text += `${idx + 1}. **${p.name}** – ${pPrice} (${p.restaurantName})\n   _${shortDesc}_\n`;
         });
         text += `\n💡 Bạn có thể áp thêm mã **FASTFOOD20** để được giảm thêm 20.000đ cho đơn từ 60K nữa đó ạ!`;
         return text;
       }
     }
 
-    // 3. Món bán chạy / Best seller / Hôm nay ăn gì
+    // 7. Món bán chạy / Best seller / Hôm nay ăn gì
     if (/(hom nay an gi|ban chay|best seller|mon hot|ngon nhat|goi y|mon gi ngon)/.test(normalized)) {
       if (contextData.products && contextData.products.length > 0) {
         let text = `🔥 Chào ${customerName}! Dưới đây là top món ăn **bán chạy nhất** được thực khách Buôn Ma Thuột săn đón nồng nhiệt:\n\n`;
         contextData.products.slice(0, 5).forEach((p, idx) => {
           const pPrice = new Intl.NumberFormat('vi-VN').format(p.price) + 'đ';
-          text += `${idx + 1}. **${p.name}** – ${pPrice} ⭐ 4.9\n   📍 Quán: _${p.restaurantName}_\n`;
+          text += `${idx + 1}. **${p.name}** – ${pPrice} ⭐ ${p.rating || 4.9}\n   📍 Quán: _${p.restaurantName}_\n`;
         });
-        text += `\n👉 Bạn thích thưởng thức món nào nhất? Nhắn mình để mình tư vấn chi tiết hơn hoặc chọn món ngay nhé!`;
+        text += `\n👉 Bạn thích thưởng thức món nào nhất? Nhắn mình để mình tư vấn chi tiết hơn hoặc bấm **+ Giỏ** ngay bên dưới nhé!`;
         return text;
       }
-    }
-
-    // 4. Hỏi về Combo / Tiết kiệm
-    if (/(combo|set|tiet kiem|giam gia nhieu|khuyen mai)/.test(normalized)) {
-      if (contextData.products && contextData.products.length > 0) {
-        let text = `🎁 Dạ ${customerName}, các gói **Combo & Món ưu đãi tiết kiệm** nhất đang có tại FASTFOOD:\n\n`;
-        contextData.products.slice(0, 4).forEach((p, idx) => {
-          const curPrice = new Intl.NumberFormat('vi-VN').format(p.price) + 'đ';
-          const oldPrice = p.hasDiscount ? ` (Giá gốc: ${new Intl.NumberFormat('vi-VN').format(p.originalPrice)}đ, giảm -${p.discountPercent}%)` : '';
-          text += `${idx + 1}. **${p.name}**\n   💰 Chỉ còn: **${curPrice}**${oldPrice}\n   🏪 Quán: ${p.restaurantName}\n`;
-        });
-        text += `\n🛵 Đơn từ 100K nhập thêm mã **FREESHIP** để được giao tận nơi hoàn toàn miễn phí nhé!`;
-        return text;
-      }
-    }
-
-    // 5. Chính sách phí ship & Giao hàng
-    if (/(phi ship|giao hang|van chuyen|ship|bao nhieu tien ship|bao xa)/.test(normalized)) {
-      return `🛵 **Chính sách giao hàng của FASTFOOD tại Buôn Ma Thuột:**\n\n`
-        + `• **Phí ship tiêu chuẩn:** 18.000đ cho mọi đơn hàng trong khu vực nội thành.\n`
-        + `• **Ưu đãi Freeship:** Đơn hàng từ **100.000đ** được MIỄN PHÍ GIAO HÀNG (giảm tối đa 18.000đ) khi nhập mã **FREESHIP**.\n`
-        + `• **Thời gian giao:** Trung bình chỉ từ 15 - 25 phút. Đồ ăn được giữ trong thùng giữ nhiệt chuyên dụng đảm bảo luôn nóng sốt chuẩn vị khi tới tay bạn! ✨`;
     }
 
     // 6. Hướng dẫn đặt hàng

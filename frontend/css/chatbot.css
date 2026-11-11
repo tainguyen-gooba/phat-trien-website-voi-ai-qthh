@@ -864,18 +864,26 @@
   }
 }
 
-/* Đảm bảo nút Trò chuyện trực tiếp (Live Chat CSKH) không bị đè lên nút Chatbot AI */
-#live-chat-launcher {
-  right: 102px !important;
-  bottom: 30px !important;
-  z-index: 99990 !important;
+/* Nhãn phân biệt tin nhắn từ Nhân viên Admin vs Trợ lý tự động */
+.ff-sender-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #ea580c;
+  margin-bottom: 4px;
 }
 
-@media (max-width: 640px) {
-  #live-chat-launcher {
-    right: 16px !important;
-    bottom: 92px !important;
-  }
+.ff-sender-tag.is-admin {
+  color: #15803d;
 }
 
+.ff-msg-row.admin .ff-msg-avatar {
+  background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+.ff-status-dot.busy {
+  background: #f59e0b;
+}
 

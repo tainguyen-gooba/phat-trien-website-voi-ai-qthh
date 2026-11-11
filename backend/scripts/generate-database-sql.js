@@ -3,7 +3,7 @@ const path = require('path');
 const vm = require('vm');
 
 // Load fastfoodData from frontend/js/data.js
-const dataPath = path.resolve(__dirname, '../frontend/js/data.js');
+const dataPath = path.resolve(__dirname, '../../frontend/js/data.js');
 const dataContent = fs.readFileSync(dataPath, 'utf8');
 const sandbox = { window: {}, localStorage: { getItem: () => null, setItem: () => null } };
 sandbox.window = sandbox;
@@ -504,9 +504,12 @@ CREATE TABLE \`ai_chat_sessions\` (
   \`customer_name\` VARCHAR(150) NULL DEFAULT 'Khách hàng',
   \`title\` VARCHAR(255) NOT NULL DEFAULT 'Hội thoại mới',
   \`is_active\` TINYINT(1) NOT NULL DEFAULT 1,
+  \`ai_paused_until\` DATETIME NULL DEFAULT NULL,
+  \`ai_force_auto\` TINYINT(1) NOT NULL DEFAULT 0,
   \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX \`idx_chat_session_user\` (\`user_id\`),
+  INDEX \`idx_chat_session_updated\` (\`updated_at\`),
   INDEX \`idx_chat_session_created\` (\`created_at\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -518,7 +521,7 @@ CREATE TABLE \`ai_chat_messages\` (
   \`id\` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   \`session_id\` VARCHAR(64) NOT NULL,
   \`user_id\` BIGINT UNSIGNED NULL,
-  \`sender\` ENUM('user', 'assistant', 'system') NOT NULL DEFAULT 'user',
+  \`sender\` ENUM('user', 'assistant', 'admin', 'system') NOT NULL DEFAULT 'user',
   \`message\` TEXT NOT NULL,
   \`metadata\` LONGTEXT NULL COMMENT 'JSON lưu thông tin món ăn, gợi ý hoặc tra cứu đơn hàng',
   \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -764,13 +767,13 @@ SET FOREIGN_KEY_CHECKS = 1;
 COMMIT;
 `;
 
-fs.writeFileSync(path.resolve(__dirname, '../database/schema.sql'), fullSchemaSql, 'utf8');
+fs.writeFileSync(path.resolve(__dirname, '../../database/schema.sql'), fullSchemaSql, 'utf8');
 console.log('Created database/schema.sql');
 
-fs.writeFileSync(path.resolve(__dirname, '../database/seeds.sql'), fullSeedsSql, 'utf8');
+fs.writeFileSync(path.resolve(__dirname, '../../database/seeds.sql'), fullSeedsSql, 'utf8');
 console.log('Created database/seeds.sql');
 
-fs.writeFileSync(path.resolve(__dirname, '../database/fastfood_db.sql'), allInOneSql, 'utf8');
+fs.writeFileSync(path.resolve(__dirname, '../../database/fastfood_db.sql'), allInOneSql, 'utf8');
 console.log('Created database/fastfood_db.sql');
 
 console.log('All database files generated successfully!');

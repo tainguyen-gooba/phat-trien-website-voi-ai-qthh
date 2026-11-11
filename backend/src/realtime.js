@@ -2,6 +2,7 @@ const jwt = require('jsonwebtoken');
 const { Server } = require('socket.io');
 const config = require('./config/app.config');
 const { pool } = require('./config/db.config');
+const chatController = require('./controllers/chatController');
 const logger = require('./utils/logger');
 
 const CONTENT_COLLECTIONS = new Set(['categories', 'products', 'restaurants']);
@@ -60,13 +61,34 @@ function createRealtimeServer(httpServer) {
     }
   });
 
+  chatController.setIo(io);
+
   io.on('connection', (socket) => {
     const user = socket.data.user;
     socket.join('public');
     if (user) {
       socket.join(`user:${user.id}`);
-      if (user.role === 'admin') socket.join('admins');
+      if (user.role === 'admin') {
+        socket.join('admins');
+        io.emit('support:status', chatController.getGlobalSupportState(io));
+      }
     }
+
+    socket.on('support:join', (payload) => {
+      const sessionId = typeof payload?.sessionId === 'string' ? payload.sessionId.trim() : '';
+      if (sessionId && /^[a-zA-Z0-9_-]{4,80}$/.test(sessionId)) {
+        socket.join(`support:${sessionId}`);
+        socket.emit('support:status', chatController.getGlobalSupportState(io));
+      }
+    });
+
+    socket.on('disconnect', () => {
+      if (user?.role === 'admin') {
+        setTimeout(() => {
+          io.emit('support:status', chatController.getGlobalSupportState(io));
+        }, 100);
+      }
+    });
 
     socket.on('admin:content:publish', async (payload, acknowledge = () => {}) => {
       if (user?.role !== 'admin') {

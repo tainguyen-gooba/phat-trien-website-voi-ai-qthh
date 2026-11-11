@@ -488,10 +488,10 @@ ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
 -- 6. Hình ảnh món ăn
 INSERT INTO `product_images` (`id`, `product_id`, `image_url`, `is_primary`, `display_order`) VALUES
-(1, 1, '/assets/images/hero-burger.svg', 1, 1),
-(2, 2, '/assets/images/hero-burger.svg', 1, 1),
-(3, 3, '/assets/images/hero-burger.svg', 1, 1),
-(4, 4, '/assets/images/hero-burger.svg', 1, 1)
+(1, 1, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80', 1, 1),
+(2, 2, 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&auto=format&fit=crop&q=80', 1, 1),
+(3, 3, 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&auto=format&fit=crop&q=80', 1, 1),
+(4, 4, 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?w=600&auto=format&fit=crop&q=80', 1, 1)
 ON DUPLICATE KEY UPDATE `image_url` = VALUES(`image_url`);
 
 -- 7. Sổ địa chỉ mẫu

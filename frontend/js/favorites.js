@@ -161,6 +161,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderFavorites();
     UIComponents.showToast('Đã bỏ yêu thích món ăn!', 'info', 2500);
+    window.saveFavoritesToStorage?.();
   });
 
   // Remove favorite from restaurant card
@@ -181,6 +182,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     renderFavorites();
     UIComponents.showToast('Đã bỏ yêu thích quán ăn!', 'info', 2500);
+    window.saveFavoritesToStorage?.();
   });
 
   renderFavorites();

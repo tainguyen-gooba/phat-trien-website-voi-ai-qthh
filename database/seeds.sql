@@ -54,6 +54,14 @@ INSERT INTO `products` (`id`, `restaurant_id`, `category_id`, `name`, `slug`, `d
 (4, 2, 1, 'Cơm Tấm Sườn Bì Chả Trứng Ốp La', 'com-tam-suon-bi-cha-trung', 'Dĩa cơm tấm đầy đủ sườn cốt lết dày dặn, bì chả nóng hổi, mỡ hành tép mỡ giòn rụm.', 55000.00, 49000.00, 1, 1, 10)
 ON DUPLICATE KEY UPDATE `name` = VALUES(`name`);
 
+-- Ảnh món ăn mẫu
+INSERT INTO `product_images` (`id`, `product_id`, `image_url`, `is_primary`, `display_order`) VALUES
+(1, 1, 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80', 1, 1),
+(2, 2, 'https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?w=600&auto=format&fit=crop&q=80', 1, 1),
+(3, 3, 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&auto=format&fit=crop&q=80', 1, 1),
+(4, 4, 'https://images.unsplash.com/photo-1541832676-9b763b0239ab?w=600&auto=format&fit=crop&q=80', 1, 1)
+ON DUPLICATE KEY UPDATE `image_url` = VALUES(`image_url`);
+
 -- 6. Thêm mã giảm giá mẫu
 INSERT INTO `coupons` (`id`, `restaurant_id`, `code`, `title`, `discount_type`, `discount_value`, `min_order_value`, `max_discount_amount`, `usage_limit`, `usage_count`, `start_date`, `end_date`, `is_active`) VALUES
 (1, NULL, 'FASTFOODHELLO', 'Giảm 20K cho đơn hàng đầu tiên', 'fixed', 20000.00, 50000.00, 20000.00, 500, 0, '2026-01-01 00:00:00', '2026-12-31 23:59:59', 1),

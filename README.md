@@ -17,92 +17,153 @@
 ## 2. CẤU TRÚC THƯ MỤC DỰ ÁN
 
 ```text
-fastfood-qtnhhh/
-├── backend/                             # MÃ NGUỒN BACKEND (NODE.JS & EXPRESS)
-│   ├── scripts/                         # Script tự động hóa
-│   │   ├── init-db.js                   # Script tự động tạo database & 16 bảng & nạp seed
-│   │   └── test-db.js                   # Script kiểm tra kết nối MySQL độc lập
-│   ├── src/                             # Mã nguồn chính phân tầng
-│   │   ├── config/                      # Cấu hình hệ thống & kết nối DB
-│   │   │   ├── app.config.js            # Cấu hình biến môi trường
-│   │   │   └── db.config.js             # MySQL Connection Pool
-│   │   ├── constants/                   # Hằng số hệ thống
-│   │   │   ├── httpStatusCodes.js       # Mã trạng thái HTTP
-│   │   │   └── roles.js                 # Vai trò và trạng thái đơn hàng
-│   │   ├── controllers/                 # Tầng tiếp nhận & điều phối request
-│   │   │   ├── base.controller.js       # Controller cơ sở
-│   │   │   └── health.controller.js     # Controller kiểm tra trạng thái
-│   │   ├── middlewares/                 # Middleware trung gian
-│   │   │   ├── auth.middleware.js       # Xác thực JWT & phân quyền RBAC
-│   │   │   ├── errorHandler.middleware.js # Bắt lỗi toàn cục tập trung
-│   │   │   ├── notFound.middleware.js   # Bắt lỗi 404 Route Not Found
-│   │   │   └── requestLogger.middleware.js # Ghi log từng HTTP request
-│   │   ├── models/                      # Tầng truy vấn CSDL
-│   │   │   ├── BaseModel.js             # Lớp trừu tượng truy vấn MySQL
-│   │   │   └── health.model.js          # Model kiểm tra DB & lấy danh sách bảng
-│   │   ├── routes/                      # Định tuyến RESTful API
-│   │   │   ├── health.routes.js         # Endpoint kiểm tra sức khỏe (/health)
-│   │   │   └── index.js                 # Router gốc (/api/v1)
-│   │   ├── services/                    # Tầng xử lý nghiệp vụ kinh doanh
-│   │   │   └── health.service.js        # Logic kiểm tra sức khỏe hệ thống
-│   │   ├── utils/                       # Tiện ích bổ trợ
-│   │   │   ├── apiResponse.js           # Chuẩn hóa định dạng phản hồi JSON
-│   │   │   └── logger.js                # Tiện ích ghi log có timestamp
-│   │   ├── app.js                       # Cấu hình Express, CORS, Static files
-│   │   └── server.js                    # Khởi động server HTTP & kiểm tra kết nối
-│   ├── .env                             # File biến môi trường
-│   ├── .env.example                     # File biến môi trường mẫu
-│   └── package.json                     # Quản lý thư viện backend
-│
-├── frontend/                            # GIAO DIỆN FRONTEND (HTML5/CSS3/JS THUẦN)
-│   ├── public/                          # Tài nguyên tĩnh công khai
-│   │   ├── assets/
-│   │   │   ├── css/                     # CSS phân chia theo chức năng
-│   │   │   │   ├── variables.css        # Hệ thống biến màu sắc, typography
-│   │   │   │   ├── reset.css            # Chuẩn hóa reset CSS
-│   │   │   │   ├── main.css             # Components, layout, buttons, cards
-│   │   │   │   └── responsive.css       # Tương thích màn hình di động/tablet
-│   │   │   ├── js/                      # JavaScript phân chia theo chức năng
-│   │   │   │   ├── config.js            # Cấu hình frontend & API Base URL
-│   │   │   │   ├── api.js               # HTTP Client gọi API kèm Bearer JWT
-│   │   │   │   ├── utils.js             # Định dạng tiền tệ VNĐ, ngày giờ, toast
-│   │   │   │   └── main.js              # Logic kiểm tra trạng thái và UI
-│   │   │   └── images/
-│   │   │       └── logo.svg             # Logo nhận diện thương hiệu FASTFOOD
-│   │   └── index.html                   # Trang chủ điều khiển & chẩn đoán hệ thống
-│   ├── pages/                           # Các trang chức năng riêng biệt
-│   │   ├── auth/                        # Phân hệ đăng nhập & đăng ký
-│   │   │   ├── login.html
-│   │   │   ├── register.html
+phat-trien-website-voi-ai-qthh/
+├── backend/
+│   ├── scripts/
+│   │   ├── init-db.js
+│   │   ├── migrate-buon-ma-thuot.js
+│   │   ├── migrate-customer-profile.js
+│   │   ├── migrate-realtime.js
+│   │   ├── reset-demo-admin.js
+│   │   ├── start-local.js
+│   │   └── test-db.js
+│   ├── src/
+│   │   ├── config/
+│   │   │   ├── app.config.js
+│   │   │   └── db.config.js
+│   │   ├── constants/
+│   │   │   ├── httpStatusCodes.js
+│   │   │   └── roles.js
+│   │   ├── controllers/
+│   │   │   ├── auth.controller.js
+│   │   │   ├── base.controller.js
+│   │   │   ├── health.controller.js
+│   │   │   ├── image-upload.controller.js
+│   │   │   ├── payment.controller.js
+│   │   │   └── realtime.controller.js
+│   │   ├── middlewares/
+│   │   │   ├── auth.middleware.js
+│   │   │   ├── errorHandler.middleware.js
+│   │   │   ├── notFound.middleware.js
+│   │   │   └── requestLogger.middleware.js
+│   │   ├── models/
+│   │   │   ├── auth.model.js
+│   │   │   ├── BaseModel.js
+│   │   │   └── health.model.js
+│   │   ├── routes/
+│   │   │   ├── auth.routes.js
+│   │   │   ├── health.routes.js
+│   │   │   ├── image-upload.routes.js
+│   │   │   ├── index.js
+│   │   │   ├── payment.routes.js
+│   │   │   └── realtime.routes.js
+│   │   ├── services/
+│   │   │   ├── ai-chat.service.js
+│   │   │   ├── auth.service.js
+│   │   │   └── health.service.js
+│   │   ├── utils/
+│   │   │   ├── apiResponse.js
+│   │   │   ├── customer-profile.validation.js
+│   │   │   └── logger.js
+│   │   ├── app.js
+│   │   ├── realtime.js
+│   │   └── server.js
+│   ├── test/
+│   │   ├── order-pricing.test.js
+│   │   └── payment.controller.test.js
+│   ├── .env.example
+│   └── package.json
+├── database/
+│   ├── fastfood_db.sql
+│   ├── schema.sql
+│   └── seeds.sql
+├── docs/
+│   ├── api-specs.md
+│   ├── architecture.md
+│   └── database-design.md
+├── frontend/
+│   ├── assets/
+│   │   └── images/
+│   │       ├── hero-burger.svg
+│   │       ├── logo-footer.svg
+│   │       └── logo.svg
+│   ├── css/
+│   │   ├── base.css
+│   │   ├── components.css
+│   │   ├── home.css
+│   │   ├── pages.css
+│   │   ├── policies.css
+│   │   ├── reset.css
+│   │   ├── responsive.css
+│   │   └── variables.css
+│   ├── js/
+│   │   ├── admin-chat.js
+│   │   ├── auth.js
+│   │   ├── cart.js
+│   │   ├── checkout.js
+│   │   ├── components.js
+│   │   ├── data.js
+│   │   ├── favorites.js
+│   │   ├── food-detail.js
+│   │   ├── foods.js
+│   │   ├── home.js
+│   │   ├── order-reviews.js
+│   │   ├── payment.js
+│   │   ├── policies.js
+│   │   ├── profile.js
+│   │   ├── realtime.js
+│   │   ├── restaurants.js
+│   │   ├── storage.js
+│   │   └── tracking.js
+│   ├── pages/
+│   │   ├── admin/
+│   │   │   └── dashboard.html
+│   │   ├── auth/
 │   │   │   ├── auth.css
-│   │   │   └── auth.js
-│   │   ├── customer/                    # Phân hệ khách hàng đặt món
-│   │   │   ├── home.html
+│   │   │   ├── auth.js
+│   │   │   ├── login.html
+│   │   │   └── register.html
+│   │   ├── customer/
 │   │   │   ├── cart.html
 │   │   │   ├── customer.css
-│   │   │   └── customer.js
-│   │   ├── restaurant/                  # Phân hệ kênh quán ăn đối tác
+│   │   │   ├── customer.js
+│   │   │   └── home.html
+│   │   ├── restaurant/
 │   │   │   └── dashboard.html
-│   │   └── admin/                       # Phân hệ quản trị toàn sàn
-│   │       └── dashboard.html
-│   └── components/                      # Snippets giao diện dùng chung
-│       ├── header.html
-│       └── footer.html
-│
-├── database/                            # CƠ SỞ DỮ LIỆU
-│   ├── schema.sql                       # Toàn bộ mã DDL 16 bảng chuẩn hóa 3NF
-│   └── seeds.sql                        # Dữ liệu khởi tạo (Roles, Admin, Món ăn mẫu)
-│
-├── docs/                                # TÀI LIỆU KỸ THUẬT DỰ ÁN
-│   ├── architecture.md                  # Kiến trúc hệ thống & nguyên lý phân tầng
-│   ├── database-design.md               # Mô tả chi tiết 16 bảng & chiến lược đánh index
-│   └── api-specs.md                     # Đặc tả API RESTful
-│
-├── .gitignore                           # Cấu hình bỏ qua git
-├── package.json                         # File quản lý chạy script toàn dự án
-└── README.md                            # Hướng dẫn chi tiết cài đặt và vận hành
+│   │   ├── cart.html
+│   │   ├── checkout.html
+│   │   ├── favorites.html
+│   │   ├── food-detail.html
+│   │   ├── foods.html
+│   │   ├── home.html
+│   │   ├── login.html
+│   │   ├── order-history.html
+│   │   ├── order-tracking.html
+│   │   ├── payment.html
+│   │   ├── policies.html
+│   │   ├── profile.html
+│   │   ├── register.html
+│   │   └── restaurants.html
+│   ├── public/
+│   │   ├── assets/
+│   │   │   ├── css/
+│   │   │   │   ├── main.css
+│   │   │   │   ├── reset.css
+│   │   │   │   ├── responsive.css
+│   │   │   │   └── variables.css
+│   │   │   ├── images/
+│   │   │   │   └── logo.svg
+│   │   │   └── js/
+│   │   │       ├── api.js
+│   │   │       ├── config.js
+│   │   │       ├── main.js
+│   │   │       └── utils.js
+│   │   └── index.html
+│   └── index.html
+├── .gitignore
+├── package.json
+└── README.md
 ```
-
 ---
 
 ## 3. CƠ SỞ DỮ LIỆU 16 BẢNG CHUẨN HÓA

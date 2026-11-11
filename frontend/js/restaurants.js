@@ -232,6 +232,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     UIComponents.showToast(res.isLiked ? 'Đã thêm vào yêu thích!' : 'Đã bỏ yêu thích!', 'info', 2500);
     UIComponents.updateFavoriteBadge();
+    window.saveFavoritesToStorage?.();
   });
 
   // Detail view favorite button click
@@ -260,6 +261,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       UIComponents.showToast(res.isLiked ? 'Đã thêm vào yêu thích!' : 'Đã bỏ yêu thích!', 'info', 2500);
       UIComponents.updateFavoriteBadge();
+      window.saveFavoritesToStorage?.();
     });
   }
 
@@ -286,6 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     UIComponents.showToast(product.isLiked ? 'Đã thêm món vào yêu thích!' : 'Đã bỏ yêu thích món!', 'info', 2500);
     UIComponents.updateFavoriteBadge();
+    window.saveFavoritesToStorage?.();
   });
 
   container?.addEventListener('click', (event) => {

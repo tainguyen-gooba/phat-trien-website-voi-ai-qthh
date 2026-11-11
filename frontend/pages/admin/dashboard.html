@@ -3951,7 +3951,7 @@
         return {
           ...seedProduct,
           ...product,
-          image: product.image || seedProduct?.image || '',
+          image: seedProduct?.image || product.image || '',
           toppings: Array.isArray(product.toppings) ? product.toppings : (seedProduct?.toppings || []),
         };
       });

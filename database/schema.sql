@@ -1,7 +1,7 @@
 -- ===================================================================
 -- CƠ SỞ DỮ LIỆU DỰ ÁN FASTFOOD (FOOD DELIVERY PLATFORM)
--- Phiên bản: 1.0.0
--- Bảng số lượng: 16 bảng chuẩn hóa 3NF, quan hệ toàn vẹn, đánh index tối ưu
+-- Phiên bản: 2.0.0 (Chuẩn hóa toàn diện 23 bảng + AI Chat + Realtime)
+-- Mã hóa: utf8mb4 / utf8mb4_unicode_ci
 -- ===================================================================
 
 CREATE DATABASE IF NOT EXISTS `fastfood_db`
@@ -10,25 +10,50 @@ CREATE DATABASE IF NOT EXISTS `fastfood_db`
 
 USE `fastfood_db`;
 
--- Tắt tạm thời kiểm tra khóa ngoại để tạo bảng sạch sẽ
+-- Tắt kiểm tra khóa ngoại để tạo bảng sạch sẽ
 SET FOREIGN_KEY_CHECKS = 0;
 
--- -------------------------------------------------------------------
--- 1. BẢNG roles (Phân quyền người dùng)
--- -------------------------------------------------------------------
+
+-- Drop all existing tables in reverse dependency order
+DROP TABLE IF EXISTS `ai_chat_messages`;
+DROP TABLE IF EXISTS `ai_chat_sessions`;
+DROP TABLE IF EXISTS `chat_automation`;
+DROP TABLE IF EXISTS `chat_messages`;
+DROP TABLE IF EXISTS `realtime_payments`;
+DROP TABLE IF EXISTS `realtime_orders`;
+DROP TABLE IF EXISTS `website_content`;
+DROP TABLE IF EXISTS `notifications`;
+DROP TABLE IF EXISTS `staff_assignments`;
+DROP TABLE IF EXISTS `cart_items`;
+DROP TABLE IF EXISTS `carts`;
+DROP TABLE IF EXISTS `reviews`;
+DROP TABLE IF EXISTS `payments`;
+DROP TABLE IF EXISTS `order_items`;
+DROP TABLE IF EXISTS `orders`;
+DROP TABLE IF EXISTS `coupons`;
+DROP TABLE IF EXISTS `addresses`;
+DROP TABLE IF EXISTS `product_images`;
+DROP TABLE IF EXISTS `products`;
+DROP TABLE IF EXISTS `categories`;
+DROP TABLE IF EXISTS `restaurants`;
+DROP TABLE IF EXISTS `users`;
 DROP TABLE IF EXISTS `roles`;
+
+-- ===================================================================
+-- 1. BẢNG roles (Phân quyền người dùng)
+-- ===================================================================
 CREATE TABLE `roles` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `name` VARCHAR(50) NOT NULL UNIQUE COMMENT 'Tên vai trò: admin, customer, restaurant_owner, shipper',
   `description` VARCHAR(255) NULL COMMENT 'Mô tả vai trò',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   INDEX `idx_roles_name` (`name`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 2. BẢNG users (Người dùng hệ thống: khách hàng, chủ quán, tài xế, quản trị viên)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 2. BẢNG users (Tài khoản người dùng)
+-- ===================================================================
 DROP TABLE IF EXISTS `users`;
 CREATE TABLE `users` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -40,17 +65,17 @@ CREATE TABLE `users` (
   `password_hash` VARCHAR(255) NOT NULL COMMENT 'Mật khẩu đã mã hóa bcrypt',
   `avatar_url` VARCHAR(500) NULL COMMENT 'Ảnh đại diện',
   `status` ENUM('active', 'inactive', 'banned') DEFAULT 'active' COMMENT 'Trạng thái tài khoản',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_users_role` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON UPDATE CASCADE,
   INDEX `idx_users_email` (`email`),
   INDEX `idx_users_phone` (`phone`),
   INDEX `idx_users_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
+-- ===================================================================
 -- 3. BẢNG restaurants (Cửa hàng / Quán ăn đối tác)
--- -------------------------------------------------------------------
+-- ===================================================================
 DROP TABLE IF EXISTS `restaurants`;
 CREATE TABLE `restaurants` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -61,7 +86,7 @@ CREATE TABLE `restaurants` (
   `address` VARCHAR(255) NOT NULL COMMENT 'Địa chỉ thực tế',
   `latitude` DECIMAL(10, 8) NULL COMMENT 'Tọa độ vĩ độ cho tính khoảng cách',
   `longitude` DECIMAL(11, 8) NULL COMMENT 'Tọa độ kinh độ cho tính khoảng cách',
-  `phone` VARCHAR(20) NOT NULL COMMENT 'Hotline quán',
+  `phone` VARCHAR(20) NOT NULL DEFAULT '' COMMENT 'Hotline quán',
   `email` VARCHAR(191) NULL COMMENT 'Email liên hệ quán',
   `banner_url` VARCHAR(500) NULL COMMENT 'Ảnh bìa quán',
   `logo_url` VARCHAR(500) NULL COMMENT 'Logo quán',
@@ -72,17 +97,17 @@ CREATE TABLE `restaurants` (
   `opening_time` TIME NOT NULL DEFAULT '07:00:00' COMMENT 'Giờ mở cửa',
   `closing_time` TIME NOT NULL DEFAULT '22:00:00' COMMENT 'Giờ đóng cửa',
   `min_order_amount` DECIMAL(12, 2) DEFAULT 0.00 COMMENT 'Giá trị đơn hàng tối thiểu',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_restaurants_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_restaurants_owner` FOREIGN KEY (`owner_id`) REFERENCES `users` (`id`) ON UPDATE CASCADE,
   INDEX `idx_restaurants_slug` (`slug`),
   INDEX `idx_restaurants_rating` (`rating_avg`),
   INDEX `idx_restaurants_location` (`latitude`, `longitude`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
+-- ===================================================================
 -- 4. BẢNG categories (Danh mục món ăn)
--- -------------------------------------------------------------------
+-- ===================================================================
 DROP TABLE IF EXISTS `categories`;
 CREATE TABLE `categories` (
   `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -92,57 +117,63 @@ CREATE TABLE `categories` (
   `icon_url` VARCHAR(500) NULL COMMENT 'Icon minh họa',
   `display_order` INT DEFAULT 0 COMMENT 'Thứ tự hiển thị',
   `is_active` TINYINT(1) DEFAULT 1 COMMENT '1 = Hiển thị, 0 = Ẩn',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_categories_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_categories_restaurant` (`restaurant_id`),
+  CONSTRAINT `fk_categories_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
   INDEX `idx_categories_slug` (`slug`),
   INDEX `idx_categories_display_order` (`display_order`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 5. BẢNG products (Sản phẩm / Món ăn)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 5. BẢNG products (Sản phẩm món ăn)
+-- ===================================================================
 DROP TABLE IF EXISTS `products`;
 CREATE TABLE `products` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `product_code` VARCHAR(50) NULL COMMENT 'Mã sản phẩm (ví dụ: prod-1)',
   `restaurant_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK quán bán món này',
   `category_id` INT UNSIGNED NOT NULL COMMENT 'FK danh mục món',
   `name` VARCHAR(200) NOT NULL COMMENT 'Tên món ăn',
   `slug` VARCHAR(220) NOT NULL COMMENT 'Slug món ăn',
   `description` TEXT NULL COMMENT 'Mô tả thành phần, khẩu phần',
+  `image_url` VARCHAR(500) NULL COMMENT 'Ảnh chính món ăn',
   `base_price` DECIMAL(12, 2) NOT NULL COMMENT 'Giá gốc',
   `discount_price` DECIMAL(12, 2) NULL COMMENT 'Giá khuyến mãi (nếu có)',
   `is_available` TINYINT(1) DEFAULT 1 COMMENT '1 = Còn món, 0 = Tạm hết hàng',
   `is_featured` TINYINT(1) DEFAULT 0 COMMENT '1 = Món ăn nổi bật / Best-seller',
   `prep_time_minutes` INT UNSIGNED DEFAULT 15 COMMENT 'Thời gian chuẩn bị món dự kiến (phút)',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_products_restaurant` (`restaurant_id`),
+  KEY `fk_products_category` (`category_id`),
   CONSTRAINT `fk_products_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_products_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_products_category` FOREIGN KEY (`category_id`) REFERENCES `categories` (`id`) ON UPDATE CASCADE,
   INDEX `idx_products_restaurant` (`restaurant_id`),
   INDEX `idx_products_category` (`category_id`),
   INDEX `idx_products_available` (`is_available`),
   INDEX `idx_products_price` (`base_price`, `discount_price`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 6. BẢNG product_images (Hình ảnh món ăn)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 6. BẢNG product_images (Hình ảnh món ăn chi tiết)
+-- ===================================================================
 DROP TABLE IF EXISTS `product_images`;
 CREATE TABLE `product_images` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `product_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK liên kết tới sản phẩm',
+  `product_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK món ăn',
   `image_url` VARCHAR(500) NOT NULL COMMENT 'Đường dẫn ảnh',
   `is_primary` TINYINT(1) DEFAULT 0 COMMENT '1 = Ảnh đại diện chính',
-  `display_order` INT DEFAULT 0 COMMENT 'Thứ tự hiển thị thư viện ảnh',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `display_order` INT DEFAULT 0 COMMENT 'Thứ tự hiển thị',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `fk_product_images_product` (`product_id`),
   CONSTRAINT `fk_product_images_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   INDEX `idx_product_images_product` (`product_id`, `is_primary`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 7. BẢNG addresses (Sổ địa chỉ giao hàng của người dùng)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 7. BẢNG addresses (Sổ địa chỉ người dùng)
+-- ===================================================================
 DROP TABLE IF EXISTS `addresses`;
 CREATE TABLE `addresses` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -157,152 +188,133 @@ CREATE TABLE `addresses` (
   `longitude` DECIMAL(11, 8) NULL COMMENT 'Tọa độ kinh độ người nhận',
   `is_default` TINYINT(1) DEFAULT 0 COMMENT '1 = Địa chỉ mặc định',
   `note` VARCHAR(255) NULL COMMENT 'Ghi chú chỉ dẫn giao hàng (ví dụ: gọi bảo vệ)',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_addresses_user` (`user_id`),
   CONSTRAINT `fk_addresses_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   INDEX `idx_addresses_user` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 8. BẢNG carts (Giỏ hàng của người dùng - Mỗi quán 1 giỏ hàng riêng biệt)
--- -------------------------------------------------------------------
-DROP TABLE IF EXISTS `carts`;
-CREATE TABLE `carts` (
-  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK người dùng sở hữu giỏ',
-  `restaurant_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK quán ăn của giỏ hàng hiện tại',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_carts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_carts_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  UNIQUE KEY `uq_user_restaurant_cart` (`user_id`, `restaurant_id`),
-  INDEX `idx_carts_user` (`user_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- -------------------------------------------------------------------
--- 9. BẢNG cart_items (Chi tiết món ăn trong giỏ hàng)
--- -------------------------------------------------------------------
-DROP TABLE IF EXISTS `cart_items`;
-CREATE TABLE `cart_items` (
-  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `cart_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK giỏ hàng',
-  `product_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK sản phẩm trong giỏ',
-  `quantity` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Số lượng đặt',
-  `unit_price` DECIMAL(12, 2) NOT NULL COMMENT 'Đơn giá tại thời điểm đưa vào giỏ',
-  `notes` VARCHAR(255) NULL COMMENT 'Ghi chú cho món ăn (ví dụ: ít ngọt, không cay)',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_cart_items_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_cart_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  INDEX `idx_cart_items_cart` (`cart_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- -------------------------------------------------------------------
--- 10. BẢNG coupons (Mã giảm giá / Khuyến mãi)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 8. BẢNG coupons (Mã giảm giá & Khuyến mãi)
+-- ===================================================================
 DROP TABLE IF EXISTS `coupons`;
 CREATE TABLE `coupons` (
-  `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `user_id` BIGINT UNSIGNED NULL COMMENT 'NULL cho voucher chung, có ID nếu voucher được cấp riêng',
-  `restaurant_id` BIGINT UNSIGNED NULL COMMENT 'NULL nếu voucher toàn sàn, có ID nếu mã riêng của quán',
-  `code` VARCHAR(50) NOT NULL UNIQUE COMMENT 'Mã voucher (ví dụ: FREESHIP, GIAM20K)',
-  `title` VARCHAR(150) NOT NULL COMMENT 'Tiêu đề voucher',
-  `discount_type` ENUM('percentage', 'fixed') NOT NULL COMMENT 'percentage = %, fixed = số tiền cố định',
-  `discount_value` DECIMAL(12, 2) NOT NULL COMMENT 'Giá trị giảm (% hoặc VNĐ)',
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id` BIGINT UNSIGNED NULL,
+  `restaurant_id` BIGINT UNSIGNED NULL COMMENT 'NULL = Mã sàn toàn hệ thống; có ID = Mã riêng quán',
+  `code` VARCHAR(50) NOT NULL UNIQUE COMMENT 'Mã voucher (ví dụ: FREESHIP, GIAM50K)',
+  `title` VARCHAR(200) NOT NULL COMMENT 'Tiêu đề khuyến mãi',
+  `discount_type` ENUM('percentage', 'fixed') NOT NULL COMMENT 'percentage = Theo %, fixed = Giảm cố định VNĐ',
+  `discount_value` DECIMAL(12, 2) NOT NULL COMMENT 'Giá trị giảm',
   `min_order_value` DECIMAL(12, 2) DEFAULT 0.00 COMMENT 'Giá trị đơn tối thiểu để áp dụng',
-  `max_discount_amount` DECIMAL(12, 2) NULL COMMENT 'Số tiền giảm tối đa (nếu dùng %)',
-  `usage_limit` INT UNSIGNED DEFAULT 1000 COMMENT 'Tổng số lượt sử dụng tối đa',
+  `max_discount_amount` DECIMAL(12, 2) NULL COMMENT 'Mức giảm tối đa (với mã %)',
+  `usage_limit` INT UNSIGNED NULL COMMENT 'Lượt dùng tối đa',
   `usage_count` INT UNSIGNED DEFAULT 0 COMMENT 'Số lượt đã sử dụng',
   `start_date` DATETIME NOT NULL COMMENT 'Thời gian bắt đầu',
   `end_date` DATETIME NOT NULL COMMENT 'Thời gian kết thúc',
   `is_active` TINYINT(1) DEFAULT 1 COMMENT '1 = Kích hoạt, 0 = Tạm dừng',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_coupons_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_coupons_restaurant` (`restaurant_id`),
+  KEY `fk_coupons_user` (`user_id`),
   CONSTRAINT `fk_coupons_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  UNIQUE INDEX `uq_coupons_user_id` (`user_id`),
+  CONSTRAINT `fk_coupons_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   INDEX `idx_coupons_code` (`code`),
   INDEX `idx_coupons_dates` (`start_date`, `end_date`, `is_active`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 11. BẢNG orders (Đơn đặt hàng đồ ăn)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 9. BẢNG orders (Đơn hàng chuẩn RDBMS)
+-- ===================================================================
 DROP TABLE IF EXISTS `orders`;
 CREATE TABLE `orders` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `order_code` VARCHAR(30) NOT NULL UNIQUE COMMENT 'Mã đơn hiển thị người dùng (ví dụ: FF0123)',
-  `user_id` BIGINT UNSIGNED NOT NULL COMMENT 'Khách hàng đặt món',
-  `restaurant_id` BIGINT UNSIGNED NOT NULL COMMENT 'Quán ăn nhận đơn',
-  `delivery_address_id` BIGINT UNSIGNED NOT NULL COMMENT 'Địa chỉ nhận hàng',
-  `coupon_id` INT UNSIGNED NULL COMMENT 'Mã giảm giá áp dụng (nếu có)',
+  `order_code` VARCHAR(30) NOT NULL UNIQUE COMMENT 'Mã hiển thị (ví dụ: FF-20261109-0001)',
+  `customer_id` BIGINT UNSIGNED NOT NULL COMMENT 'Người đặt',
+  `restaurant_id` BIGINT UNSIGNED NOT NULL COMMENT 'Quán tiếp nhận',
   `shipper_id` BIGINT UNSIGNED NULL COMMENT 'Tài xế giao hàng',
-  `delivery_fee` DECIMAL(12, 2) DEFAULT 0.00 COMMENT 'Phí vận chuyển',
+  `coupon_id` BIGINT UNSIGNED NULL COMMENT 'Mã giảm giá áp dụng',
+  `delivery_address` VARCHAR(255) NOT NULL COMMENT 'Địa chỉ giao hàng thực tế',
+  `recipient_name` VARCHAR(150) NOT NULL COMMENT 'Tên người nhận tại thời điểm đặt',
+  `recipient_phone` VARCHAR(20) NOT NULL COMMENT 'SĐT người nhận',
+  `delivery_latitude` DECIMAL(10, 8) NULL COMMENT 'Tọa độ giao hàng',
+  `delivery_longitude` DECIMAL(11, 8) NULL COMMENT 'Tọa độ giao hàng',
   `subtotal` DECIMAL(12, 2) NOT NULL COMMENT 'Tổng tiền món ăn',
-  `discount_amount` DECIMAL(12, 2) DEFAULT 0.00 COMMENT 'Số tiền được giảm',
-  `final_amount` DECIMAL(12, 2) NOT NULL COMMENT 'Số tiền thực tế thanh toán',
-  `status` ENUM('pending', 'confirmed', 'preparing', 'delivering', 'delivered', 'cancelled') DEFAULT 'pending' COMMENT 'Trạng thái đơn hàng',
-  `delivery_notes` VARCHAR(255) NULL COMMENT 'Ghi chú đơn hàng của khách',
-  `cancel_reason` VARCHAR(255) NULL COMMENT 'Lý do hủy đơn',
-  `order_time` TIMESTAMP DEFAULT CURRENT_TIMESTAMP COMMENT 'Thời gian khách bấm đặt hàng',
-  `delivered_time` TIMESTAMP NULL COMMENT 'Thời gian hoàn tất giao đơn',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `fk_orders_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `fk_orders_address` FOREIGN KEY (`delivery_address_id`) REFERENCES `addresses` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
-  CONSTRAINT `fk_orders_coupon` FOREIGN KEY (`coupon_id`) REFERENCES `coupons` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  `shipping_fee` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT 'Phí giao hàng',
+  `discount_amount` DECIMAL(12, 2) NOT NULL DEFAULT 0.00 COMMENT 'Số tiền được giảm',
+  `total_amount` DECIMAL(12, 2) NOT NULL COMMENT 'Số tiền khách phải trả',
+  `payment_method` ENUM('cod', 'momo', 'banking', 'vnpay') NOT NULL DEFAULT 'cod',
+  `payment_status` ENUM('pending', 'paid', 'failed', 'refunded') NOT NULL DEFAULT 'pending',
+  `order_status` ENUM('placed', 'confirmed', 'preparing', 'delivering', 'completed', 'cancelled') NOT NULL DEFAULT 'placed',
+  `cancellation_reason` VARCHAR(255) NULL COMMENT 'Lý do hủy đơn',
+  `note_for_restaurant` VARCHAR(255) NULL COMMENT 'Lời nhắn cho quán',
+  `note_for_shipper` VARCHAR(255) NULL COMMENT 'Lời nhắn cho tài xế',
+  `placed_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `confirmed_at` TIMESTAMP NULL DEFAULT NULL,
+  `delivering_at` TIMESTAMP NULL DEFAULT NULL,
+  `completed_at` TIMESTAMP NULL DEFAULT NULL,
+  `cancelled_at` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_orders_customer` (`customer_id`),
+  KEY `fk_orders_restaurant` (`restaurant_id`),
+  KEY `fk_orders_shipper` (`shipper_id`),
+  KEY `fk_orders_coupon` (`coupon_id`),
+  CONSTRAINT `fk_orders_customer` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON UPDATE CASCADE,
+  CONSTRAINT `fk_orders_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON UPDATE CASCADE,
   CONSTRAINT `fk_orders_shipper` FOREIGN KEY (`shipper_id`) REFERENCES `users` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
-  INDEX `idx_orders_code` (`order_code`),
-  INDEX `idx_orders_user` (`user_id`),
-  INDEX `idx_orders_restaurant` (`restaurant_id`),
-  INDEX `idx_orders_shipper` (`shipper_id`),
-  INDEX `idx_orders_status` (`status`)
+  CONSTRAINT `fk_orders_coupon` FOREIGN KEY (`coupon_id`) REFERENCES `coupons` (`id`) ON DELETE SET NULL ON UPDATE CASCADE,
+  INDEX `idx_orders_customer` (`customer_id`, `placed_at`),
+  INDEX `idx_orders_restaurant` (`restaurant_id`, `order_status`),
+  INDEX `idx_orders_status` (`order_status`),
+  INDEX `idx_orders_payment` (`payment_status`, `payment_method`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 12. BẢNG order_items (Chi tiết món ăn trong từng đơn hàng)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 10. BẢNG order_items (Chi tiết món ăn trong đơn hàng)
+-- ===================================================================
 DROP TABLE IF EXISTS `order_items`;
 CREATE TABLE `order_items` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
   `order_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK đơn hàng',
-  `product_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK sản phẩm',
-  `product_name` VARCHAR(200) NOT NULL COMMENT 'Lưu cứng tên món tại thời điểm đặt',
-  `unit_price` DECIMAL(12, 2) NOT NULL COMMENT 'Lưu cứng đơn giá tại thời điểm đặt',
-  `quantity` INT UNSIGNED NOT NULL COMMENT 'Số lượng món',
-  `subtotal` DECIMAL(12, 2) NOT NULL COMMENT 'Thành tiền = đơn giá * số lượng',
-  `notes` VARCHAR(255) NULL COMMENT 'Ghi chú cụ thể món',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `product_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK món ăn',
+  `product_name` VARCHAR(200) NOT NULL COMMENT 'Lưu lại tên món tại thời điểm đặt',
+  `quantity` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Số lượng',
+  `unit_price` DECIMAL(12, 2) NOT NULL COMMENT 'Đơn giá sau chiết khấu tại lúc mua',
+  `subtotal` DECIMAL(12, 2) NOT NULL COMMENT 'quantity * unit_price',
+  `special_instructions` VARCHAR(255) NULL COMMENT 'Ghi chú đặc biệt cho món',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `fk_order_items_order` (`order_id`),
+  KEY `fk_order_items_product` (`product_id`),
   CONSTRAINT `fk_order_items_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT `fk_order_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `fk_order_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON UPDATE CASCADE,
   INDEX `idx_order_items_order` (`order_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 13. BẢNG payments (Giao dịch thanh toán đơn hàng)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 11. BẢNG payments (Lịch sử thanh toán giao dịch)
+-- ===================================================================
 DROP TABLE IF EXISTS `payments`;
 CREATE TABLE `payments` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `order_id` BIGINT UNSIGNED NOT NULL UNIQUE COMMENT 'FK đơn hàng (1 đơn - 1 giao dịch)',
-  `payment_method` ENUM('cod', 'vnpay', 'momo', 'banking') NOT NULL COMMENT 'Phương thức thanh toán',
-  `payment_status` ENUM('pending', 'completed', 'failed', 'refunded') DEFAULT 'pending' COMMENT 'Trạng thái thanh toán',
-  `transaction_id` VARCHAR(100) NULL COMMENT 'Mã giao dịch từ cổng thanh toán đối tác',
+  `order_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK đơn hàng',
+  `transaction_code` VARCHAR(100) NULL UNIQUE COMMENT 'Mã giao dịch từ cổng thanh toán',
   `amount` DECIMAL(12, 2) NOT NULL COMMENT 'Số tiền thanh toán',
-  `payment_time` TIMESTAMP NULL COMMENT 'Thời gian thanh toán thành công',
-  `provider_response` TEXT NULL COMMENT 'JSON phản hồi từ cổng thanh toán',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `provider` ENUM('cod', 'momo', 'banking', 'vnpay') NOT NULL,
+  `status` ENUM('pending', 'success', 'failed', 'refunded') NOT NULL DEFAULT 'pending',
+  `gateway_response` LONGTEXT NULL COMMENT 'Log phản hồi từ cổng thanh toán (JSON)',
+  `paid_at` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   CONSTRAINT `fk_payments_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  INDEX `idx_payments_method` (`payment_method`),
-  INDEX `idx_payments_status` (`payment_status`),
-  INDEX `idx_payments_transaction` (`transaction_id`)
+  INDEX `idx_payments_order` (`order_id`),
+  INDEX `idx_payments_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 14. BẢNG reviews (Đánh giá và nhận xét món ăn / quán)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 12. BẢNG reviews (Đánh giá món ăn & Quán ăn)
+-- ===================================================================
 DROP TABLE IF EXISTS `reviews`;
 CREATE TABLE `reviews` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -312,19 +324,60 @@ CREATE TABLE `reviews` (
   `rating` TINYINT UNSIGNED NOT NULL DEFAULT 5 COMMENT 'Điểm từ 1 đến 5 sao',
   `comment` TEXT NULL COMMENT 'Nội dung nhận xét',
   `reply_from_restaurant` TEXT NULL COMMENT 'Quán phản hồi lại đánh giá của khách',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `chk_reviews_rating` CHECK (`rating` >= 1 AND `rating` <= 5),
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_reviews_order` (`order_id`),
+  KEY `fk_reviews_user` (`user_id`),
+  KEY `fk_reviews_restaurant` (`restaurant_id`),
   CONSTRAINT `fk_reviews_order` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_reviews_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_reviews_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `chk_reviews_rating` CHECK (`rating` >= 1 AND `rating` <= 5),
   INDEX `idx_reviews_restaurant` (`restaurant_id`),
   INDEX `idx_reviews_rating` (`rating`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- 15. BẢNG notifications (Thông báo hệ thống, đơn hàng, khuyến mãi)
--- -------------------------------------------------------------------
+-- ===================================================================
+-- 13. BẢNG carts (Giỏ hàng của người dùng)
+-- ===================================================================
+DROP TABLE IF EXISTS `carts`;
+CREATE TABLE `carts` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `user_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK người dùng sở hữu giỏ',
+  `restaurant_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK quán ăn của giỏ hàng hiện tại',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_carts_user` (`user_id`),
+  KEY `fk_carts_restaurant` (`restaurant_id`),
+  CONSTRAINT `fk_carts_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_carts_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  UNIQUE KEY `uq_user_restaurant_cart` (`user_id`, `restaurant_id`),
+  INDEX `idx_carts_user` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 14. BẢNG cart_items (Chi tiết món ăn trong giỏ hàng)
+-- ===================================================================
+DROP TABLE IF EXISTS `cart_items`;
+CREATE TABLE `cart_items` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `cart_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK giỏ hàng',
+  `product_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK sản phẩm trong giỏ',
+  `quantity` INT UNSIGNED NOT NULL DEFAULT 1 COMMENT 'Số lượng đặt',
+  `unit_price` DECIMAL(12, 2) NOT NULL COMMENT 'Đơn giá tại thời điểm đưa vào giỏ',
+  `notes` VARCHAR(255) NULL COMMENT 'Ghi chú cho món ăn (ví dụ: ít ngọt, không cay)',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_cart_items_cart` (`cart_id`),
+  KEY `fk_cart_items_product` (`product_id`),
+  CONSTRAINT `fk_cart_items_cart` FOREIGN KEY (`cart_id`) REFERENCES `carts` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  CONSTRAINT `fk_cart_items_product` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  INDEX `idx_cart_items_cart` (`cart_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 15. BẢNG notifications (Thông báo hệ thống cho người dùng)
+-- ===================================================================
 DROP TABLE IF EXISTS `notifications`;
 CREATE TABLE `notifications` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -333,72 +386,16 @@ CREATE TABLE `notifications` (
   `content` TEXT NOT NULL COMMENT 'Nội dung chi tiết',
   `type` ENUM('order', 'promotion', 'system') DEFAULT 'system' COMMENT 'Phân loại thông báo',
   `is_read` TINYINT(1) DEFAULT 0 COMMENT '0 = Chưa đọc, 1 = Đã đọc',
-  `metadata` JSON NULL COMMENT 'Dữ liệu JSON kèm theo (order_id, url...)',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  `metadata` LONGTEXT NULL COMMENT 'Dữ liệu JSON kèm theo (order_id, url...)',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `fk_notifications_user` (`user_id`),
   CONSTRAINT `fk_notifications_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   INDEX `idx_notifications_user` (`user_id`, `is_read`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- -------------------------------------------------------------------
--- Realtime website content and support chat
--- -------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `website_content` (
-  `collection_name` VARCHAR(50) PRIMARY KEY,
-  `content` JSON NOT NULL,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `chat_messages` (
-  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `customer_id` BIGINT UNSIGNED NOT NULL,
-  `sender_id` BIGINT UNSIGNED NULL,
-  `sender_role` ENUM('admin', 'customer', 'ai') NOT NULL,
-  `message` VARCHAR(1000) NOT NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_chat_customer` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  CONSTRAINT `fk_chat_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  INDEX `idx_chat_customer_id` (`customer_id`, `id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `chat_automation` (
-  `customer_id` BIGINT UNSIGNED PRIMARY KEY,
-  `paused_until` TIMESTAMP NULL DEFAULT NULL,
-  CONSTRAINT `fk_chat_automation_customer` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `realtime_orders` (
-  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-  `order_code` VARCHAR(30) NOT NULL UNIQUE,
-  `user_id` BIGINT UNSIGNED NOT NULL,
-  `order_data` JSON NOT NULL,
-  `status` ENUM('pending', 'preparing', 'delivering', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_realtime_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  INDEX `idx_realtime_orders_user` (`user_id`, `id`),
-  INDEX `idx_realtime_orders_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
-CREATE TABLE IF NOT EXISTS `realtime_payments` (
-  `order_code` VARCHAR(30) PRIMARY KEY,
-  `payment_method` ENUM('banking', 'momo') NOT NULL,
-  `request_id` VARCHAR(64) NOT NULL,
-  `amount` BIGINT UNSIGNED NOT NULL,
-  `status` ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
-  `provider_transaction_id` VARCHAR(100) NULL UNIQUE,
-  `payment_url` TEXT NULL,
-  `qr_url` TEXT NULL,
-  `paid_at` TIMESTAMP NULL,
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  CONSTRAINT `fk_realtime_payments_order`
-    FOREIGN KEY (`order_code`) REFERENCES `realtime_orders` (`order_code`) ON DELETE CASCADE,
-  INDEX `idx_realtime_payments_status` (`status`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- -------------------------------------------------------------------
+-- ===================================================================
 -- 16. BẢNG staff_assignments (Phân công nhân viên quản lý quán)
--- -------------------------------------------------------------------
+-- ===================================================================
 DROP TABLE IF EXISTS `staff_assignments`;
 CREATE TABLE `staff_assignments` (
   `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
@@ -406,13 +403,124 @@ CREATE TABLE `staff_assignments` (
   `user_id` BIGINT UNSIGNED NOT NULL COMMENT 'FK nhân viên',
   `role_in_restaurant` ENUM('manager', 'chef', 'staff') DEFAULT 'staff' COMMENT 'Vị trí trong quán',
   `is_active` TINYINT(1) DEFAULT 1 COMMENT '1 = Đang làm việc, 0 = Đã nghỉ',
-  `created_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY `fk_staff_restaurant` (`restaurant_id`),
+  KEY `fk_staff_user` (`user_id`),
   CONSTRAINT `fk_staff_restaurant` FOREIGN KEY (`restaurant_id`) REFERENCES `restaurants` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_staff_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   UNIQUE KEY `uq_restaurant_staff` (`restaurant_id`, `user_id`),
   INDEX `idx_staff_restaurant` (`restaurant_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Bật lại kiểm tra khóa ngoại sau khi hoàn tất tạo bảng
+-- ===================================================================
+-- 17. BẢNG realtime_orders (Đơn hàng Realtime Socket.IO & Checkout)
+-- ===================================================================
+DROP TABLE IF EXISTS `realtime_orders`;
+CREATE TABLE `realtime_orders` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `order_code` VARCHAR(30) NOT NULL UNIQUE,
+  `user_id` BIGINT UNSIGNED NOT NULL,
+  `order_data` LONGTEXT NOT NULL COMMENT 'Payload đơn hàng định dạng JSON',
+  `status` ENUM('pending', 'preparing', 'delivering', 'delivered', 'cancelled') NOT NULL DEFAULT 'pending',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_realtime_orders_user` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  INDEX `idx_realtime_orders_user` (`user_id`, `id`),
+  INDEX `idx_realtime_orders_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 18. BẢNG realtime_payments (Giao dịch thanh toán Realtime)
+-- ===================================================================
+DROP TABLE IF EXISTS `realtime_payments`;
+CREATE TABLE `realtime_payments` (
+  `order_code` VARCHAR(30) NOT NULL PRIMARY KEY,
+  `payment_method` ENUM('banking', 'momo') NOT NULL,
+  `request_id` VARCHAR(64) NOT NULL,
+  `amount` BIGINT UNSIGNED NOT NULL,
+  `status` ENUM('pending', 'completed', 'failed') NOT NULL DEFAULT 'pending',
+  `provider_transaction_id` VARCHAR(100) NULL UNIQUE,
+  `payment_url` TEXT NULL,
+  `qr_url` TEXT NULL,
+  `paid_at` TIMESTAMP NULL DEFAULT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT `fk_realtime_payments_order` FOREIGN KEY (`order_code`) REFERENCES `realtime_orders` (`order_code`) ON DELETE CASCADE,
+  INDEX `idx_realtime_payments_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 19. BẢNG chat_messages (Tin nhắn hỗ trợ trực tiếp CSKH Realtime)
+-- ===================================================================
+DROP TABLE IF EXISTS `chat_messages`;
+CREATE TABLE `chat_messages` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `customer_id` BIGINT UNSIGNED NOT NULL,
+  `sender_id` BIGINT UNSIGNED NULL,
+  `sender_role` ENUM('admin', 'customer', 'ai') NOT NULL,
+  `message` VARCHAR(1000) NOT NULL,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY `fk_chat_sender` (`sender_id`),
+  CONSTRAINT `fk_chat_customer` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_chat_sender` FOREIGN KEY (`sender_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
+  INDEX `idx_chat_customer_id` (`customer_id`, `id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 20. BẢNG chat_automation (Cấu hình tự động trả lời CSKH)
+-- ===================================================================
+DROP TABLE IF EXISTS `chat_automation`;
+CREATE TABLE `chat_automation` (
+  `customer_id` BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  `paused_until` TIMESTAMP NULL DEFAULT NULL,
+  CONSTRAINT `fk_chat_automation_customer` FOREIGN KEY (`customer_id`) REFERENCES `users` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 21. BẢNG website_content (Đồng bộ nội dung động CMS)
+-- ===================================================================
+DROP TABLE IF EXISTS `website_content`;
+CREATE TABLE `website_content` (
+  `collection_name` VARCHAR(50) NOT NULL PRIMARY KEY,
+  `content` LONGTEXT NOT NULL COMMENT 'Nội dung CMS lưu dạng JSON',
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 22. BẢNG ai_chat_sessions (Phiên hội thoại Trợ lý ảo FASTFOOD AI)
+-- ===================================================================
+DROP TABLE IF EXISTS `ai_chat_sessions`;
+CREATE TABLE `ai_chat_sessions` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `session_id` VARCHAR(64) NOT NULL UNIQUE,
+  `user_id` BIGINT UNSIGNED NULL,
+  `customer_name` VARCHAR(150) NULL DEFAULT 'Khách hàng',
+  `title` VARCHAR(255) NOT NULL DEFAULT 'Hội thoại mới',
+  `is_active` TINYINT(1) NOT NULL DEFAULT 1,
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  INDEX `idx_chat_session_user` (`user_id`),
+  INDEX `idx_chat_session_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ===================================================================
+-- 23. BẢNG ai_chat_messages (Lịch sử tin nhắn Trợ lý ảo FASTFOOD AI)
+-- ===================================================================
+DROP TABLE IF EXISTS `ai_chat_messages`;
+CREATE TABLE `ai_chat_messages` (
+  `id` BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  `session_id` VARCHAR(64) NOT NULL,
+  `user_id` BIGINT UNSIGNED NULL,
+  `sender` ENUM('user', 'assistant', 'system') NOT NULL DEFAULT 'user',
+  `message` TEXT NOT NULL,
+  `metadata` LONGTEXT NULL COMMENT 'JSON lưu thông tin món ăn, gợi ý hoặc tra cứu đơn hàng',
+  `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX `idx_chat_msg_session` (`session_id`),
+  INDEX `idx_chat_msg_user` (`user_id`),
+  INDEX `idx_chat_msg_created` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- Bật lại kiểm tra khóa ngoại sau khi tạo bảng
 SET FOREIGN_KEY_CHECKS = 1;

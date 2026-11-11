@@ -1,7 +1,7 @@
 /**
  * FASTFOOD Database Initializer & Migration Script
  * Chạy lệnh: npm run db:init
- * Tự động tạo cơ sở dữ liệu, 16 bảng và nạp dữ liệu mẫu
+ * Tự động tạo cơ sở dữ liệu, 23 bảng và nạp dữ liệu mẫu
  */
 const mysql = require('mysql2/promise');
 const fs = require('fs');
@@ -38,10 +38,10 @@ async function initDatabase() {
     // 3. Đọc và thực thi schema.sql
     const schemaPath = path.resolve(__dirname, '../../database/schema.sql');
     if (fs.existsSync(schemaPath)) {
-      logger.info('Đang nạp cấu trúc 16 bảng từ database/schema.sql...');
+      logger.info('Đang nạp cấu trúc 23 bảng từ database/schema.sql...');
       const schemaSql = fs.readFileSync(schemaPath, 'utf8');
       await connection.query(schemaSql);
-      logger.info('Đã tạo thành công 16 bảng và thiết lập quan hệ khóa ngoại/indexes!');
+      logger.info('Đã tạo thành công 23 bảng và thiết lập quan hệ khóa ngoại/indexes!');
     } else {
       throw new Error(`Không tìm thấy file schema tại ${schemaPath}`);
     }

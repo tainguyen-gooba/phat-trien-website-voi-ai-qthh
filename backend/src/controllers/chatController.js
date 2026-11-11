@@ -505,7 +505,7 @@ class ChatController extends BaseController {
       if (!shouldAutoReply) {
         return this.sendSuccess(
           res,
-          'Đã chuyển tin nhắn đến Nhân viên hỗ trợ',
+          'Tin nhắn của bạn đã được gửi.',
           {
             autoReplied: false,
             pendingAdminReply: true,

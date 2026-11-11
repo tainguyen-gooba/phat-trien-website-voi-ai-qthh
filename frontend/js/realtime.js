@@ -81,6 +81,8 @@ function mountLiveChat(user, socket) {
     panel.classList.toggle('open');
     launcher.hidden = panel.classList.contains('open');
     if (!panel.classList.contains('open')) return;
+    // Đóng cửa sổ AI Chatbot nếu đang mở để không bị chồng panel
+    window.FASTFOODChatbot?.toggleChat(false);
     const customerId = isAdmin ? targetInput.value.trim() : String(user.id);
     loadHistory(customerId);
     panel.querySelector('input[name="message"]').focus();
@@ -144,8 +146,9 @@ function mountLiveChat(user, socket) {
 
   const style = document.createElement('style');
   style.textContent = `
-    #live-chat-launcher{position:fixed;right:22px;bottom:22px;z-index:1100;padding:12px 18px;border:0;border-radius:28px;background:#f28a24;color:#fff;font:600 14px Arial,sans-serif;box-shadow:0 6px 24px #0003;cursor:pointer}
-    #live-chat-panel{display:none;position:fixed;right:18px;bottom:15px;z-index:1101;width:min(494px,calc(100vw - 32px));height:590px;max-height:calc(100vh - 92px);background:#fff;border:1px solid #eee;border-radius:20px;box-shadow:0 12px 40px #0003;overflow:hidden}
+    #live-chat-launcher{position:fixed;right:98px;bottom:33px;z-index:1100;padding:11px 18px;border:0;border-radius:28px;background:#f28a24;color:#fff;font:600 13.5px "Plus Jakarta Sans",Arial,sans-serif;box-shadow:0 6px 20px rgba(242,138,36,0.3);cursor:pointer;transition:all .25s ease;white-space:nowrap;display:flex;align-items:center;gap:6px}
+    #live-chat-launcher:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(242,138,36,0.45);background:#e07b1c}
+    #live-chat-panel{display:none;position:fixed;right:18px;bottom:15px;z-index:100000;width:min(494px,calc(100vw - 32px));height:590px;max-height:calc(100vh - 92px);background:#fff;border:1px solid #eee;border-radius:20px;box-shadow:0 12px 40px #0003;overflow:hidden}
     #live-chat-panel.open{display:flex;flex-direction:column}
     .live-chat-header{display:flex;justify-content:space-between;align-items:center;padding:22px;background:#f28a24;color:#fff;font-size:20px}
     .live-chat-header button{font-size:22px;color:#fff;cursor:pointer}
@@ -158,6 +161,7 @@ function mountLiveChat(user, socket) {
     .live-chat-form{display:flex;gap:10px;padding:14px;border-top:1px solid #eee}
     .live-chat-form input{flex:1;min-width:0;padding:12px;border:1px solid #ddd;border-radius:10px;font-size:18px}
     .live-chat-form button{padding:0 17px;border-radius:10px;background:#f28a24;color:#fff;font-size:18px;font-weight:700}
+    @media(max-width:640px){#live-chat-launcher{right:16px;bottom:86px;padding:9px 15px;font-size:12.5px}}
     @media(max-width:480px){#live-chat-panel{right:12px;bottom:12px;width:calc(100vw - 24px);height:min(590px,calc(100vh - 90px))}}
   `;
   document.head.appendChild(style);

@@ -537,6 +537,22 @@ const UIComponents = {
     const overlay = document.getElementById('food-modal-overlay');
     if (overlay) overlay.classList.remove('active');
   },
+
+  // Tự động khởi tạo Trợ lý FASTFOOD AI Chatbot nổi trên toàn hệ thống
+  initChatbot() {
+    if (document.querySelector('script[src*="chatbot.js"]') || window.FASTFOODChatbot) return;
+    const script = document.createElement('script');
+    script.src = '/js/chatbot.js';
+    script.defer = true;
+    document.body.appendChild(script);
+  },
 };
+
+// Tự động nạp Trợ lý AI khi trang sẵn sàng
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => UIComponents.initChatbot());
+} else {
+  UIComponents.initChatbot();
+}
 
 window.UIComponents = UIComponents;

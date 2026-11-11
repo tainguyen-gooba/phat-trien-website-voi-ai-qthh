@@ -5,6 +5,7 @@ const authRoutes = require('./auth.routes');
 const healthRoutes = require('./health.routes');
 const realtimeRoutes = require('./realtime.routes');
 const paymentRoutes = require('./payment.routes');
+const chatRoutes = require('./chatRoutes');
 
 /**
  * Root API Router - Version 1 (/api/v1)
@@ -24,6 +25,7 @@ router.get('/', (req, res) => {
       auth: '/api/v1/auth',
       login: '/api/v1/auth/login',
       currentUser: '/api/v1/auth/me',
+      chat: '/api/v1/chat',
       restaurants: '/api/v1/restaurants (sắp ra mắt)',
       products: '/api/v1/products (sắp ra mắt)',
       orders: '/api/v1/orders (sắp ra mắt)',
@@ -36,6 +38,7 @@ router.use('/auth', authRoutes);
 router.use('/health', healthRoutes);
 router.use('/realtime', realtimeRoutes);
 router.use('/payments', paymentRoutes);
+router.use('/chat', chatRoutes);
 
 // Các routes nghiệp vụ sẽ được phát triển tiếp ở các Prompt sau:
 // router.use('/users', userRoutes);

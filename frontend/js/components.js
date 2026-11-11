@@ -64,15 +64,40 @@ const UIComponents = {
     };
   },
 
-  // Hiển thị Toast thông báonpm
+  // Hiển thị Toast thông báo ở góc trên bên phải
   showToast(message, type = 'info', duration = 4500) {
+    if (!message) return;
     let container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'toast-container';
       container.setAttribute('aria-live', 'polite');
       container.setAttribute('aria-atomic', 'false');
+      // Đảm bảo container luôn cố định ở góc trên bên phải màn hình
+      container.style.position = 'fixed';
+      container.style.top = '24px';
+      container.style.right = '24px';
+      container.style.zIndex = '999999';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'column';
+      container.style.gap = '0.75rem';
+      container.style.pointerEvents = 'none';
+      container.style.maxWidth = '440px';
+      container.style.width = 'calc(100vw - 48px)';
       document.body.appendChild(container);
+    }
+
+    // Tránh spam dồn dập các thông báo có nội dung giống hệt nhau
+    const existing = [...container.querySelectorAll('.toast-message')]
+      .find(el => el.textContent.trim() === String(message).trim());
+    if (existing) {
+      const parentToast = existing.closest('.toast');
+      if (parentToast) {
+        parentToast.style.animation = 'none';
+        void parentToast.offsetHeight;
+        parentToast.style.animation = 'toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+        return;
+      }
     }
 
     const toast = document.createElement('div');

@@ -3429,8 +3429,13 @@
         <section class="chat-inbox" id="chat-inbox" aria-label="Hộp thư tin nhắn khách hàng" hidden>
           <aside class="chat-inbox-panel" aria-label="Danh sách hội thoại khách hàng">
             <div class="chat-inbox-heading">
-              <h2>Khách hàng</h2>
-              <p>Các cuộc trò chuyện gần đây</p>
+              <h2>Nhân viên hỗ trợ</h2>
+              <p>Hộp thư tin nhắn khách hàng trực tiếp</p>
+              <button type="button" class="ai-action-btn secondary" id="btn-admin-busy-toggle"
+                style="margin-top:10px;width:100%;justify-content:center;"
+                title="Chuyển trạng thái Admin: Khi Đang bận AI sẽ tự động trả lời khách, khi Đang trực bạn tự trả lời">
+                🟢 Đang trực (Tự trả lời)
+              </button>
             </div>
             <div class="chat-conversation-list" id="chat-conversation-list" aria-live="polite"></div>
           </aside>
@@ -3440,7 +3445,7 @@
                 <h2 id="chat-thread-title">Chọn một khách hàng</h2>
                 <p>Hỗ trợ khách hàng trực tiếp</p>
               </div>
-              <p id="chat-assistant-status">Trợ lý AI sẽ tự trả lời tin nhắn mới của khách.</p>
+              <p id="chat-assistant-status">Khi Admin bận, Trợ lý tự động sẽ trả lời khách.</p>
             </header>
             <div class="admin-chat-messages" id="admin-chat-messages" aria-live="polite"></div>
             <!-- AI Copilot Support Toolbar for Admin -->

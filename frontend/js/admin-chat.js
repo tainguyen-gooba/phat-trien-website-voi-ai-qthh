@@ -11,18 +11,37 @@
     const form = document.getElementById('admin-chat-form');
     const input = form.elements.message;
 
-    // AI Copilot Controls
+    const btnAdminBusyToggle = document.getElementById('btn-admin-busy-toggle');
     const btnSuggest = document.getElementById('btn-ai-suggest-reply');
     const btnToggleAuto = document.getElementById('btn-toggle-ai-automation');
     const intentTag = document.getElementById('ai-detected-intent');
     const quickChips = document.getElementById('ai-quick-chips');
 
     let conversations = [];
-    let selectedCustomerId = '';
+    let selectedSessionId = '';
     let active = false;
     let historyRequestId = 0;
+    let supportStatus = { adminOnline: true, adminManualBusy: null, effectiveBusy: false };
+    let pollTimer = null;
 
-    async function request(path, options = {}) {
+    async function chatRequest(path, options = {}) {
+      const response = await fetch(`${apiUrl}/chat${path}`, {
+        ...options,
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+          ...(options.headers || {}),
+        },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Không thể xử lý yêu cầu.');
+      }
+      return result.data;
+    }
+
+    async function realtimeRequest(path, options = {}) {
       const response = await fetch(`${apiUrl}/realtime${path}`, {
         ...options,
         headers: {
@@ -45,15 +64,24 @@
     }
 
     function renderMessage(message) {
+      if (!message) return;
       if (message.id && messageList.querySelector(`[data-message-id="${message.id}"]`)) return;
+
+      const role = message.sender || message.senderRole || 'user';
+      const isAdminMsg = role === 'admin';
+      const isAiMsg = role === 'assistant' || role === 'ai';
+
       const bubble = document.createElement('article');
-      bubble.className = `admin-chat-message${message.senderRole === 'admin' ? ' outgoing' : ''}${message.senderRole === 'ai' ? ' assistant' : ''}`;
+      bubble.className = `admin-chat-message${isAdminMsg ? ' outgoing' : ''}${isAiMsg ? ' assistant' : ''}`;
       if (message.id) bubble.dataset.messageId = String(message.id);
 
       const sender = document.createElement('strong');
-      sender.textContent = message.senderRole === 'admin'
-        ? 'Bạn (Admin)'
-        : message.senderRole === 'ai' ? 'Trợ lý AI FASTFOOD' : 'Khách hàng';
+      sender.textContent = isAdminMsg
+        ? 'Bạn (Admin - Nhân viên hỗ trợ)'
+        : isAiMsg
+          ? '🤖 Trợ lý tự động (Khi Admin bận)'
+          : 'Khách hàng';
+
       const content = document.createElement('p');
       content.textContent = message.message;
       bubble.append(sender, content);
@@ -66,25 +94,49 @@
       return Boolean(pauseTime && pauseTime.getTime() > Date.now());
     }
 
+    function updateBusyToggleUI(status) {
+      if (status) {
+        supportStatus = { ...supportStatus, ...status };
+      }
+      if (!btnAdminBusyToggle) return;
+
+      const isBusy = Boolean(supportStatus.effectiveBusy);
+      if (isBusy) {
+        btnAdminBusyToggle.textContent = '🟠 Đang bận (AI tự rep)';
+        btnAdminBusyToggle.classList.remove('secondary');
+        btnAdminBusyToggle.title = 'Hệ thống đang tự động trả lời khách thay bạn. Bấm để chuyển sang Đang trực.';
+      } else {
+        btnAdminBusyToggle.textContent = '🟢 Đang trực (Tự trả lời)';
+        btnAdminBusyToggle.classList.add('secondary');
+        btnAdminBusyToggle.title = 'Bạn đang trực tiếp nhận tin nhắn (AI không tự trả lời). Bấm nếu bạn đang bận.';
+      }
+    }
+
     function updateAutomationUI(conversation) {
       const paused = isAiPaused(conversation);
+      const forced = Boolean(conversation?.aiForceAuto);
+
       if (btnToggleAuto) {
-        if (paused) {
-          btnToggleAuto.textContent = '🤖 Bật lại AI tự động';
+        if (paused || (!supportStatus.effectiveBusy && !forced)) {
+          btnToggleAuto.textContent = '🤖 Bật AI tự động cho khách này';
           btnToggleAuto.classList.remove('secondary');
-          btnToggleAuto.title = 'Hiện đang tạm dừng bot. Bấm để bật lại AI tự trả lời.';
+          btnToggleAuto.title = 'Cho phép trợ lý AI tự trả lời khách này ngay cả khi bạn đang trực.';
         } else {
           btnToggleAuto.textContent = '⏸️ Tạm dừng AI (30p)';
           btnToggleAuto.classList.add('secondary');
-          btnToggleAuto.title = 'Bấm để tạm dừng bot AI trả lời tự động cho khách này trong 30 phút.';
+          btnToggleAuto.title = 'Tạm dừng trợ lý AI cho khách này trong 30 phút để bạn trực tiếp trao đổi.';
         }
       }
 
       if (paused) {
         const pauseTime = new Date(conversation.aiPausedUntil);
-        assistantStatus.textContent = `Trợ lý AI đang tạm dừng đến ${pauseTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`;
+        assistantStatus.textContent = `Admin đang tiếp quản. AI tạm dừng đến ${pauseTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}.`;
+      } else if (forced) {
+        assistantStatus.textContent = 'Đang bật Trợ lý tự động riêng cho khách hàng này.';
+      } else if (supportStatus.effectiveBusy) {
+        assistantStatus.textContent = 'Admin đang bận: Trợ lý tự động sẽ trả lời tin nhắn mới của khách.';
       } else {
-        assistantStatus.textContent = 'Trợ lý AI sẽ tự trả lời tin nhắn mới của khách.';
+        assistantStatus.textContent = 'Admin đang trực: AI tắt tự động, bạn tự đọc và trả lời trực tiếp cho khách.';
       }
     }
 
@@ -99,33 +151,42 @@
       }
 
       conversations.forEach((conversation) => {
-        const customerId = String(conversation.customerId);
+        const sessionId = String(conversation.sessionId);
         const button = document.createElement('button');
         button.type = 'button';
-        button.className = `chat-conversation${customerId === selectedCustomerId ? ' active' : ''}`;
-        button.dataset.customerId = customerId;
+        button.className = `chat-conversation${sessionId === selectedSessionId ? ' active' : ''}`;
+        button.dataset.sessionId = sessionId;
+
         const name = document.createElement('strong');
-        name.textContent = conversation.customerName || `Khách hàng #${customerId}`;
+        name.textContent = conversation.customerName || 'Khách hàng';
+
         const preview = document.createElement('span');
-        preview.textContent = `${conversation.lastSenderRole === 'customer' ? 'Khách: ' : ''}${conversation.lastMessage || '...'}`;
-        const email = document.createElement('small');
-        email.textContent = conversation.email || `Mã khách hàng: ${customerId}`;
-        button.append(name, preview, email);
+        const prefix = conversation.lastSender === 'user'
+          ? 'Khách: '
+          : conversation.lastSender === 'admin'
+            ? 'Bạn: '
+            : '🤖 ';
+        preview.textContent = `${prefix}${conversation.lastMessage || '...'}`;
+
+        const meta = document.createElement('small');
+        meta.textContent = conversation.email || (conversation.userId ? `ID khách: ${conversation.userId}` : 'Khách vãng lai');
+
+        button.append(name, preview, meta);
         conversationList.appendChild(button);
       });
     }
 
-    async function loadHistory(customerId) {
+    async function loadHistory(sessionId) {
       const requestId = ++historyRequestId;
       messageList.replaceChildren();
       if (intentTag) intentTag.style.display = 'none';
 
-      const conversation = conversations.find((item) => String(item.customerId) === customerId);
-      threadTitle.textContent = conversation?.customerName || `Khách hàng #${customerId}`;
+      const conversation = conversations.find((item) => String(item.sessionId) === sessionId);
+      threadTitle.textContent = conversation?.customerName || 'Khách hàng';
       updateAutomationUI(conversation);
 
       try {
-        const messages = await request(`/chat/${encodeURIComponent(customerId)}`);
+        const messages = await chatRequest(`/admin/sessions/${encodeURIComponent(sessionId)}/messages`);
         if (requestId !== historyRequestId) return;
         messages.forEach((message) => renderMessage(message));
       } catch (error) {
@@ -135,16 +196,21 @@
 
     async function refreshConversations() {
       try {
-        conversations = await request('/chat/conversations');
+        const data = await chatRequest('/admin/conversations');
+        conversations = Array.isArray(data?.conversations) ? data.conversations : [];
+        if (data?.supportStatus) {
+          updateBusyToggleUI(data.supportStatus);
+        }
         renderConversationList();
-        if (!selectedCustomerId && conversations.length) {
-          selectedCustomerId = String(conversations[0].customerId);
+
+        if (!selectedSessionId && conversations.length) {
+          selectedSessionId = String(conversations[0].sessionId);
           renderConversationList();
-          await loadHistory(selectedCustomerId);
+          await loadHistory(selectedSessionId);
         } else {
-          const currentConversation = conversations.find((item) => String(item.customerId) === selectedCustomerId);
+          const currentConversation = conversations.find((item) => String(item.sessionId) === selectedSessionId);
           if (currentConversation) {
-            threadTitle.textContent = currentConversation.customerName || `Khách hàng #${selectedCustomerId}`;
+            threadTitle.textContent = currentConversation.customerName || 'Khách hàng';
             updateAutomationUI(currentConversation);
           }
         }
@@ -153,15 +219,38 @@
       }
     }
 
+    // --- Toggle Global Admin Busy / Online Status ---
+    btnAdminBusyToggle?.addEventListener('click', async () => {
+      const nextBusy = !supportStatus.effectiveBusy;
+      btnAdminBusyToggle.disabled = true;
+      try {
+        const data = await chatRequest('/admin/status', {
+          method: 'PATCH',
+          body: JSON.stringify({ busy: nextBusy }),
+        });
+        updateBusyToggleUI(data);
+        const currentConversation = conversations.find((item) => String(item.sessionId) === selectedSessionId);
+        updateAutomationUI(currentConversation);
+        showFeedback(
+          nextBusy
+            ? '🟠 Đã chuyển sang ĐANG BẬN: Trợ lý tự động sẽ trả lời khách thay bạn.'
+            : '🟢 Đã chuyển sang ĐANG TRỰC: Tin nhắn khách sẽ chờ bạn trực tiếp phản hồi.'
+        );
+      } catch (err) {
+        showFeedback(err.message || 'Không thể đổi trạng thái trực.', true);
+      } finally {
+        btnAdminBusyToggle.disabled = false;
+      }
+    });
+
     // --- AI Suggest Reply Button ---
     btnSuggest?.addEventListener('click', async () => {
-      if (!selectedCustomerId) {
+      if (!selectedSessionId) {
         showFeedback('Vui lòng chọn một cuộc trò chuyện từ danh sách trước.', true);
         return;
       }
 
-      const conversation = conversations.find((item) => String(item.customerId) === selectedCustomerId);
-      // Tìm tin nhắn gần nhất của khách hàng
+      const conversation = conversations.find((item) => String(item.sessionId) === selectedSessionId);
       let lastCustomerMsg = '';
       const allBubbles = Array.from(messageList.querySelectorAll('.admin-chat-message'));
       for (let i = allBubbles.length - 1; i >= 0; i--) {
@@ -175,7 +264,7 @@
         }
       }
 
-      if (!lastCustomerMsg && conversation?.lastSenderRole === 'customer') {
+      if (!lastCustomerMsg && conversation?.lastSender === 'user') {
         lastCustomerMsg = conversation.lastMessage;
       }
 
@@ -187,10 +276,10 @@
       const originalBtnText = btnSuggest.innerHTML;
       btnSuggest.disabled = true;
       btnSuggest.innerHTML = '✨ Đang phân tích...';
-      showFeedback('Trợ lý AI đang phân tích ý định và chuẩn bị câu trả lời phù hợp...');
+      showFeedback('Đang gợi ý câu trả lời phù hợp...');
 
       try {
-        const data = await request('/chat/ai/suggest', {
+        const data = await realtimeRequest('/chat/ai/suggest', {
           method: 'POST',
           body: JSON.stringify({
             customerMessage: lastCustomerMsg,
@@ -206,19 +295,18 @@
             intentTag.style.display = 'inline-block';
             intentTag.textContent = `🎯 ${data.intentLabel || data.intent}`;
           }
-          showFeedback('✨ Đã điền câu trả lời gợi ý từ AI! Bạn có thể chỉnh sửa rồi bấm Gửi.');
+          showFeedback('✨ Đã điền câu trả lời gợi ý! Bạn có thể chỉnh sửa rồi bấm Gửi.');
         } else {
           showFeedback('Không thể tạo gợi ý câu trả lời, vui lòng thử lại.', true);
         }
       } catch (err) {
-        showFeedback(err.message || 'Lỗi khi gọi Trợ lý AI.', true);
+        showFeedback(err.message || 'Lỗi khi gọi gợi ý AI.', true);
       } finally {
         btnSuggest.disabled = false;
         btnSuggest.innerHTML = originalBtnText;
       }
     });
 
-    // --- Quick reply chips ---
     quickChips?.addEventListener('click', (event) => {
       const chip = event.target.closest('.ai-chip');
       if (!chip) return;
@@ -230,20 +318,19 @@
       }
     });
 
-    // --- Toggle AI Automation Button ---
     btnToggleAuto?.addEventListener('click', async () => {
-      if (!selectedCustomerId) {
+      if (!selectedSessionId) {
         showFeedback('Vui lòng chọn khách hàng trước.', true);
         return;
       }
 
-      const conversation = conversations.find((item) => String(item.customerId) === selectedCustomerId);
-      const currentlyPaused = isAiPaused(conversation);
-      const willEnable = currentlyPaused; // Nếu đang pause thì bấm để enable
+      const conversation = conversations.find((item) => String(item.sessionId) === selectedSessionId);
+      const currentlyAutoActive = !isAiPaused(conversation) && (conversation?.aiForceAuto || supportStatus.effectiveBusy);
+      const willEnable = !currentlyAutoActive;
 
       btnToggleAuto.disabled = true;
       try {
-        await request(`/chat/${encodeURIComponent(selectedCustomerId)}/automation`, {
+        await chatRequest(`/admin/sessions/${encodeURIComponent(selectedSessionId)}/automation`, {
           method: 'PATCH',
           body: JSON.stringify({
             enabled: willEnable,
@@ -254,13 +341,19 @@
         if (conversation) {
           if (willEnable) {
             conversation.aiPausedUntil = null;
+            conversation.aiForceAuto = true;
           } else {
             conversation.aiPausedUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
+            conversation.aiForceAuto = false;
           }
           updateAutomationUI(conversation);
         }
 
-        showFeedback(willEnable ? '✅ Đã kích hoạt lại AI tự động trả lời cho khách này.' : '⏸️ Đã tạm dừng AI tự động trong 30 phút.');
+        showFeedback(
+          willEnable
+            ? '✅ Đã bật tự động trả lời cho khách hàng này.'
+            : '⏸️ Đã tạm dừng tự động trong 30 phút để bạn trực tiếp hỗ trợ.'
+        );
       } catch (err) {
         showFeedback(err.message || 'Không thể thay đổi trạng thái AI.', true);
       } finally {
@@ -269,50 +362,83 @@
     });
 
     conversationList.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-customer-id]');
+      const button = event.target.closest('[data-session-id]');
       if (!button) return;
-      selectedCustomerId = button.dataset.customerId;
+      selectedSessionId = button.dataset.sessionId;
       renderConversationList();
       showFeedback('');
-      loadHistory(selectedCustomerId);
+      loadHistory(selectedSessionId);
     });
 
-    form.addEventListener('submit', (event) => {
+    form.addEventListener('submit', async (event) => {
       event.preventDefault();
       const message = input.value.trim();
-      if (!message || !selectedCustomerId) {
+      if (!message || !selectedSessionId) {
         showFeedback('Chọn một hội thoại trước khi trả lời.', true);
-        return;
-      }
-      if (!socket?.connected) {
-        showFeedback('Kết nối chat chưa sẵn sàng. Vui lòng thử lại.', true);
         return;
       }
 
       const sendButton = form.querySelector('button[type="submit"]');
       sendButton.disabled = true;
-      socket.emit('chat:send', { message, customerId: selectedCustomerId }, (result) => {
-        sendButton.disabled = false;
-        if (!result?.success) {
-          showFeedback(result?.message || 'Không thể gửi tin nhắn.', true);
-          return;
-        }
+      try {
+        const result = await chatRequest(`/admin/sessions/${encodeURIComponent(selectedSessionId)}/reply`, {
+          method: 'POST',
+          body: JSON.stringify({ message }),
+        });
         input.value = '';
         if (intentTag) intentTag.style.display = 'none';
-        showFeedback('Đã gửi trả lời. Trợ lý AI sẽ tạm dừng 10 phút.');
-      });
+        if (result?.message) {
+          renderMessage(result.message);
+        }
+        const conv = conversations.find((item) => String(item.sessionId) === selectedSessionId);
+        if (conv) {
+          conv.aiPausedUntil = result?.aiPausedUntil || new Date(Date.now() + 15 * 60 * 1000).toISOString();
+          conv.aiForceAuto = false;
+          conv.lastMessage = message;
+          conv.lastSender = 'admin';
+          updateAutomationUI(conv);
+          renderConversationList();
+        }
+        showFeedback('Đã gửi tin nhắn trực tiếp cho khách hàng (Tạm dừng tự động 15 phút).');
+      } catch (err) {
+        showFeedback(err.message || 'Không thể gửi tin nhắn.', true);
+      } finally {
+        sendButton.disabled = false;
+      }
     });
 
-    socket?.on('chat:new', (message) => {
-      if (active && String(message.customerId) === selectedCustomerId) renderMessage(message);
+    socket?.on('support:new_message', (payload) => {
+      if (!payload) return;
+      if (active && String(payload.sessionId) === selectedSessionId && payload.message) {
+        renderMessage(payload.message);
+      }
       refreshConversations();
+    });
+
+    socket?.on('support:status', (status) => {
+      updateBusyToggleUI(status);
+      const currentConversation = conversations.find((item) => String(item.sessionId) === selectedSessionId);
+      if (currentConversation) updateAutomationUI(currentConversation);
     });
 
     return {
       setActive(isActive) {
         if (active === isActive) return;
         active = isActive;
-        if (active) refreshConversations();
+        if (pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = null;
+        }
+        if (active) {
+          refreshConversations();
+          pollTimer = setInterval(() => {
+            if (active && selectedSessionId) {
+              chatRequest(`/admin/sessions/${encodeURIComponent(selectedSessionId)}/messages`)
+                .then((msgs) => Array.isArray(msgs) && msgs.forEach(renderMessage))
+                .catch(() => {});
+            }
+          }, 5000);
+        }
       },
     };
   }

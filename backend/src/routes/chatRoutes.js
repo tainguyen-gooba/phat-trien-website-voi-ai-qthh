@@ -1,6 +1,6 @@
 /**
  * FASTFOOD CHAT API ROUTES
- * Đường dẫn API phục vụ hệ thống Chat AI thông minh
+ * Đường dẫn API phục vụ hệ thống Chat Nhân viên hỗ trợ + Trợ lý tự động khi Admin bận
  */
 
 const express = require('express');
@@ -9,6 +9,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/app.config');
 const chatController = require('../controllers/chatController');
 const chatRateLimit = require('../middlewares/chatRateLimit');
+const { authenticate, authorize } = require('../middlewares/auth.middleware');
 
 /**
  * Middleware xác thực tùy chọn (Optional Authentication)
@@ -26,22 +27,23 @@ function optionalAuth(req, res, next) {
     const decoded = jwt.verify(token, config.jwt.secret);
     req.user = decoded;
   } catch (_) {
-    req.user = null; // Token lỗi hoặc hết hạn thì coi như khách vãng lai
+    req.user = null;
   }
   next();
 }
 
-// 1. Gửi tin nhắn hỏi đáp với AI (có Rate Limiting chống spam)
+// Khách hàng & Khách vãng lai
 router.post('/message', optionalAuth, chatRateLimit, chatController.sendMessage);
-
-// 2. Lấy lịch sử hội thoại của phiên
 router.get('/history', optionalAuth, chatController.getHistory);
-
-// 3. Khởi tạo phiên trò chuyện mới
 router.post('/new-session', optionalAuth, chatController.newSession);
-
-// 4. Lấy dữ liệu món ăn gợi ý nhanh ban đầu từ MySQL
+router.get('/status', optionalAuth, chatController.getSupportStatus);
 router.get('/recommendations', chatController.getRecommendations);
 
-module.exports = router;
+// Admin quản lý hộp thư "Nhân viên hỗ trợ"
+router.get('/admin/conversations', authenticate, authorize('admin'), chatController.getAdminConversations);
+router.get('/admin/sessions/:sessionId/messages', authenticate, authorize('admin'), chatController.getAdminSessionMessages);
+router.post('/admin/sessions/:sessionId/reply', authenticate, authorize('admin'), chatController.sendAdminReply);
+router.patch('/admin/status', authenticate, authorize('admin'), chatController.updateAdminBusyStatus);
+router.patch('/admin/sessions/:sessionId/automation', authenticate, authorize('admin'), chatController.toggleSessionAutomation);
 
+module.exports = router;

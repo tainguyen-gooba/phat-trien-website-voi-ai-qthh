@@ -1,14 +1,30 @@
 /**
- * FASTFOOD AI CHATBOT CONTROLLER
- * Xử lý tương tác giao diện người dùng, kết nối Backend RESTful API (/api/v1/chat),
- * hiển thị danh thiếp món ăn, thẻ tra cứu đơn hàng và lưu trữ lịch sử
+ * FASTFOOD SUPPORT CHATBOX CONTROLLER ("Nhân viên hỗ trợ")
+ * Hợp nhất Chat trực tiếp với Admin & Trợ lý AI tự động khi Admin bận:
+ * - Đồng bộ realtime qua Socket.IO + dự phòng polling HTTP
+ * - Kết nối API /api/v1/chat (hỗ trợ cả port 5000, Live Server và dự phòng offline FASTFOOD_DATA)
+ * - Thêm nhanh món vào giỏ hàng chuẩn CartController
  */
 
 (function (window, document) {
   'use strict';
 
   const STORAGE_SESSION_KEY = 'fastfood_ai_session_id';
-  const API_BASE = '/api/v1/chat';
+  const DEFAULT_FOOD_IMG = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+
+  function detectFrontendBaseUrl() {
+    const scriptEl = document.currentScript
+      || Array.from(document.scripts).find(s => /chatbot\.js/i.test(s.src || ''));
+    if (scriptEl && scriptEl.src) {
+      return scriptEl.src.replace(/js\/chatbot\.js(\?.*)?$/i, '');
+    }
+    return window.location.pathname.includes('/pages/') ? '../' : './';
+  }
+
+  const FRONTEND_BASE = detectFrontendBaseUrl();
+  const API_BASE = window.location.port === '5000'
+    ? `${window.location.origin}/api/v1/chat`
+    : 'http://localhost:5000/api/v1/chat';
 
   const FASTFOODChatbot = {
     isOpen: false,
@@ -16,20 +32,18 @@
     sessionId: null,
     isSubmitting: false,
     initialized: false,
-
-    // Cấu hình selectors DOM
+    lastRenderedMsgId: 0,
+    renderedMessageIds: new Set(),
+    pollTimer: null,
+    supportStatus: { adminOnline: false, effectiveBusy: true, aiPaused: false },
     elements: {},
 
-    /**
-     * Khởi tạo chatbot
-     */
     async init() {
       if (this.initialized) return;
+      if (window.location.pathname.includes('/admin/')) return;
 
-      // Đảm bảo CSS đã được nạp
       this.ensureStylesheet();
 
-      // Kiểm tra và tiêm HTML nếu chưa có
       if (!document.getElementById('ff-chatbot-wrapper')) {
         await this.injectChatbotHtml();
       }
@@ -37,71 +51,83 @@
       this.cacheElements();
       this.initSession();
       this.bindEvents();
+      this.bindRealtimeBridge();
       this.initialized = true;
 
-      // Tải lịch sử tin nhắn ban đầu nếu đã có session
       await this.loadHistory();
+      this.joinSupportRoom();
     },
 
-    /**
-     * Đảm bảo stylesheet chatbot.css được nhúng vào trang
-     */
+    resolveFrontendPath(relPath) {
+      const clean = String(relPath || '').replace(/^\/+/, '');
+      if (/^https?:\/\//i.test(clean)) return clean;
+      return `${FRONTEND_BASE}${clean}`;
+    },
+
+    normalizeImageUrl(rawImg) {
+      const img = String(rawImg || '').trim();
+      if (!img) return DEFAULT_FOOD_IMG;
+      if (/^https?:\/\//i.test(img) || img.startsWith('data:')) return img;
+      if (img.startsWith('../')) return this.resolveFrontendPath(img.slice(3));
+      if (img.startsWith('./')) return this.resolveFrontendPath(img.slice(2));
+      if (img.startsWith('/')) return this.resolveFrontendPath(img.slice(1));
+      return this.resolveFrontendPath(img);
+    },
+
     ensureStylesheet() {
       if (document.querySelector('link[href*="chatbot.css"]')) return;
       const link = document.createElement('link');
       link.rel = 'stylesheet';
-      link.href = '/css/chatbot.css';
+      link.href = this.resolveFrontendPath('css/chatbot.css');
       document.head.appendChild(link);
     },
 
-    /**
-     * Tiêm mã HTML của chatbot vào trang
-     */
     async injectChatbotHtml() {
       try {
-        const res = await fetch('/components/chatbot.html');
+        const res = await fetch(this.resolveFrontendPath('components/chatbot.html'));
         if (res.ok) {
           const html = await res.text();
           const div = document.createElement('div');
           div.innerHTML = html;
-          document.body.appendChild(div.firstElementChild);
-        } else {
-          console.warn('[FASTFOOD AI] Could not load /components/chatbot.html directly, using inline markup.');
-          this.injectFallbackHtml();
+          if (div.firstElementChild) {
+            document.body.appendChild(div.firstElementChild);
+            return;
+          }
         }
-      } catch (_) {
-        this.injectFallbackHtml();
-      }
+      } catch (_) {}
+      this.injectFallbackHtml();
     },
 
     injectFallbackHtml() {
-      // Fallback HTML nếu fetch components bị chặn
       const wrapper = document.createElement('div');
       wrapper.id = 'ff-chatbot-wrapper';
       wrapper.className = 'ff-chatbot-wrapper';
       wrapper.innerHTML = `
-        <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở Trợ lý AI FASTFOOD" title="Chat với FASTFOOD AI">
+        <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat Nhân viên hỗ trợ" title="Chat với Nhân viên hỗ trợ FASTFOOD">
           <div class="ff-trigger-glow"></div>
           <div class="ff-trigger-icon-wrap">
-            <svg class="ff-icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8V4H8"></path><rect width="16" height="12" x="4" y="8" rx="2"></rect><path d="M2 14h2"></path><path d="M20 14h2"></path><path d="M15 13v2"></path><path d="M9 13v2"></path></svg>
+            <svg class="ff-icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+            </svg>
             <svg class="ff-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </div>
-          <span class="ff-trigger-badge">AI</span>
-          <span class="ff-trigger-tooltip">Hỏi FASTFOOD AI món ngon &amp; ưu đãi!</span>
+          <span class="ff-trigger-badge">24/7</span>
+          <span class="ff-trigger-tooltip">Nhắn với Nhân viên hỗ trợ FASTFOOD!</span>
         </button>
-        <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện với FASTFOOD AI" hidden>
+        <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện với Nhân viên hỗ trợ" hidden>
           <header class="ff-chat-header">
             <div class="ff-header-identity">
               <div class="ff-avatar-wrap">
-                <span class="ff-avatar-icon">🤖</span>
-                <span class="ff-status-dot online"></span>
+                <span class="ff-avatar-icon" id="ff-header-avatar">👨‍💼</span>
+                <span class="ff-status-dot online" id="ff-header-status-dot"></span>
               </div>
               <div class="ff-header-info">
                 <div class="ff-header-title-row">
-                  <h3 class="ff-chat-name">FASTFOOD AI</h3>
+                  <h3 class="ff-chat-name">Nhân viên hỗ trợ</h3>
                   <span class="ff-verified-badge">✓</span>
                 </div>
-                <p class="ff-chat-status">Trợ lý ảo thông minh 24/7</p>
+                <p class="ff-chat-status" id="ff-chat-status-text">Hỗ trợ khách hàng trực tuyến 24/7</p>
               </div>
             </div>
             <div class="ff-header-actions">
@@ -113,9 +139,9 @@
           </header>
           <div class="ff-chat-body" id="ff-chat-body" aria-live="polite"></div>
           <div class="ff-chat-typing" id="ff-chat-typing" hidden>
-            <div class="ff-typing-avatar">🤖</div>
+            <div class="ff-typing-avatar">👨‍💼</div>
             <div class="ff-typing-bubble">
-              <span>FASTFOOD AI đang tra cứu dữ liệu</span>
+              <span>Nhân viên hỗ trợ đang phản hồi</span>
               <div class="ff-typing-dots"><span></span><span></span><span></span></div>
             </div>
           </div>
@@ -131,21 +157,18 @@
           </div>
           <footer class="ff-chat-footer">
             <form class="ff-chat-form" id="ff-chat-form" autocomplete="off">
-              <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Hỏi món ngon, giá tiền, khuyến mãi..." maxlength="1000" required />
+              <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Nhắn tin cho Nhân viên hỗ trợ..." maxlength="1000" required />
               <button type="submit" class="ff-chat-send-btn" id="ff-chat-send-btn" aria-label="Gửi tin nhắn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
             </form>
-            <div class="ff-chat-disclaimer"><span>⚡ Trợ lý AI FASTFOOD kết nối dữ liệu thực tế từ MySQL</span></div>
+            <div class="ff-chat-disclaimer"><span>⚡ Kết nối trực tiếp đội ngũ hỗ trợ FASTFOOD</span></div>
           </footer>
         </section>
       `;
       document.body.appendChild(wrapper);
     },
 
-    /**
-     * Cache các element DOM
-     */
     cacheElements() {
       this.elements = {
         wrapper: document.getElementById('ff-chatbot-wrapper'),
@@ -161,33 +184,34 @@
         btnExpand: document.getElementById('ff-btn-expand'),
         btnNewChat: document.getElementById('ff-btn-new-chat'),
         quickChips: document.getElementById('ff-quick-chips'),
+        statusText: document.getElementById('ff-chat-status-text'),
+        statusDot: document.getElementById('ff-header-status-dot'),
       };
     },
 
-    /**
-     * Khởi tạo hoặc lấy Session ID từ localStorage
-     */
     initSession() {
       let saved = localStorage.getItem(STORAGE_SESSION_KEY);
       if (!saved) {
-        saved = 'ff_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
+        saved = 'ff_chat_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
         localStorage.setItem(STORAGE_SESSION_KEY, saved);
       }
       this.sessionId = saved;
     },
 
-    /**
-     * Lấy JWT token nếu người dùng đã đăng nhập
-     */
     getAuthToken() {
-      return sessionStorage.getItem('fastfood_auth_token') 
+      return sessionStorage.getItem('fastfood_auth_token')
         || localStorage.getItem('fastfood_auth_token')
         || null;
     },
 
-    /**
-     * Đăng ký các sự kiện tương tác
-     */
+    getCurrentCustomerName() {
+      try {
+        const u = window.StorageManager?.getUser?.();
+        if (u?.full_name) return u.full_name;
+      } catch (_) {}
+      return 'Khách hàng';
+    },
+
     bindEvents() {
       const { trigger, btnClose, btnMinimize, btnExpand, btnNewChat, form, quickChips } = this.elements;
 
@@ -211,7 +235,6 @@
         }
       });
 
-      // Lắng nghe phím ESC để đóng
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && this.isOpen) {
           this.toggleChat(false);
@@ -219,48 +242,125 @@
       });
     },
 
-    /**
-     * Mở / Đóng cửa sổ chat
-     */
-    toggleChat(forceState) {
-      this.isOpen = typeof forceState === 'boolean' ? forceState : !this.isOpen;
-      const { trigger, window } = this.elements;
+    bindRealtimeBridge() {
+      // Khởi tạo socket nếu chưa chạy trên trang hiện tại
+      if (typeof window.initFastfoodRealtime === 'function' && !window.FASTFOOD_SOCKET) {
+        window.initFastfoodRealtime();
+      }
 
-      if (this.isOpen) {
-        // Đóng panel chat CSKH live nếu đang mở để tránh đè giao diện
-        const liveChatPanel = document.getElementById('live-chat-panel');
-        const liveChatLauncher = document.getElementById('live-chat-launcher');
-        if (liveChatPanel && liveChatPanel.classList.contains('open')) {
-          liveChatPanel.classList.remove('open');
-          if (liveChatLauncher) liveChatLauncher.hidden = false;
+      window.addEventListener('fastfood:socket-connected', () => {
+        this.joinSupportRoom();
+      });
+
+      window.addEventListener('fastfood:support-status', (event) => {
+        if (event.detail) {
+          this.updateSupportStatusUI(event.detail);
         }
+      });
 
-        window.removeAttribute('hidden');
-        trigger.classList.add('is-active');
-        this.scrollToBottom();
-        setTimeout(() => this.elements.input?.focus(), 150);
-      } else {
-        window.setAttribute('hidden', '');
-        trigger.classList.remove('is-active');
+      window.addEventListener('fastfood:support-message', (event) => {
+        const payload = event.detail;
+        if (!payload || payload.sessionId !== this.sessionId || !payload.message) return;
+        const msg = payload.message;
+        if (msg.sender === 'admin' || msg.sender === 'assistant') {
+          this.renderMessage(msg);
+          if (!this.isOpen && msg.sender === 'admin') {
+            window.UIComponents?.showToast('Nhân viên hỗ trợ vừa phản hồi tin nhắn của bạn!', 'info');
+          }
+        }
+      });
+    },
+
+    joinSupportRoom() {
+      const socket = window.FASTFOOD_SOCKET;
+      if (socket && socket.connected && this.sessionId) {
+        socket.emit('support:join', { sessionId: this.sessionId });
       }
     },
 
-    /**
-     * Mở rộng / Thu nhỏ kích thước cửa sổ chat
-     */
+    updateSupportStatusUI(status) {
+      if (!status) return;
+      this.supportStatus = { ...this.supportStatus, ...status };
+      const { statusText, statusDot } = this.elements;
+      if (!statusText) return;
+
+      statusText.textContent = 'Hỗ trợ khách hàng trực tuyến 24/7';
+      statusDot?.classList.add('online');
+      statusDot?.classList.remove('busy');
+    },
+
+    startPolling() {
+      this.stopPolling();
+      this.pollTimer = setInterval(() => {
+        if (this.isOpen && !this.isSubmitting) {
+          this.syncLatestMessages();
+        }
+      }, 3000);
+    },
+
+    stopPolling() {
+      if (this.pollTimer) {
+        clearInterval(this.pollTimer);
+        this.pollTimer = null;
+      }
+    },
+
+    async syncLatestMessages() {
+      try {
+        const token = this.getAuthToken();
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        const res = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.sessionId)}`, { headers });
+        if (!res.ok) return;
+        const result = await res.json();
+        if (!result.success) return;
+
+        if (result.data?.supportStatus) {
+          this.updateSupportStatusUI(result.data.supportStatus);
+        }
+
+        const messages = result.data?.messages;
+        if (!Array.isArray(messages)) return;
+        messages.forEach(m => {
+          if (m.id && !this.renderedMessageIds.has(String(m.id))) {
+            this.renderMessage(m);
+          }
+        });
+      } catch (_) {}
+    },
+
+    toggleChat(forceState) {
+      this.isOpen = typeof forceState === 'boolean' ? forceState : !this.isOpen;
+      const { trigger, window: chatWindow } = this.elements;
+
+      if (this.isOpen) {
+        chatWindow.removeAttribute('hidden');
+        trigger.classList.add('is-active');
+        this.joinSupportRoom();
+        this.syncLatestMessages();
+        this.startPolling();
+        this.scrollToBottom();
+        setTimeout(() => this.elements.input?.focus(), 150);
+      } else {
+        chatWindow.setAttribute('hidden', '');
+        trigger.classList.remove('is-active');
+        this.stopPolling();
+      }
+    },
+
     toggleExpand() {
       this.isExpanded = !this.isExpanded;
-      const { window, btnExpand } = this.elements;
+      const { window: chatWindow, btnExpand } = this.elements;
       const maxIcon = btnExpand.querySelector('.ff-icon-maximize');
       const restoreIcon = btnExpand.querySelector('.ff-icon-restore');
 
       if (this.isExpanded) {
-        window.classList.add('is-expanded');
+        chatWindow.classList.add('is-expanded');
         if (maxIcon) maxIcon.style.display = 'none';
         if (restoreIcon) restoreIcon.style.display = 'block';
         btnExpand.title = 'Thu gọn khung chat';
       } else {
-        window.classList.remove('is-expanded');
+        chatWindow.classList.remove('is-expanded');
         if (maxIcon) maxIcon.style.display = 'block';
         if (restoreIcon) restoreIcon.style.display = 'none';
         btnExpand.title = 'Mở rộng khung chat';
@@ -268,16 +368,15 @@
       this.scrollToBottom();
     },
 
-    /**
-     * Bắt đầu phiên hội thoại mới
-     */
     async startNewSession() {
       if (this.isSubmitting) return;
 
-      const confirmed = window.confirm('Bắt đầu cuộc trò chuyện mới với FASTFOOD AI?');
+      const confirmed = window.confirm('Bắt đầu cuộc trò chuyện mới với Nhân viên hỗ trợ?');
       if (!confirmed) return;
 
       this.elements.body.innerHTML = '';
+      this.renderedMessageIds.clear();
+      this.lastRenderedMsgId = 0;
       this.showTyping(true);
 
       try {
@@ -288,25 +387,28 @@
         const res = await fetch(`${API_BASE}/new-session`, { method: 'POST', headers });
         const result = await res.json();
 
-        if (result.success && result.data?.sessionId) {
+        if (res.ok && result.success && result.data?.sessionId) {
           this.sessionId = result.data.sessionId;
           localStorage.setItem(STORAGE_SESSION_KEY, this.sessionId);
-          this.showTyping(false);
+          this.joinSupportRoom();
+          if (result.data.supportStatus) {
+            this.updateSupportStatusUI(result.data.supportStatus);
+          }
           this.renderMessage({
             sender: 'assistant',
-            message: result.data.welcomeMessage || 'Dạ chào bạn! Tôi là FASTFOOD AI. Bạn cần tìm món ngon, săn khuyến mãi hay tra cứu đơn hàng nào hôm nay?',
+            message: result.data.welcomeMessage || 'Dạ chào bạn! Tôi là Nhân viên hỗ trợ FASTFOOD. Bạn cần tìm món ngon, săn khuyến mãi hay kiểm tra đơn hàng nào hôm nay?',
           });
+        } else {
+          this.renderDefaultWelcome();
         }
       } catch (err) {
-        console.error('[FASTFOOD AI] Error starting new session:', err);
-        this.showTyping(false);
+        console.warn('[Nhân viên hỗ trợ] Tạo phiên offline:', err);
         this.renderDefaultWelcome();
+      } finally {
+        this.showTyping(false);
       }
     },
 
-    /**
-     * Tải lịch sử tin nhắn của phiên hiện tại
-     */
     async loadHistory() {
       try {
         const token = this.getAuthToken();
@@ -316,30 +418,32 @@
         const res = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.sessionId)}`, { headers });
         const result = await res.json();
 
+        if (result.success && result.data?.supportStatus) {
+          this.updateSupportStatusUI(result.data.supportStatus);
+        }
+
         if (result.success && Array.isArray(result.data?.messages) && result.data.messages.length > 0) {
           this.elements.body.innerHTML = '';
+          this.renderedMessageIds.clear();
           result.data.messages.forEach(m => this.renderMessage(m));
         } else {
           this.renderDefaultWelcome();
         }
-      } catch (err) {
-        console.warn('[FASTFOOD AI] Could not load chat history:', err);
+      } catch (_) {
         this.renderDefaultWelcome();
       }
     },
 
-    /**
-     * Hiển thị lời chào mặc định ban đầu
-     */
     renderDefaultWelcome() {
       this.elements.body.innerHTML = '';
-      const welcomeText = `Xin chào bạn! Tôi là **FASTFOOD AI** – Trợ lý ảo chính thức của nền tảng đặt đồ ăn FASTFOOD Buôn Ma Thuột 💖\n\n`
-        + `Tôi có thể hỗ trợ bạn:\n`
+      this.renderedMessageIds.clear();
+      const welcomeText = `Xin chào bạn! Tôi là **Nhân viên hỗ trợ** của nền tảng đặt đồ ăn FASTFOOD Buôn Ma Thuột 💖\n\n`
+        + `Mình có thể hỗ trợ bạn ngay lập tức:\n`
         + `• Gợi ý món ăn ngon, bán chạy hôm nay 🔥\n`
-        + `• Tìm món ăn giá sinh viên, combo tiết kiệm (dưới 50K) 💰\n`
-        + `• Hướng dẫn đặt hàng, kiểm tra phí ship & mã giảm giá 🎁\n`
-        + `• Tra cứu đơn hàng của bạn theo thời gian thực 📦\n\n`
-        + `Bạn có thể bấm vào các gợi ý nhanh bên dưới hoặc đặt câu hỏi trực tiếp cho tôi nhé!`;
+        + `• Tìm món giá sinh viên, combo tiết kiệm (dưới 50K) 💰\n`
+        + `• Hướng dẫn đặt hàng, phí ship & mã giảm giá 🎁\n`
+        + `• Tra cứu đơn hàng & kết nối trực tiếp với Admin 📦\n\n`
+        + `Bạn bấm vào gợi ý bên dưới hoặc nhắn câu hỏi cho mình nhé!`;
 
       this.renderMessage({
         sender: 'assistant',
@@ -348,8 +452,72 @@
     },
 
     /**
-     * Gửi tin nhắn đến Backend
+     * Dự phòng ngay tại trình duyệt nếu máy đồng đội chưa bật Backend Node.js
      */
+    buildLocalOfflineReply(userText) {
+      const data = window.FASTFOOD_DATA;
+      const products = Array.isArray(data?.products) ? data.products : [];
+      const norm = userText
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[đĐ]/g, 'd')
+        .toLowerCase();
+
+      if (products.length === 0) {
+        return {
+          reply: 'Dạ Nhân viên hỗ trợ đã ghi nhận câu hỏi của bạn. Hiện kết nối tới máy chủ đang tạm gián đoạn, bạn thử kiểm tra lại backend (cổng 5000) hoặc duyệt thực đơn trên trang nhé!',
+          products: [],
+        };
+      }
+
+      let matched = [];
+      let reply = '';
+      const cleanNoDots = norm.replace(/\./g, '');
+      const budgetMatch = cleanNoDots.match(/duoi\s*(\d+)\s*(k|000)?/);
+
+      if (/(combo|set|khuyen mai|uu dai)/.test(norm)) {
+        matched = products
+          .filter(p => /combo|set/i.test(p.name) || p.isFlashDeal || (p.oldPrice && p.oldPrice > p.price))
+          .slice(0, 4);
+        reply = '🎁 Dưới đây là các **Combo & Món ưu đãi tiết kiệm** nổi bật tại FASTFOOD:\n\n';
+      } else if (budgetMatch || /(duoi 50|gia re|tiet kiem)/.test(norm)) {
+        let maxPrice = 50000;
+        if (budgetMatch) {
+          const val = Number(budgetMatch[1]);
+          maxPrice = budgetMatch[2] === 'k' ? val * 1000 : (val < 1000 ? val * 1000 : val);
+        }
+        matched = products.filter(p => Number(p.price) <= maxPrice).slice(0, 5);
+        reply = `🎉 Gợi ý các món ngon giá **dưới ${new Intl.NumberFormat('vi-VN').format(maxPrice)}đ** dành cho bạn:\n\n`;
+      } else if (/(hom nay an gi|ban chay|best seller|mon hot|goi y)/.test(norm)) {
+        matched = products.filter(p => p.isBestSeller).slice(0, 5);
+        reply = '🔥 Top món **bán chạy nhất** tại FASTFOOD Buôn Ma Thuột hôm nay:\n\n';
+      } else {
+        matched = products.filter(p => {
+          const pNorm = `${p.name} ${p.category} ${p.restaurantName}`
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
+          return norm.split(/\s+/).some(tok => tok.length >= 2 && pNorm.includes(tok));
+        }).slice(0, 5);
+        if (matched.length === 0) matched = products.filter(p => p.isBestSeller).slice(0, 4);
+        reply = 'Dạ Nhân viên hỗ trợ tìm thấy các món phù hợp với nhu cầu của bạn:\n\n';
+      }
+
+      matched.forEach((p, i) => {
+        reply += `${i + 1}. **${p.name}** – ${new Intl.NumberFormat('vi-VN').format(p.price)}đ (${p.restaurantName || 'FASTFOOD'})\n`;
+      });
+
+      const formattedProducts = matched.map(p => ({
+        id: p.id,
+        name: p.name,
+        price: Number(p.price),
+        originalPrice: Number(p.oldPrice || p.price),
+        discountPercent: p.oldPrice && p.oldPrice > p.price ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0,
+        restaurantName: p.restaurantName || 'FASTFOOD',
+        image: p.image,
+      }));
+
+      return { reply, products: formattedProducts };
+    },
+
     async sendMessage(text) {
       if (!text || this.isSubmitting) return;
 
@@ -357,14 +525,12 @@
       this.elements.input.value = '';
       this.isSubmitting = true;
 
-      // 1. Render tin nhắn của User
       this.renderMessage({
         sender: 'user',
         message: userText,
         time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       });
 
-      // 2. Bật hiệu ứng Typing
       this.showTyping(true);
 
       try {
@@ -378,35 +544,43 @@
           body: JSON.stringify({
             message: userText,
             sessionId: this.sessionId,
+            customerName: this.getCurrentCustomerName(),
           }),
         });
 
         const result = await res.json();
         this.showTyping(false);
 
-        if (res.ok && result.success) {
-          const { reply, products, order } = result.data;
+        if (res.ok && result.success && result.data) {
+          const { autoReplied, reply, products, order, messageId, adminBusy, adminOnline } = result.data;
+          this.updateSupportStatusUI({ adminBusy, effectiveBusy: adminBusy, adminOnline });
 
-          // Render tin nhắn phản hồi của AI
-          this.renderMessage({
-            sender: 'assistant',
-            message: reply,
-            metadata: { products, order },
-            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-          });
+          if (autoReplied && reply) {
+            this.renderMessage({
+              id: messageId,
+              sender: 'assistant',
+              message: reply,
+              metadata: { products, order },
+              time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            });
+          }
         } else {
-          const errMsg = result.message || 'Hệ thống đang bận. Vui lòng thử lại sau giây lát!';
+          const fallback = this.buildLocalOfflineReply(userText);
           this.renderMessage({
             sender: 'assistant',
-            message: `⚠️ ${errMsg}`,
+            message: fallback.reply,
+            metadata: { products: fallback.products },
           });
         }
       } catch (err) {
-        console.error('[FASTFOOD AI] Send message error:', err);
+        console.warn('[Nhân viên hỗ trợ] Dùng chế độ dự phòng cục bộ:', err);
         this.showTyping(false);
+        const fallback = this.buildLocalOfflineReply(userText);
         this.renderMessage({
           sender: 'assistant',
-          message: 'Dạ mạng kết nối tới máy chủ AI đang chập chờn, bạn kiểm tra lại kết nối mạng và thử lại giúp mình nhé! 🛵',
+          message: fallback.reply,
+          metadata: { products: fallback.products },
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
         });
       } finally {
         this.isSubmitting = false;
@@ -414,9 +588,6 @@
       }
     },
 
-    /**
-     * Hiển thị / Ẩn hiệu ứng đang nhập
-     */
     showTyping(show) {
       if (show) {
         this.elements.typing.removeAttribute('hidden');
@@ -426,9 +597,6 @@
       this.scrollToBottom();
     },
 
-    /**
-     * Cuộn khung chat xuống đáy
-     */
     scrollToBottom() {
       requestAnimationFrame(() => {
         if (this.elements.body) {
@@ -437,20 +605,38 @@
       });
     },
 
-    /**
-     * Render tin nhắn vào DOM
-     */
     renderMessage(msgData) {
+      if (!msgData) return;
+      const msgIdStr = msgData.id ? String(msgData.id) : '';
+      if (msgIdStr && this.renderedMessageIds.has(msgIdStr)) {
+        return;
+      }
+      if (msgIdStr) {
+        this.renderedMessageIds.add(msgIdStr);
+        const numericId = Number(msgData.id);
+        if (Number.isFinite(numericId) && numericId > this.lastRenderedMsgId) {
+          this.lastRenderedMsgId = numericId;
+        }
+      }
+
       const isUser = msgData.sender === 'user';
-      const timeStr = msgData.time 
+      const isAdmin = msgData.sender === 'admin';
+      const timeStr = msgData.time
         || (msgData.createdAt ? new Date(msgData.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '');
 
       const row = document.createElement('article');
-      row.className = `ff-msg-row ${isUser ? 'user' : 'assistant'}`;
+      row.className = `ff-msg-row ${isUser ? 'user' : 'assistant'}${isAdmin ? ' admin' : ''}`;
+      if (msgIdStr) row.dataset.msgId = msgIdStr;
 
       let avatarHtml = '';
+      let senderLabelHtml = '';
       if (!isUser) {
-        avatarHtml = `<div class="ff-msg-avatar" title="FASTFOOD AI">🤖</div>`;
+        avatarHtml = isAdmin
+          ? `<div class="ff-msg-avatar" title="Nhân viên hỗ trợ trực tiếp">👨‍💼</div>`
+          : `<div class="ff-msg-avatar" title="Nhân viên hỗ trợ tự động">🤖</div>`;
+        senderLabelHtml = isAdmin
+          ? `<div class="ff-sender-tag is-admin">👨‍💼 ${this.escapeHtml(msgData.metadata?.adminName || 'Nhân viên hỗ trợ trực tiếp')}</div>`
+          : `<div class="ff-sender-tag">🤖 Trợ lý tự động</div>`;
       }
 
       const formattedText = this.formatMarkdown(msgData.message || '');
@@ -459,20 +645,20 @@
       if (msgData.metadata?.products && msgData.metadata.products.length > 0) {
         cardsHtml = this.buildProductCardsHtml(msgData.metadata.products);
       }
-      if (msgData.metadata?.order) {
+      if (msgData.metadata?.order && msgData.metadata.order.isAuthorized !== false && msgData.metadata.order.found !== false) {
         cardsHtml += this.buildOrderCardHtml(msgData.metadata.order);
       }
 
       row.innerHTML = `
         ${avatarHtml}
         <div class="ff-msg-bubble">
+          ${senderLabelHtml}
           <div class="ff-msg-content">${formattedText}</div>
           ${cardsHtml}
           ${timeStr ? `<span class="ff-msg-time">${timeStr}</span>` : ''}
         </div>
       `;
 
-      // Gắn sự kiện thêm vào giỏ hàng trên các card
       const addBtns = row.querySelectorAll('.ff-btn-card-add');
       addBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -490,23 +676,21 @@
       this.scrollToBottom();
     },
 
-    /**
-     * Tạo HTML danh thiếp sản phẩm gợi ý
-     */
     buildProductCardsHtml(products) {
       if (!Array.isArray(products) || products.length === 0) return '';
-      
+
       const cards = products.slice(0, 4).map(p => {
         const priceFmt = new Intl.NumberFormat('vi-VN').format(p.price) + 'đ';
-        const oldPriceFmt = p.originalPrice && p.originalPrice > p.price 
+        const oldPriceFmt = p.originalPrice && p.originalPrice > p.price
           ? new Intl.NumberFormat('vi-VN').format(p.originalPrice) + 'đ' : '';
         const discountBadge = p.discountPercent ? `<span class="ff-card-discount-tag">-${p.discountPercent}%</span>` : '';
-        const detailUrl = `/pages/food-detail.html?id=${encodeURIComponent(p.id)}`;
+        const detailUrl = this.resolveFrontendPath(`pages/food-detail.html?id=${encodeURIComponent(p.id)}`);
+        const imgSrc = this.normalizeImageUrl(p.image);
 
         return `
           <div class="ff-product-card">
             <div class="ff-card-thumb-wrap">
-              <img src="${p.image}" alt="${this.escapeHtml(p.name)}" class="ff-card-thumb" loading="lazy" />
+              <img src="${this.escapeHtml(imgSrc)}" alt="${this.escapeHtml(p.name)}" class="ff-card-thumb" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_FOOD_IMG}'" />
               ${discountBadge}
             </div>
             <div class="ff-card-info">
@@ -518,11 +702,11 @@
               </div>
               <div class="ff-card-actions">
                 <a href="${detailUrl}" class="ff-btn-card-view">Xem</a>
-                <button type="button" class="ff-btn-card-add" 
-                  data-id="${p.id}" 
-                  data-name="${this.escapeHtml(p.name)}" 
-                  data-price="${p.price}" 
-                  data-image="${p.image}">
+                <button type="button" class="ff-btn-card-add"
+                  data-id="${this.escapeHtml(p.id)}"
+                  data-name="${this.escapeHtml(p.name)}"
+                  data-price="${Number(p.price || 0)}"
+                  data-image="${this.escapeHtml(imgSrc)}">
                   + Giỏ
                 </button>
               </div>
@@ -534,88 +718,87 @@
       return `<div class="ff-product-grid">${cards}</div>`;
     },
 
-    /**
-     * Tạo HTML thẻ tra cứu đơn hàng
-     */
     buildOrderCardHtml(order) {
       if (!order || !order.orderCode) return '';
       const totalFmt = order.totalAmount ? new Intl.NumberFormat('vi-VN').format(order.totalAmount) + 'đ' : '—';
-      const statusClass = order.status === 'delivered' ? 'delivered' : (order.status === 'cancelled' ? 'cancelled' : '');
+      const statusClass = order.status === 'delivered' || order.status === 'completed'
+        ? 'delivered'
+        : (order.status === 'cancelled' ? 'cancelled' : '');
+      const trackUrl = this.resolveFrontendPath(`pages/order-tracking.html?orderCode=${encodeURIComponent(order.orderCode)}`);
 
       return `
         <div class="ff-order-card">
           <div class="ff-order-card-header">
-            <span class="ff-order-code">Đơn #${order.orderCode}</span>
-            <span class="ff-order-badge ${statusClass}">${order.displayStatus || 'Đang xử lý'}</span>
+            <span class="ff-order-code">Đơn #${this.escapeHtml(order.orderCode)}</span>
+            <span class="ff-order-badge ${statusClass}">${this.escapeHtml(order.displayStatus || 'Đang xử lý')}</span>
           </div>
           <div class="ff-order-detail-row">
             <span>Tổng tiền:</span>
             <span>${totalFmt}</span>
           </div>
-          <div class="ff-order-detail-row">
-            <span>Thanh toán:</span>
-            <span>${order.paymentStatus === 'completed' ? 'Đã thanh toán ✅' : 'Chờ thanh toán ⏳'}</span>
-          </div>
-          <a href="/pages/order-tracking.html?orderCode=${encodeURIComponent(order.orderCode)}" class="ff-order-track-link">
-            Xem lộ trình tài xế ➔
+          <a href="${trackUrl}" class="ff-order-track-link">
+            Xem lộ trình đơn hàng ➔
           </a>
         </div>
       `;
     },
 
-    /**
-     * Xử lý thêm nhanh món ăn vào giỏ hàng
-     */
     handleQuickAddToCart(item) {
       try {
-        if (window.Cart && typeof window.Cart.addItem === 'function') {
-          window.Cart.addItem({
-            id: item.id,
-            name: item.name,
-            price: item.price,
-            image: item.image,
-            quantity: 1,
-            toppings: [],
-          });
-          if (typeof window.showToast === 'function') {
-            window.showToast(`Đã thêm "${item.name}" vào giỏ hàng!`);
-          } else if (window.UIComponents && typeof window.UIComponents.showToast === 'function') {
-            window.UIComponents.showToast(`Đã thêm "${item.name}" vào giỏ hàng!`);
-          } else {
-            alert(`Đã thêm "${item.name}" vào giỏ hàng thành công!`);
-          }
+        const catalogProduct = window.FASTFOOD_DATA?.products?.find(p => String(p.id) === String(item.id));
+        const productToAdd = catalogProduct || {
+          id: item.id,
+          name: item.name,
+          price: Number(item.price || 0),
+          image: item.image,
+          restaurantId: 'res-1',
+          restaurantName: 'FASTFOOD',
+          toppings: [],
+        };
+
+        if (window.CartController && typeof window.CartController.addItem === 'function') {
+          window.CartController.addItem(productToAdd, 1, []);
+          return;
+        }
+
+        const cartKey = 'fastfood_cart';
+        const current = JSON.parse(localStorage.getItem(cartKey) || '[]');
+        const existing = current.find(x => String(x.id) === String(productToAdd.id));
+        if (existing) {
+          existing.qty = (existing.qty || existing.quantity || 1) + 1;
         } else {
-          // Lưu vào storage mặc định nếu giỏ hàng dùng key riêng
-          const cartKey = 'fastfood_cart_items';
-          const current = JSON.parse(localStorage.getItem(cartKey) || '[]');
-          const existing = current.find(x => x.id === item.id);
-          if (existing) {
-            existing.quantity = (existing.quantity || 1) + 1;
-          } else {
-            current.push({ ...item, quantity: 1, toppings: [] });
-          }
-          localStorage.setItem(cartKey, JSON.stringify(current));
-          alert(`Đã thêm "${item.name}" vào giỏ hàng! Bạn có thể vào Giỏ hàng để thanh toán.`);
+          current.push({
+            key: `${productToAdd.id}::`,
+            productId: productToAdd.id,
+            id: productToAdd.id,
+            name: productToAdd.name,
+            basePrice: productToAdd.price,
+            price: productToAdd.price,
+            image: productToAdd.image,
+            restaurantId: productToAdd.restaurantId || 'res-1',
+            restaurantName: productToAdd.restaurantName || 'FASTFOOD',
+            selectedToppings: [],
+            qty: 1,
+          });
+        }
+        localStorage.setItem(cartKey, JSON.stringify(current));
+        window.UIComponents?.updateCartBadge?.();
+        if (window.UIComponents?.showToast) {
+          window.UIComponents.showToast(`Đã thêm "${productToAdd.name}" vào giỏ hàng!`, 'success');
+        } else {
+          alert(`Đã thêm "${productToAdd.name}" vào giỏ hàng!`);
         }
       } catch (err) {
-        console.error('[FASTFOOD AI] Quick add to cart error:', err);
+        console.error('[Nhân viên hỗ trợ] Quick add to cart error:', err);
       }
     },
 
-    /**
-     * Format Markdown đơn giản sang HTML an toàn
-     */
     formatMarkdown(text) {
       if (!text) return '';
       let safe = this.escapeHtml(text);
-
-      // In đậm **text**
       safe = safe.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-      // In nghiêng _text_
       safe = safe.replace(/_(.*?)_/g, '<em>$1</em>');
 
-      // Danh sách gạch đầu dòng • hoặc -
       const lines = safe.split('\n');
       const output = [];
       let inList = false;
@@ -650,7 +833,6 @@
     },
   };
 
-  // Tự động khởi chạy khi trang web tải xong
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => FASTFOODChatbot.init());
   } else {
@@ -658,6 +840,4 @@
   }
 
   window.FASTFOODChatbot = FASTFOODChatbot;
-
 })(window, document);
-

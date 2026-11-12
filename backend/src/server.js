@@ -3,6 +3,7 @@ const http = require('http');
 const { createRealtimeServer } = require('./realtime');
 const config = require('./config/app.config');
 const { testConnection, closePool } = require('./config/db.config');
+const { syncCatalogIfSparse } = require('../scripts/sync-catalog-to-db');
 const logger = require('./utils/logger');
 
 const PORT = config.port;
@@ -29,6 +30,14 @@ const server = httpServer.listen(PORT, async () => {
   if (dbStatus.connected) {
     logger.info(`[Database] Đã kết nối thành công tới MySQL (${dbStatus.host})!`);
     logger.info(`[Database] Phiên bản: ${dbStatus.serverVersion} | Tên CSDL: ${dbStatus.database}`);
+    try {
+      const synced = await syncCatalogIfSparse();
+      if (synced) {
+        logger.info(`[Database] Đã tự động đồng bộ danh mục (${synced.categories} danh mục, ${synced.restaurants} quán, ${synced.products} món) lên MySQL.`);
+      }
+    } catch (syncErr) {
+      logger.warn(`[Database] Không thể tự động đồng bộ danh mục: ${syncErr.message}`);
+    }
   } else {
     logger.warn(`[Database] CẢNH BÁO: ${dbStatus.message}`);
     logger.warn(`[Database] Gợi ý: ${dbStatus.hint}`);

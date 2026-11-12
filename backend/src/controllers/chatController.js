@@ -410,7 +410,18 @@ class ChatController extends BaseController {
       contextData.products = await productRecommendationService.getProductsUnderBudget(maxVal, 6);
       return contextData;
     }
+if (/(sushi|shushi|susi|su shi)/.test(normalizedMsg)) {
+      const allProds = await productRecommendationService.getBestSellers(50);
+      
+      let matched = allProds.filter(p => {
+        const name = String(p.name || '').toLowerCase();
+        // Chỉ lấy những món có tên chứa sushi, shushi hoặc sashimi
+        return name.includes('sushi') || name.includes('shushi') || name.includes('sashimi');
+      });
 
+      contextData.products = matched.length > 0 ? matched.slice(0, 5) : allProds.slice(0, 5);
+      return contextData;
+    }
     if (/(hom nay an gi|ban chay|best seller|mon hot|ngon nhat|goi y|mon gi ngon)/.test(normalizedMsg)) {
       contextData.products = await productRecommendationService.getBestSellers(6);
       return contextData;

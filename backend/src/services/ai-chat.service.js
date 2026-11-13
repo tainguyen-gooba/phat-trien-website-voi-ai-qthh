@@ -82,12 +82,25 @@ class AIChatService {
       };
     }
 
-    // 6. Ý định: Hỏi thực đơn, món ăn ngon, gợi ý quán
-    if (/(mon nao ngon|thuc don|menu|quan nao|goi y|banh burger|com tam|tra sua|pizza|pho|sushi)/.test(normalized)) {
+    // 6. Ý định: Tư vấn đồ uống / trà sữa riêng biệt
+    if (/(tra sua|nuoc ngot|ca phe|sinh to|tra chanh|pepsi|coca)/.test(normalized)) {
+      return {
+        intent: 'drink_recommendation',
+        intentLabel: 'Tư vấn đồ uống',
+        suggestion: `Chào bạn ${name}, các loại đồ uống và trà sữa 'best-seller' hiện có gồm: Trà Sữa Trân Châu Đường Đen Hoàng Gia, Hồng Trà Sữa Kem Cheese và Trà Chanh Giã Tay. Bạn muốn chọn loại size hay thêm topping gì không ạ?`,
+        quickReplies: [
+          `Trà Sữa Trân Châu Đường Đen Hoàng Gia size M đang có giá rất ưu đãi ạ!`,
+          `Quán có hỗ trợ thêm trân châu trắng, thạch dừa và kem cheese theo sở thích của bạn nhé.`,
+        ],
+      };
+    }
+
+    // 6.1. Ý định: Hỏi thực đơn món ăn nhanh / đồ mặn
+    if (/(mon nao ngon|thuc don|menu|quan nao|goi y|banh burger|com tam|pizza|pho|sushi)/.test(normalized)) {
       return {
         intent: 'menu_recommendation',
         intentLabel: 'Tư vấn món ăn & Quán',
-        suggestion: `Chào bạn ${name}, các món 'best-seller' được đặt nhiều nhất hôm nay gồm: Burger Bò Nướng Phô Mai Tan Chảy, Cơm Tấm Sườn Cốt Lết Mật Ong Rừng, Trà Sữa Trân Châu Đường Đen Hoàng Gia và Pizza Bò Băm Pepperoni. Bạn thích ăn món mặn hay đồ uống để mình tư vấn thêm nhé!`,
+        suggestion: `Chào bạn ${name}, các món ăn 'best-seller' được đặt nhiều nhất hôm nay gồm: Burger Bò Nướng Phô Mai Tan Chảy, Cơm Tấm Sườn Cốt Lết Mật Ong Rừng và Pizza Bò Băm Pepperoni. Bạn thích ăn món mặn nào để mình tư vấn thêm nhé!`,
         quickReplies: [
           `Quán Burger King Station và Cơm Tấm Sài Gòn Xưa đang có ưu đãi Flash Sale giảm đến 25% hôm nay đó bạn!`,
           `Dạ các món ăn đều được chế biến nóng sốt ngay khi bạn đặt hàng ạ.`,

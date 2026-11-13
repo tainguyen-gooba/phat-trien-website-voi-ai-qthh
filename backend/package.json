@@ -12,7 +12,8 @@
     "db:migrate:buon-ma-thuot": "node scripts/migrate-buon-ma-thuot.js",
     "db:migrate:realtime": "node scripts/migrate-realtime.js",
     "db:migrate:customer-profile": "node scripts/migrate-customer-profile.js",
-    "db:reset-demo-admin": "node scripts/reset-demo-admin.js"
+    "db:reset-demo-admin": "node scripts/reset-demo-admin.js",
+    "db:sync": "node scripts/sync-catalog-to-db.js"
   },
   "keywords": [
     "fastfood",

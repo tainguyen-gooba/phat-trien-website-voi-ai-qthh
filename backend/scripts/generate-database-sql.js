@@ -73,6 +73,7 @@ CREATE TABLE \`users\` (
   \`status\` ENUM('active', 'inactive', 'banned') DEFAULT 'active' COMMENT 'Trạng thái tài khoản',
   \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY \`fk_users_role\` (\`role_id\`),
   CONSTRAINT \`fk_users_role\` FOREIGN KEY (\`role_id\`) REFERENCES \`roles\` (\`id\`) ON UPDATE CASCADE,
   INDEX \`idx_users_email\` (\`email\`),
   INDEX \`idx_users_phone\` (\`phone\`),
@@ -105,6 +106,7 @@ CREATE TABLE \`restaurants\` (
   \`min_order_amount\` DECIMAL(12, 2) DEFAULT 0.00 COMMENT 'Giá trị đơn hàng tối thiểu',
   \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY \`fk_restaurants_owner\` (\`owner_id\`),
   CONSTRAINT \`fk_restaurants_owner\` FOREIGN KEY (\`owner_id\`) REFERENCES \`users\` (\`id\`) ON UPDATE CASCADE,
   INDEX \`idx_restaurants_slug\` (\`slug\`),
   INDEX \`idx_restaurants_rating\` (\`rating_avg\`),
@@ -155,8 +157,6 @@ CREATE TABLE \`products\` (
   KEY \`fk_products_category\` (\`category_id\`),
   CONSTRAINT \`fk_products_restaurant\` FOREIGN KEY (\`restaurant_id\`) REFERENCES \`restaurants\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT \`fk_products_category\` FOREIGN KEY (\`category_id\`) REFERENCES \`categories\` (\`id\`) ON UPDATE CASCADE,
-  INDEX \`idx_products_restaurant\` (\`restaurant_id\`),
-  INDEX \`idx_products_category\` (\`category_id\`),
   INDEX \`idx_products_available\` (\`is_available\`),
   INDEX \`idx_products_price\` (\`base_price\`, \`discount_price\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -197,8 +197,7 @@ CREATE TABLE \`addresses\` (
   \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY \`fk_addresses_user\` (\`user_id\`),
-  CONSTRAINT \`fk_addresses_user\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
-  INDEX \`idx_addresses_user\` (\`user_id\`)
+  CONSTRAINT \`fk_addresses_user\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================================================
@@ -294,8 +293,7 @@ CREATE TABLE \`order_items\` (
   KEY \`fk_order_items_order\` (\`order_id\`),
   KEY \`fk_order_items_product\` (\`product_id\`),
   CONSTRAINT \`fk_order_items_order\` FOREIGN KEY (\`order_id\`) REFERENCES \`orders\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT \`fk_order_items_product\` FOREIGN KEY (\`product_id\`) REFERENCES \`products\` (\`id\`) ON UPDATE CASCADE,
-  INDEX \`idx_order_items_order\` (\`order_id\`)
+  CONSTRAINT \`fk_order_items_product\` FOREIGN KEY (\`product_id\`) REFERENCES \`products\` (\`id\`) ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================================================
@@ -353,12 +351,10 @@ CREATE TABLE \`carts\` (
   \`restaurant_id\` BIGINT UNSIGNED NOT NULL COMMENT 'FK quán ăn của giỏ hàng hiện tại',
   \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  KEY \`fk_carts_user\` (\`user_id\`),
   KEY \`fk_carts_restaurant\` (\`restaurant_id\`),
   CONSTRAINT \`fk_carts_user\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT \`fk_carts_restaurant\` FOREIGN KEY (\`restaurant_id\`) REFERENCES \`restaurants\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
-  UNIQUE KEY \`uq_user_restaurant_cart\` (\`user_id\`, \`restaurant_id\`),
-  INDEX \`idx_carts_user\` (\`user_id\`)
+  UNIQUE KEY \`uq_user_restaurant_cart\` (\`user_id\`, \`restaurant_id\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================================================
@@ -377,8 +373,7 @@ CREATE TABLE \`cart_items\` (
   KEY \`fk_cart_items_cart\` (\`cart_id\`),
   KEY \`fk_cart_items_product\` (\`product_id\`),
   CONSTRAINT \`fk_cart_items_cart\` FOREIGN KEY (\`cart_id\`) REFERENCES \`carts\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
-  CONSTRAINT \`fk_cart_items_product\` FOREIGN KEY (\`product_id\`) REFERENCES \`products\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
-  INDEX \`idx_cart_items_cart\` (\`cart_id\`)
+  CONSTRAINT \`fk_cart_items_product\` FOREIGN KEY (\`product_id\`) REFERENCES \`products\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================================================
@@ -411,12 +406,10 @@ CREATE TABLE \`staff_assignments\` (
   \`is_active\` TINYINT(1) DEFAULT 1 COMMENT '1 = Đang làm việc, 0 = Đã nghỉ',
   \`created_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   \`updated_at\` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  KEY \`fk_staff_restaurant\` (\`restaurant_id\`),
   KEY \`fk_staff_user\` (\`user_id\`),
   CONSTRAINT \`fk_staff_restaurant\` FOREIGN KEY (\`restaurant_id\`) REFERENCES \`restaurants\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT \`fk_staff_user\` FOREIGN KEY (\`user_id\`) REFERENCES \`users\` (\`id\`) ON DELETE CASCADE ON UPDATE CASCADE,
-  UNIQUE KEY \`uq_restaurant_staff\` (\`restaurant_id\`, \`user_id\`),
-  INDEX \`idx_staff_restaurant\` (\`restaurant_id\`)
+  UNIQUE KEY \`uq_restaurant_staff\` (\`restaurant_id\`, \`user_id\`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ===================================================================

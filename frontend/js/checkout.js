@@ -179,12 +179,13 @@ document.addEventListener('DOMContentLoaded', () => {
           };
         }),
         couponCode: appliedCoupon?.code || '',
-        paymentMethod: selectedPayment.toUpperCase(),
+        paymentMethod: selectedPayment === 'vietqr' ? 'BANKING' : selectedPayment.toUpperCase(),
         subtotal: currentBill.subtotal,
         shippingFee: currentBill.shippingFee,
         discount: currentBill.discount,
         total: currentBill.total,
-        status: 'pending',
+        status: selectedPayment === 'cod' ? 'pending' : 'awaiting_payment',
+        statusText: selectedPayment === 'cod' ? 'Chờ xác nhận' : 'Chờ thanh toán',
         statusStep: 2, // 1: Đặt đơn, 2: Quán nhận, 3: Đang làm, 4: Đang giao, 5: Đã giao
         estimatedTime: '20 - 25 phút',
         shipper: {
@@ -243,7 +244,7 @@ document.addEventListener('DOMContentLoaded', () => {
       StorageManager.remove(StorageManager.KEYS.COUPON);
 
       if (selectedPayment !== 'cod') {
-        const gateway = selectedPayment === 'momo' ? 'momo' : 'bank';
+        const gateway = selectedPayment === 'vietqr' ? 'vietqr' : selectedPayment;
         try {
           const paymentResponse = await fetch(`${apiUrl}/payments/${gateway}/initiate`, {
             method: 'POST',

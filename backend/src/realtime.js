@@ -106,7 +106,7 @@ function createRealtimeServer(httpServer) {
       }
     });
 
-    socket.on('admin:content:publish', async (payload, acknowledge = () => {}) => {
+    socket.on('admin:content:publish', async (payload, acknowledge = () => { }) => {
       if (user?.role !== 'admin') {
         acknowledge({ success: false, message: 'Chỉ admin mới được cập nhật nội dung.' });
         return;
@@ -156,7 +156,7 @@ function createRealtimeServer(httpServer) {
       }
     });
 
-    socket.on('chat:send', async (payload, acknowledge = () => {}) => {
+    socket.on('chat:send', async (payload, acknowledge = () => { }) => {
       if (!user || !['admin', 'customer'].includes(user.role)) {
         acknowledge({ success: false, message: 'Đăng nhập để sử dụng chat hỗ trợ.' });
         return;
@@ -305,7 +305,7 @@ function createRealtimeServer(httpServer) {
       }
     });
 
-    socket.on('admin:order:status', async (payload, acknowledge = () => {}) => {
+    socket.on('admin:order:status', async (payload, acknowledge = () => { }) => {
       if (user?.role !== 'admin') {
         acknowledge({ success: false, message: 'Chỉ admin mới được cập nhật đơn hàng.' });
         return;
@@ -349,7 +349,7 @@ function createRealtimeServer(httpServer) {
             parsed.status = status;
             parsed.statusText = displayStatus;
             updatedOrderData = JSON.stringify(parsed);
-          } catch (_) {}
+          } catch (_) { }
           await pool.execute(
             'UPDATE realtime_orders SET status = ?, order_data = ? WHERE id = ?',
             [status, updatedOrderData, realtimeOrders[0].id]

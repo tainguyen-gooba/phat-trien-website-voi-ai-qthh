@@ -3824,7 +3824,7 @@
           fields: [{ key: 'name', label: 'Tên quán ăn', required: true }, { key: 'address', label: 'Địa chỉ', required: true }, { key: 'url', label: 'URL quán ăn', type: 'url' }, { key: 'status', label: 'Trạng thái', type: 'status' }],
         },
         orders: {
-          singular: 'đơn hàng', statusOptions: ['Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Đã giao', 'Đã hủy'],
+          singular: 'đơn hàng', statusOptions: ['Chờ thanh toán', 'Thanh toán không thành công', 'Chờ xác nhận', 'Đang chuẩn bị', 'Đang giao', 'Đã giao', 'Đã hủy'],
           columns: [{ key: 'orderNo', label: 'Mã đơn hàng' }, { key: 'customer', label: 'Khách hàng' }, { key: 'restaurant', label: 'Nhà hàng' }, { key: 'total', label: 'Tổng tiền' }, { key: 'paymentLabel', label: 'Thanh toán' }, { key: 'date', label: 'Ngày đặt' }, { key: 'status', label: 'Trạng thái' }],
           fields: [{ key: 'status', label: 'Trạng thái', type: 'status' }],
         },
@@ -4125,6 +4125,8 @@
         const orderDate = new Date(order.createdAt || '');
         const vietnamDate = Number.isNaN(orderDate.getTime()) ? '' : vietnamDateKey(orderDate);
         const statusText = order.statusText || ({
+          awaiting_payment: 'Chờ thanh toán',
+          payment_failed: 'Thanh toán không thành công',
           pending: 'Chờ xác nhận',
           preparing: 'Đang chuẩn bị',
           delivering: 'Đang giao',
@@ -4141,8 +4143,10 @@
           paymentMethod: String(order.paymentMethod || '').toLowerCase(),
           paymentStatus: String(order.paymentStatus || 'pending').toLowerCase(),
           paymentLabel: order.paymentStatus === 'completed' ? 'Đã thanh toán'
-            : String(order.paymentMethod || '').toLowerCase() === 'momo' ? 'Chờ MoMo'
-              : String(order.paymentMethod || '').toLowerCase() === 'banking' ? 'Chờ QR' : 'COD',
+            : order.paymentStatus === 'failed' ? 'Thanh toán không thành công'
+              : String(order.paymentMethod || '').toLowerCase() === 'momo' ? 'Chờ MoMo'
+                : String(order.paymentMethod || '').toLowerCase() === 'banking' ? 'Chờ VietQR'
+                  : String(order.paymentMethod || '').toLowerCase() === 'vnpay' ? 'Chờ VNPay' : 'COD',
           date: vietnamDate || String(order.createdAt || '').slice(0, 10),
           status: statusText || 'Chờ xác nhận',
         };
@@ -4222,9 +4226,12 @@
           return;
         }
         record.paymentStatus = update.paymentStatus;
-        record.paymentLabel = update.paymentStatus === 'completed'
-          ? 'Đã thanh toán'
-          : record.paymentMethod === 'momo' ? 'Chờ MoMo' : 'Chờ QR';
+        record.paymentLabel = update.paymentStatus === 'completed' ? 'Đã thanh toán'
+          : update.paymentStatus === 'failed' ? 'Thanh toán không thành công'
+            : record.paymentMethod === 'momo' ? 'Chờ MoMo'
+              : record.paymentMethod === 'vnpay' ? 'Chờ VNPay'
+                : record.paymentMethod === 'cod' ? 'COD' : 'Chờ VietQR';
+        record.paymentMethod = update.paymentMethod || record.paymentMethod;
         saveRealtimeSnapshot();
         renderAll();
         showToast(update.paymentStatus === 'completed'

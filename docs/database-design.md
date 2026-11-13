@@ -15,7 +15,7 @@ Hệ thống cơ sở dữ liệu MySQL chuẩn hóa dạng chuẩn 3NF, sử d�
 10. **`coupons`**: Mã giảm giá toàn sàn hoặc riêng của từng quán ăn.
 11. **`orders`**: Đơn hàng đặt món (mã đơn hiển thị, trạng thái quy trình đơn).
 12. **`order_items`**: Chi tiết món trong đơn hàng (lưu cứng đơn giá tại thời điểm đặt).
-13. **`payments`**: Giao dịch thanh toán (COD, VNPay, MoMo, Ngân hàng).
+13. **`payments`**: Giao dịch thanh toán (COD, VietQR, MoMo; lưu tương thích giao dịch VNPay cũ).
 14. **`reviews`**: Đánh giá và nhận xét của khách hàng cho quán sau khi hoàn tất đơn.
 15. **`notifications`**: Thông báo đẩy hệ thống (đơn hàng, khuyến mãi, tài khoản).
 16. **`staff_assignments`**: Phân công vai trò nhân sự quản trị quán (quản lý, bếp, nhân viên).

@@ -38,7 +38,8 @@ Tất cả các API đều trả về cấu trúc chuẩn:
 - `POST /api/v1/realtime/orders/:orderCode/reviews/:target` - Lưu đánh giá sao và nhận xét của tài xế (`driver`) hoặc quán (`restaurant`) cho đơn đã giao; chỉ chủ đơn.
 - `GET /api/v1/realtime/orders/reviews` - Lấy đánh giá của khách hàng sau khi hoàn thành đơn; chỉ admin. Khi lưu từng đánh giá, server phát `review:new` và `notification:new` ngay sau khi giao dịch thành công.
 - `POST /api/v1/payments/momo/initiate` - Tạo giao dịch MoMo cho đơn của khách đang đăng nhập; chỉ chuyển trạng thái khi IPN có chữ ký hợp lệ.
-- `POST /api/v1/payments/bank/initiate` - Tạo QR chuyển khoản theo mã đơn; chỉ đánh dấu đã thanh toán khi SePay xác nhận webhook.
+- `POST /api/v1/payments/vietqr/initiate` - Tạo mã VietQR cho đơn của khách; chỉ xác nhận thanh toán khi SePay báo webhook hợp lệ.
+- `POST /api/v1/payments/:orderCode/switch-to-cod` - Đổi đơn online chưa thanh toán sang COD trong thời gian cho phép.
 - `GET /api/v1/payments/:orderCode/status` - Lấy trạng thái thanh toán của đơn thuộc khách đăng nhập.
 - `POST /api/v1/payments/momo/ipn` - IPN công khai của MoMo; kiểm tra HMAC-SHA256, mã đơn, số tiền và request ID.
 - `POST /api/v1/payments/sepay/webhook` - Webhook SePay; xác thực `Authorization: Apikey ...`, tài khoản nhận, nội dung mã đơn và số tiền.
@@ -46,14 +47,14 @@ Tất cả các API đều trả về cấu trúc chuẩn:
 
 Socket.IO xác thực bằng JWT qua handshake. Admin dùng `admin:content:publish` và `admin:order:status`; khách/admin gửi hỗ trợ qua `chat:send`. Trợ lý tự động trả lời theo các chủ đề hỗ trợ phổ biến; phản hồi của admin tạm dừng trợ lý trong 10 phút. Các sự kiện cập nhật được phát đến tài khoản liên quan, không phát thông tin đơn hàng cho khách không liên quan.
 
-Trước khi chạy phiên bản có chat tự động và thanh toán realtime, cập nhật cơ sở dữ liệu bằng `npm --prefix backend run db:migrate:realtime`.
+Trước khi chạy phiên bản có chat tự động và thanh toán realtime, cập nhật cơ sở dữ liệu bằng `npm --prefix backend run db:migrate:realtime`. Migration chuyển đơn online chưa trả sang trạng thái chờ thanh toán và thêm thời hạn giao dịch. Mỗi lượt có hiệu lực 15 phút; sau khi thất bại/hết hạn, khách có 1 giờ để thử lại hoặc đổi COD. Hết thời gian này, đơn vẫn lưu ở trạng thái thanh toán không thành công, không tự hủy và không cho thanh toán lại.
 
 ### Cấu hình thanh toán
-Đặt các biến MoMo, SePay và `PAYMENT_PUBLIC_URL` trong `backend/.env` theo mẫu `backend/.env.example`. Chọn `MOMO_ENV=sandbox` khi thử nghiệm hoặc `MOMO_ENV=production` với bộ khóa production; không đưa khóa bí mật vào frontend hoặc Git. Production cần URL HTTPS công khai để MoMo/SePay gửi callback:
+Đặt các biến MoMo, SePay và `PAYMENT_PUBLIC_URL` trong `backend/.env` theo mẫu `backend/.env.example`. Chọn `MOMO_ENV=sandbox` khi thử nghiệm; dùng thông tin merchant production khi đưa lên thật. Không đưa khóa bí mật vào frontend hoặc Git. Production cần URL HTTPS công khai để các cổng gửi callback:
 - MoMo IPN: `${PAYMENT_PUBLIC_URL}/api/v1/payments/momo/ipn`
 - SePay webhook: `${PAYMENT_PUBLIC_URL}/api/v1/payments/sepay/webhook`
 
-QR bank dùng nội dung chuyển khoản là mã đơn. Không xác nhận thanh toán dựa trên thao tác của trình duyệt; chỉ webhook khớp API key, tài khoản nhận, mã đơn và số tiền mới cập nhật thành công.
+Checkout mới chỉ cung cấp COD, VietQR và MoMo. VietQR dùng nội dung chuyển khoản là mã đơn. Không xác nhận thanh toán dựa trên thao tác của trình duyệt; chỉ webhook khớp API key, tài khoản nhận, mã đơn và số tiền mới cập nhật thành công.
 Với đơn thanh toán trực tuyến, máy chủ tính lại giá sản phẩm, topping và mã giảm giá từ dữ liệu tin cậy; nếu giỏ hàng cũ hoặc danh mục chưa có giá/topping tương ứng, khách cần tải lại giỏ hàng trước khi thanh toán.
 
 ### Đăng nhập

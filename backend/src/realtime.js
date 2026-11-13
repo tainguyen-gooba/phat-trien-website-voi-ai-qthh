@@ -7,6 +7,8 @@ const logger = require('./utils/logger');
 
 const CONTENT_COLLECTIONS = new Set(['categories', 'products', 'restaurants']);
 const ORDER_STATUSES = {
+  'Chờ thanh toán': 'awaiting_payment',
+  'Thanh toán không thành công': 'payment_failed',
   'Chờ xác nhận': 'pending',
   'Đang chuẩn bị': 'preparing',
   'Đang giao': 'delivering',
@@ -305,6 +307,16 @@ function createRealtimeServer(httpServer) {
         }
         if (order.status === 'cancelled' && status !== 'cancelled') {
           acknowledge({ success: false, message: 'Đơn hàng đã hủy không thể khôi phục trạng thái.' });
+          return;
+        }
+        if (orders[0] && ['awaiting_payment', 'payment_failed'].includes(status)) {
+          acknowledge({ success: false, message: 'Trạng thái chờ thanh toán chỉ áp dụng cho đơn realtime.' });
+          return;
+        }
+        if (realtimeOrders[0]
+          && ['awaiting_payment', 'payment_failed'].includes(realtimeOrders[0].status)
+          && !['awaiting_payment', 'payment_failed', 'cancelled'].includes(status)) {
+          acknowledge({ success: false, message: 'Chỉ có thể xác nhận đơn sau khi thanh toán thành công.' });
           return;
         }
 

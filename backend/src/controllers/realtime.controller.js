@@ -172,24 +172,51 @@ class RealtimeController extends BaseController {
 
   orderFromRow(row) {
     const data = typeof row.order_data === 'string' ? JSON.parse(row.order_data) : row.order_data;
+    const paymentMethod = String(data.paymentMethod || row.paymentMethod || '').toLowerCase();
+    const expiresAt = row.paymentExpiresAt || data.paymentExpiresAt || null;
+    const retryUntil = row.paymentRetryUntil || data.paymentRetryUntil || null;
+    let paymentStatus = paymentMethod === 'cod'
+      ? String(data.paymentStatus || 'pending').toLowerCase()
+      : String(row.paymentStatus || data.paymentStatus || 'pending').toLowerCase();
+    const expiresAtTime = expiresAt ? new Date(expiresAt).getTime() : null;
+    if (paymentStatus === 'pending' && expiresAtTime && expiresAtTime <= Date.now()) {
+      paymentStatus = 'failed';
+    }
+    const status = row.status === 'awaiting_payment' && paymentStatus === 'failed'
+      ? 'payment_failed'
+      : row.status;
+    const retryWindowOpen = !retryUntil || new Date(retryUntil).getTime() > Date.now();
+    const canRetryPayment = paymentMethod !== 'cod' && paymentStatus !== 'completed'
+      && ['awaiting_payment', 'payment_failed'].includes(status) && retryWindowOpen;
     return {
       ...data,
       id: row.order_code,
-      status: row.status,
+      paymentMethod: paymentMethod || data.paymentMethod,
+      paymentStatus,
+      paymentExpiresAt: expiresAt,
+      paymentRetryUntil: retryUntil,
+      canRetryPayment,
+      canSwitchToCod: paymentMethod !== 'cod' && paymentStatus !== 'completed'
+        && ['awaiting_payment', 'payment_failed'].includes(status) && retryWindowOpen,
+      status,
       statusStep: ({
+        awaiting_payment: 1,
+        payment_failed: 1,
         pending: 1,
         preparing: 3,
         delivering: 4,
         delivered: 5,
         cancelled: 1,
-      })[row.status],
+      })[status],
       statusText: ({
+        awaiting_payment: 'Chờ thanh toán',
+        payment_failed: 'Thanh toán không thành công',
         pending: 'Chờ xác nhận',
         preparing: 'Đang chuẩn bị',
         delivering: 'Đang giao',
         delivered: 'Đã giao',
         cancelled: 'Đã hủy',
-      })[row.status],
+      })[status],
     };
   }
 
@@ -200,7 +227,8 @@ class RealtimeController extends BaseController {
 
     const order = req.body?.order;
     const orderCode = typeof order?.id === 'string' ? order.id : '';
-    const paymentMethod = String(order?.paymentMethod || '').toLowerCase();
+    const requestedPaymentMethod = String(order?.paymentMethod || '').toLowerCase();
+    const paymentMethod = requestedPaymentMethod === 'vietqr' ? 'banking' : requestedPaymentMethod;
     const items = order?.items;
     const recipient = normalizeCustomerProfile(order?.recipient);
     const validOrderCode = isValidOrderCode(orderCode);
@@ -279,16 +307,16 @@ class RealtimeController extends BaseController {
         subtotal: orderSubtotal,
         discount: discountAmount,
         total: orderSubtotal + shippingFee - discountAmount,
+        status: paymentMethod === 'cod' ? 'pending' : 'awaiting_payment',
+        statusText: paymentMethod === 'cod' ? 'Chờ xác nhận' : 'Chờ thanh toán',
         cancellationCount,
         shippingIncreasePercent: cancellationCount * 3,
-        status: 'pending',
         statusStep: 1,
-        statusText: 'Chờ xác nhận',
         createdAt: new Date().toISOString(),
       };
       await connection.execute(
         'INSERT INTO realtime_orders (order_code, user_id, order_data, status) VALUES (?, ?, ?, ?)',
-        [orderCode, req.user.id, JSON.stringify(orderData), 'pending']
+        [orderCode, req.user.id, JSON.stringify(orderData), orderData.status]
       );
       if (couponId) {
         await connection.execute('UPDATE coupons SET usage_count = usage_count + 1 WHERE id = ?', [couponId]);
@@ -296,7 +324,7 @@ class RealtimeController extends BaseController {
       await connection.commit();
       transactionStarted = false;
       req.app.get('io')?.to('admins').emit('order:new', {
-        order: { ...orderData, statusText: 'Chờ xác nhận' },
+        order: orderData,
         customerId: String(req.user.id),
       });
       return this.sendSuccess(res, 'Đặt hàng thành công.', orderData, HTTP_STATUS.CREATED);
@@ -341,7 +369,7 @@ class RealtimeController extends BaseController {
         transactionStarted = false;
         return this.sendError(res, 'Không tìm thấy đơn hàng của bạn.', HTTP_STATUS.NOT_FOUND);
       }
-      if (!['pending', 'preparing'].includes(order.status)) {
+      if (!['awaiting_payment', 'payment_failed', 'pending', 'preparing'].includes(order.status)) {
         await connection.rollback();
         transactionStarted = false;
         return this.sendError(res, 'Chỉ có thể hủy đơn khi quán chưa bắt đầu giao hàng.', HTTP_STATUS.CONFLICT);
@@ -353,7 +381,7 @@ class RealtimeController extends BaseController {
         `UPDATE realtime_orders
          SET status = 'cancelled',
              order_data = JSON_SET(order_data, '$.cancelledBy', 'customer', '$.cancelledAt', ?)
-         WHERE id = ? AND status IN ('pending', 'preparing')`,
+         WHERE id = ? AND status IN ('awaiting_payment', 'payment_failed', 'pending', 'preparing')`,
         [new Date().toISOString(), order.id]
       );
       await connection.execute(
@@ -543,8 +571,18 @@ class RealtimeController extends BaseController {
   async getOrders(req, res, next) {
     try {
       const query = req.user.role === 'admin'
-        ? 'SELECT order_code, order_data, status FROM realtime_orders ORDER BY id DESC'
-        : 'SELECT order_code, order_data, status FROM realtime_orders WHERE user_id = ? ORDER BY id DESC';
+        ? `SELECT o.order_code, o.order_data, o.status,
+                  p.payment_method AS paymentMethod, p.status AS paymentStatus,
+                  p.expires_at AS paymentExpiresAt, p.retry_until AS paymentRetryUntil
+           FROM realtime_orders o
+           LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+           ORDER BY o.id DESC`
+        : `SELECT o.order_code, o.order_data, o.status,
+                  p.payment_method AS paymentMethod, p.status AS paymentStatus,
+                  p.expires_at AS paymentExpiresAt, p.retry_until AS paymentRetryUntil
+           FROM realtime_orders o
+           LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+           WHERE o.user_id = ? ORDER BY o.id DESC`;
       const [rows] = req.user.role === 'admin'
         ? await pool.execute(query)
         : await pool.execute(query, [req.user.id]);

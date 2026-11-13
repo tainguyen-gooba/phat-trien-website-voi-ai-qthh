@@ -83,3 +83,45 @@ test('online coupon discounts are calculated from server data', async () => {
     { code: 'INVALID_ORDER_PRICING' }
   );
 });
+
+test('unpaid online orders are shown as awaiting payment until paid', () => {
+  const unpaid = realtimeController.orderFromRow({
+    order_code: 'FF1234',
+    order_data: JSON.stringify({ paymentMethod: 'MOMO', paymentStatus: 'pending' }),
+    status: 'awaiting_payment',
+  });
+  const paid = realtimeController.orderFromRow({
+    order_code: 'FF1235',
+    order_data: JSON.stringify({ paymentMethod: 'MOMO', paymentStatus: 'completed' }),
+    status: 'pending',
+  });
+  const expired = realtimeController.orderFromRow({
+    order_code: 'FF1236',
+    order_data: JSON.stringify({ paymentMethod: 'BANKING', paymentStatus: 'pending' }),
+    paymentMethod: 'banking',
+    paymentStatus: 'pending',
+    paymentExpiresAt: new Date(Date.now() - 1000),
+    paymentRetryUntil: new Date(Date.now() + 60 * 60 * 1000),
+    status: 'awaiting_payment',
+  });
+  const retryExpired = realtimeController.orderFromRow({
+    order_code: 'FF1237',
+    order_data: JSON.stringify({ paymentMethod: 'MOMO', paymentStatus: 'failed' }),
+    paymentMethod: 'momo',
+    paymentStatus: 'failed',
+    paymentExpiresAt: new Date(Date.now() - 61 * 60 * 1000),
+    paymentRetryUntil: new Date(Date.now() - 1000),
+    status: 'payment_failed',
+  });
+
+  assert.equal(unpaid.statusText, 'Chờ thanh toán');
+  assert.equal(unpaid.canRetryPayment, true);
+  assert.equal(paid.statusText, 'Chờ xác nhận');
+  assert.equal(expired.statusText, 'Thanh toán không thành công');
+  assert.equal(expired.canRetryPayment, true);
+  assert.equal(expired.canSwitchToCod, true);
+  assert.equal(retryExpired.status, 'payment_failed');
+  assert.equal(retryExpired.statusText, 'Thanh toán không thành công');
+  assert.equal(retryExpired.canRetryPayment, false);
+  assert.equal(retryExpired.canSwitchToCod, false);
+});

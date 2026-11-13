@@ -57,6 +57,21 @@ test('MoMo IPN signature includes transaction result fields', () => {
   assert.equal(signatureHelpers.momoIpnSignature(payload, 'test-access'), expected);
 });
 
+test('VNPay signature sorts and encodes fields while excluding signature fields', () => {
+  const payload = {
+    vnp_OrderInfo: 'Thanh toan don FF1234',
+    vnp_Amount: '12500000',
+    vnp_SecureHashType: 'HmacSHA512',
+    vnp_SecureHash: 'ignored',
+    vnp_TxnRef: 'request-123',
+  };
+  const canonical = 'vnp_Amount=12500000&vnp_OrderInfo=Thanh+toan+don+FF1234&vnp_TxnRef=request-123';
+  const expected = crypto.createHmac('sha512', 'test-secret').update(canonical).digest('hex');
+
+  assert.equal(signatureHelpers.vnpaySignData(payload), canonical);
+  assert.equal(signatureHelpers.vnpaySignature(payload, 'test-secret'), expected);
+});
+
 test('signature comparison is timing-safe and rejects different values', () => {
   assert.equal(signatureHelpers.safeEqual('abc123', 'abc123'), true);
   assert.equal(signatureHelpers.safeEqual('abc123', 'abc124'), false);

@@ -60,6 +60,7 @@ window.initFastfoodRealtime = function initFastfoodRealtime(user = null) {
         else window.UIComponents?.showToast('Nội dung website đã được đồng bộ.', 'success');
       });
       socket.on('notification:new', (notification) => {
+        window.dispatchEvent(new CustomEvent('fastfood:notification-new', { detail: notification }));
         window.UIComponents?.showToast(notification.content || notification.title, 'info');
       });
       socket.on('support:new_message', (payload) => {

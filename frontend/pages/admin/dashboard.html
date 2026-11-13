@@ -360,6 +360,360 @@
       color: var(--orange-dark);
     }
 
+    /* ===== ADMIN NOTIFICATIONS SYSTEM ===== */
+    .notif-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .notif-bell-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      color: #555;
+      cursor: pointer;
+      transition: all .2s ease;
+    }
+
+    .notif-bell-btn:hover,
+    .notif-bell-btn[aria-expanded="true"] {
+      border-color: #ffd1b0;
+      background: var(--orange-pale);
+      color: var(--orange-dark);
+    }
+
+    .notif-bell-btn svg {
+      width: 19px;
+      height: 19px;
+    }
+
+    .notif-bell-badge {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 4px;
+      border: 2px solid #fff;
+      border-radius: 999px;
+      background: #e11d48;
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      line-height: 1;
+      animation: bell-bounce .4s ease-out;
+    }
+
+    @keyframes bell-bounce {
+      0% { transform: scale(0.3); }
+      70% { transform: scale(1.2); }
+      100% { transform: scale(1); }
+    }
+
+    .notif-dropdown {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 1000;
+      width: 360px;
+      max-width: 90vw;
+      border: 1px solid #fed7aa;
+      border-radius: 16px;
+      background: #fff;
+      box-shadow: 0 12px 36px rgba(15, 23, 42, .14), 0 2px 8px rgba(15, 23, 42, .06);
+      overflow: hidden;
+      animation: notif-slide-down .2s ease-out;
+    }
+
+    .notif-dropdown[hidden] {
+      display: none;
+    }
+
+    @keyframes notif-slide-down {
+      from {
+        opacity: 0;
+        transform: translateY(-8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .notif-dropdown-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 13px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      background: #fff7ed;
+    }
+
+    .notif-dropdown-title {
+      margin: 0;
+      color: #1e293b;
+      font-size: 13.5px;
+      font-weight: 750;
+      display: inline-block;
+      margin-right: 6px;
+    }
+
+    .notif-unread-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 10px;
+      background: #ffedd5;
+      color: var(--orange-dark);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .notif-mark-all-btn {
+      padding: 4px 8px;
+      border: 0;
+      background: transparent;
+      color: #64748b;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color .15s ease;
+    }
+
+    .notif-mark-all-btn:hover {
+      color: var(--orange-dark);
+    }
+
+    .notif-list {
+      max-height: 380px;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .notif-empty {
+      padding: 36px 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 12.5px;
+    }
+
+    .notif-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid #f8fafc;
+      background: #fff;
+      cursor: pointer;
+      transition: background .15s ease;
+      text-align: left;
+      width: 100%;
+      border-left: 3px solid transparent;
+      box-sizing: border-box;
+    }
+
+    .notif-item:hover {
+      background: #fafafa;
+    }
+
+    .notif-item.unread {
+      background: #fffaf5;
+      border-left-color: var(--orange);
+    }
+
+    .notif-icon {
+      flex: 0 0 34px;
+      height: 34px;
+      border-radius: 9px;
+      display: grid;
+      place-items: center;
+      background: #ffedd5;
+      color: #c65a0a;
+      font-size: 15px;
+    }
+
+    .notif-icon.order {
+      background: #ffedd5;
+      color: #ea580c;
+    }
+
+    .notif-icon.review {
+      background: #fef08a;
+      color: #a16207;
+    }
+
+    .notif-item-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .notif-item-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+
+    .notif-item-title {
+      font-size: 12px;
+      font-weight: 750;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .notif-item-time {
+      font-size: 10.5px;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    .notif-item-text {
+      margin: 0;
+      font-size: 11.5px;
+      line-height: 1.4;
+      color: #475569;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .nav-badge-orders {
+      background: #ef4444;
+      color: #fff;
+      font-weight: 800;
+      animation: pulse-badge 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse-badge {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.08); opacity: 0.88; }
+    }
+
+    /* Order Toast Card */
+    .order-toast-card {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      width: 350px;
+      max-width: calc(100vw - 32px);
+      padding: 14px 16px;
+      border: 1.5px solid #fb923c;
+      border-radius: 14px;
+      background: #ffffff;
+      color: #1e293b;
+      box-shadow: 0 10px 30px rgba(234, 88, 12, .22), 0 3px 10px rgba(0, 0, 0, .08);
+      animation: toast-in .24s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    .order-toast-card .order-toast-icon {
+      flex: 0 0 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: grid;
+      place-items: center;
+      background: #ffedd5;
+      color: #ea580c;
+      font-size: 18px;
+    }
+
+    .order-toast-card .order-toast-body {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .order-toast-card .order-toast-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      margin-bottom: 3px;
+    }
+
+    .order-toast-card .order-toast-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ea580c;
+    }
+
+    .order-toast-card .order-toast-badge {
+      padding: 1px 6px;
+      border-radius: 6px;
+      background: #fee2e2;
+      color: #dc2626;
+      font-size: 9.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .order-toast-card .order-toast-detail {
+      font-size: 12px;
+      line-height: 1.4;
+      color: #334155;
+      margin-bottom: 8px;
+    }
+
+    .order-toast-card .order-toast-total {
+      font-weight: 800;
+      color: #ea580c;
+    }
+
+    .order-toast-card .order-toast-action {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      border: 0;
+      border-radius: 7px;
+      background: #ea580c;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .15s ease;
+    }
+
+    .order-toast-card .order-toast-action:hover {
+      background: #c65a0a;
+    }
+
+    .order-toast-card .order-toast-close {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 20px;
+      height: 20px;
+      border: 0;
+      background: transparent;
+      color: #94a3b8;
+      cursor: pointer;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      border-radius: 4px;
+      line-height: 1;
+    }
+
+    .order-toast-card .order-toast-close:hover {
+      color: #0f172a;
+      background: #f1f5f9;
+    }
+
     .content {
       width: min(100%, 1450px);
       margin: 0 auto;
@@ -3197,7 +3551,8 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M6 3h12l2 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7z" />
             <path d="M4 7h16M9 11h6M9 15h6" />
-          </svg>Đơn hàng
+          </svg><span>Đơn hàng</span>
+          <span class="nav-badge nav-badge-orders" id="orders-nav-badge" hidden>0</span>
         </button>
         <button class="nav-item" type="button" data-section="users">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -3259,6 +3614,29 @@
               </svg>Tìm kiếm
             </button>
           </form>
+          <!-- Notification Bell & Dropdown -->
+          <div class="notif-wrapper" id="notif-wrapper">
+            <button class="notif-bell-btn" id="notif-bell-btn" type="button" aria-label="Thông báo đơn hàng" aria-expanded="false" title="Thông báo hệ thống">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+              </svg>
+              <span class="notif-bell-badge" id="notif-bell-badge" hidden>0</span>
+            </button>
+            <div class="notif-dropdown" id="notif-dropdown" hidden>
+              <div class="notif-dropdown-header">
+                <div>
+                  <h3 class="notif-dropdown-title">Thông báo</h3>
+                  <span class="notif-unread-tag" id="notif-unread-tag">0 chưa đọc</span>
+                </div>
+                <button class="notif-mark-all-btn" id="notif-mark-all-btn" type="button">Đánh dấu tất cả đã đọc</button>
+              </div>
+              <div class="notif-list" id="notif-list" role="feed" aria-busy="false">
+                <div class="notif-empty" id="notif-empty">Chưa có thông báo nào</div>
+              </div>
+            </div>
+          </div>
+
           <span class="profile-divider" aria-hidden="true"></span>
           <div class="admin-profile">
             <span class="avatar" aria-hidden="true">AD</span>
@@ -3741,6 +4119,12 @@
           }
           handlePaymentUpdate(update);
         });
+        liveSocket.on('notification:new', (notification) => {
+          handleIncomingNotification(notification);
+        });
+        window.addEventListener('fastfood:notification-new', (event) => {
+          if (event.detail) handleIncomingNotification(event.detail);
+        });
       } else {
         setRealtimeStatus(false);
       }
@@ -4195,14 +4579,331 @@
         }
       }
 
+      // ===== ADMIN NOTIFICATIONS & REAL-TIME ALERTS =====
+      let adminNotifications = [];
+      let unreadNotifCount = 0;
+      let unreadOrdersBadgeCount = 0;
+      const notifBellBtn = document.getElementById('notif-bell-btn');
+      const notifDropdown = document.getElementById('notif-dropdown');
+      const notifBellBadge = document.getElementById('notif-bell-badge');
+      const notifUnreadTag = document.getElementById('notif-unread-tag');
+      const notifList = document.getElementById('notif-list');
+      const notifMarkAllBtn = document.getElementById('notif-mark-all-btn');
+      const ordersNavBadge = document.getElementById('orders-nav-badge');
+
+      function updateOrdersNavBadge() {
+        if (!ordersNavBadge) return;
+        if (unreadOrdersBadgeCount > 0) {
+          ordersNavBadge.textContent = unreadOrdersBadgeCount > 9 ? '9+' : String(unreadOrdersBadgeCount);
+          ordersNavBadge.hidden = false;
+        } else {
+          ordersNavBadge.hidden = true;
+          ordersNavBadge.textContent = '0';
+        }
+      }
+
+      function updateNotifBellBadge() {
+        unreadNotifCount = adminNotifications.filter((n) => !n.isRead).length;
+        if (notifBellBadge) {
+          if (unreadNotifCount > 0) {
+            notifBellBadge.textContent = unreadNotifCount > 99 ? '99+' : String(unreadNotifCount);
+            notifBellBadge.hidden = false;
+          } else {
+            notifBellBadge.hidden = true;
+            notifBellBadge.textContent = '0';
+          }
+        }
+        if (notifUnreadTag) {
+          notifUnreadTag.textContent = `${unreadNotifCount} chưa đọc`;
+        }
+      }
+
+      function playNewOrderSound() {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+          const ctx = new AudioContextClass();
+          const now = ctx.currentTime;
+
+          // Sound chord: Ding-dong chime (A5 880Hz -> C#6 1108Hz)
+          const osc1 = ctx.createOscillator();
+          const gain1 = ctx.createGain();
+          osc1.type = 'sine';
+          osc1.frequency.setValueAtTime(880, now);
+          osc1.frequency.exponentialRampToValueAtTime(1108, now + 0.12);
+          gain1.gain.setValueAtTime(0.35, now);
+          gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+          osc1.connect(gain1);
+          gain1.connect(ctx.destination);
+          osc1.start(now);
+          osc1.stop(now + 0.6);
+
+          const osc2 = ctx.createOscillator();
+          const gain2 = ctx.createGain();
+          osc2.type = 'triangle';
+          osc2.frequency.setValueAtTime(1320, now + 0.14);
+          gain2.gain.setValueAtTime(0.25, now + 0.14);
+          gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+          osc2.connect(gain2);
+          gain2.connect(ctx.destination);
+          osc2.start(now + 0.14);
+          osc2.stop(now + 0.75);
+        } catch (err) {
+          console.warn('[Audio] Could not synthesize chime:', err.message);
+        }
+      }
+
+      function navigateToOrders(orderCode = '') {
+        const button = document.querySelector('.nav-item[data-section="orders"]');
+        if (!button) return;
+        activeSection = 'orders';
+        currentPage = 1;
+        searchTerm = orderCode ? String(orderCode).replace(/^#/, '').trim().toLocaleLowerCase('vi') : '';
+        statusFilter = '';
+        const searchInput = document.getElementById('search-input');
+        if (searchInput) searchInput.value = orderCode ? String(orderCode).replace(/^#/, '').trim() : '';
+        document.querySelectorAll('.nav-item').forEach((item) => {
+          item.classList.toggle('active', item === button);
+          if (item === button) item.setAttribute('aria-current', 'page');
+          else item.removeAttribute('aria-current');
+        });
+        unreadOrdersBadgeCount = 0;
+        updateOrdersNavBadge();
+        renderSection();
+        closeMobileMenu();
+        const main = document.querySelector('.main');
+        if (main) main.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+
+      function showOrderToast(order) {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        const card = document.createElement('div');
+        card.className = 'order-toast-card';
+        const cleanId = String(order.id || order.orderCode || '').replace(/^#/, '');
+        const customerName = order.recipient?.name || order.customer || order.customerName || 'Khách hàng';
+        const totalAmount = Number(order.total) || 0;
+        const totalStr = money(totalAmount);
+        const itemsList = Array.isArray(order.items)
+          ? order.items.map((it) => `${it.qty || 1}x ${it.name}`).slice(0, 2).join(', ') + (order.items.length > 2 ? '...' : '')
+          : (order.itemsSummary || '');
+
+        card.innerHTML = `
+          <div class="order-toast-icon" aria-hidden="true">🛍️</div>
+          <div class="order-toast-body">
+            <div class="order-toast-header">
+              <span class="order-toast-title">Đơn hàng mới #${escapeHtml(cleanId)}</span>
+              <span class="order-toast-badge">Mới</span>
+            </div>
+            <div class="order-toast-detail">
+              <strong>${escapeHtml(customerName)}</strong> vừa đặt món.<br>
+              Tổng tiền: <span class="order-toast-total">${escapeHtml(totalStr)}</span>
+              ${itemsList ? `<div style="font-size: 11px; color: #64748b; margin-top: 3px;">${escapeHtml(itemsList)}</div>` : ''}
+            </div>
+            <button class="order-toast-action" type="button" data-order-code="${escapeHtml(cleanId)}">
+              Xem đơn hàng
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+          <button class="order-toast-close" type="button" aria-label="Đóng">&times;</button>
+        `;
+
+        card.querySelector('.order-toast-action').addEventListener('click', () => {
+          navigateToOrders(cleanId);
+          card.remove();
+        });
+
+        card.querySelector('.order-toast-close').addEventListener('click', () => {
+          card.remove();
+        });
+
+        container.prepend(card);
+        window.setTimeout(() => {
+          if (card.parentElement) card.remove();
+        }, 12000);
+      }
+
+      function formatNotifTime(dateString) {
+        if (!dateString) return 'Vừa xong';
+        const date = new Date(dateString);
+        if (Number.isNaN(date.getTime())) return String(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMinutes = Math.floor(diffMs / 60000);
+        if (diffMinutes < 1) return 'Vừa xong';
+        if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+        const diffHours = Math.floor(diffMinutes / 60);
+        if (diffHours < 24) return `${diffHours} giờ trước`;
+        return new Intl.DateTimeFormat('vi-VN', {
+          day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+        }).format(date);
+      }
+
+      function renderAdminNotifications() {
+        if (!notifList) return;
+        if (adminNotifications.length === 0) {
+          notifList.innerHTML = '<div class="notif-empty">Chưa có thông báo nào</div>';
+          return;
+        }
+
+        notifList.innerHTML = adminNotifications.map((notif) => {
+          const isUnread = !notif.isRead;
+          const isOrder = notif.type === 'order';
+          const icon = isOrder ? '🛍️' : notif.type === 'review' ? '⭐' : '🔔';
+          const iconClass = isOrder ? 'order' : notif.type === 'review' ? 'review' : '';
+          const timeFormatted = formatNotifTime(notif.createdAt);
+          const orderCode = notif.orderCode || notif.metadata?.orderCode || '';
+
+          return `
+            <div class="notif-item${isUnread ? ' unread' : ''}" data-notif-id="${notif.id}" data-order-code="${escapeHtml(orderCode)}" role="article" tabindex="0">
+              <div class="notif-icon ${iconClass}" aria-hidden="true">${icon}</div>
+              <div class="notif-item-body">
+                <div class="notif-item-top">
+                  <span class="notif-item-title">${escapeHtml(notif.title || 'Thông báo mới')}</span>
+                  <span class="notif-item-time">${escapeHtml(timeFormatted)}</span>
+                </div>
+                <p class="notif-item-text">${escapeHtml(notif.content || '')}</p>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        notifList.querySelectorAll('.notif-item').forEach((itemEl) => {
+          itemEl.addEventListener('click', async () => {
+            const notifId = Number(itemEl.dataset.notifId);
+            const orderCode = itemEl.dataset.orderCode;
+            if (notifId) await markNotificationRead(notifId);
+            if (orderCode) {
+              closeNotifDropdown();
+              navigateToOrders(orderCode);
+            }
+          });
+        });
+      }
+
+      async function loadAdminNotifications() {
+        try {
+          const apiUrl = window.location.port === '5000'
+            ? `${window.location.origin}/api/v1`
+            : 'http://localhost:5000/api/v1';
+          const response = await fetch(`${apiUrl}/realtime/notifications`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          });
+          const result = await response.json();
+          if (response.ok && result.success && Array.isArray(result.data)) {
+            adminNotifications = result.data;
+            updateNotifBellBadge();
+            renderAdminNotifications();
+          }
+        } catch (err) {
+          console.warn('[Admin Notifications] Failed to fetch:', err.message);
+        }
+      }
+
+      async function markNotificationRead(notifId) {
+        const item = adminNotifications.find((n) => n.id === notifId);
+        if (item && !item.isRead) {
+          item.isRead = true;
+          updateNotifBellBadge();
+          renderAdminNotifications();
+        }
+        try {
+          const apiUrl = window.location.port === '5000'
+            ? `${window.location.origin}/api/v1`
+            : 'http://localhost:5000/api/v1';
+          await fetch(`${apiUrl}/realtime/notifications/${notifId}/read`, {
+            method: 'PATCH',
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          });
+        } catch (err) {
+          console.warn('[Admin Notifications] Mark read failed:', err.message);
+        }
+      }
+
+      async function markAllAdminNotificationsRead() {
+        adminNotifications.forEach((n) => { n.isRead = true; });
+        updateNotifBellBadge();
+        renderAdminNotifications();
+        try {
+          const apiUrl = window.location.port === '5000'
+            ? `${window.location.origin}/api/v1`
+            : 'http://localhost:5000/api/v1';
+          await fetch(`${apiUrl}/realtime/notifications/read-all`, {
+            method: 'PATCH',
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          });
+          showToast('Đã đánh dấu tất cả thông báo là đã đọc.');
+        } catch (err) {
+          console.warn('[Admin Notifications] Mark all read failed:', err.message);
+        }
+      }
+
+      function toggleNotifDropdown() {
+        if (!notifDropdown) return;
+        const isHidden = notifDropdown.hidden;
+        if (isHidden) {
+          notifDropdown.hidden = false;
+          notifBellBtn?.setAttribute('aria-expanded', 'true');
+        } else {
+          closeNotifDropdown();
+        }
+      }
+
+      function closeNotifDropdown() {
+        if (!notifDropdown) return;
+        notifDropdown.hidden = true;
+        notifBellBtn?.setAttribute('aria-expanded', 'false');
+      }
+
+      function handleIncomingNotification(notif) {
+        if (!notif) return;
+        const existingIdx = adminNotifications.findIndex((n) => n.id && notif.id && n.id === notif.id);
+        if (existingIdx >= 0) {
+          adminNotifications[existingIdx] = { ...adminNotifications[existingIdx], ...notif };
+        } else {
+          adminNotifications.unshift({
+            id: notif.id || Date.now(),
+            title: notif.title || 'Thông báo mới',
+            content: notif.content || '',
+            type: notif.type || 'order',
+            orderCode: notif.orderCode || '',
+            isRead: false,
+            createdAt: notif.createdAt || new Date().toISOString(),
+          });
+        }
+        updateNotifBellBadge();
+        renderAdminNotifications();
+      }
+
       function handleNewOrder(order) {
         if (!order?.id) return;
-        const orderId = String(order.id);
-        if (data.orders.some((item) => String(item.id) === orderId)) return;
-        data.orders.unshift(toOrderRecord(order));
-        saveRealtimeSnapshot();
-        renderAll();
-        showToast(`Đơn hàng mới ${orderId} đã được đặt thành công.`);
+        const orderId = String(order.id).replace(/^#/, '');
+        const exists = data.orders.some((item) => String(item.id).replace(/^#/, '') === orderId);
+        if (!exists) {
+          data.orders.unshift(toOrderRecord(order));
+          saveRealtimeSnapshot();
+          renderAll();
+        }
+
+        // 1. Play chime sound
+        playNewOrderSound();
+
+        // 2. Increment sidebar unread badge
+        unreadOrdersBadgeCount++;
+        updateOrdersNavBadge();
+
+        // 3. Show rich notification toast card
+        showOrderToast(order);
+
+        // 4. Register notification if not present
+        handleIncomingNotification({
+          id: `order_${orderId}_${Date.now()}`,
+          title: 'Đơn hàng mới',
+          content: `Khách hàng ${order.recipient?.name || order.customer || 'Khách'} vừa đặt đơn #${orderId} (${money(order.total || 0)}).`,
+          type: 'order',
+          orderCode: orderId,
+          createdAt: order.createdAt || new Date().toISOString(),
+        });
       }
 
       function handleOrderUpdate(update) {
@@ -4738,6 +5439,10 @@
         const button = event.target.closest('[data-section]');
         if (!button) return;
         activeSection = button.dataset.section;
+        if (activeSection === 'orders') {
+          unreadOrdersBadgeCount = 0;
+          updateOrdersNavBadge();
+        }
         currentPage = 1;
         searchTerm = '';
         statusFilter = '';
@@ -4749,6 +5454,23 @@
         });
         renderSection();
         closeMobileMenu();
+      });
+
+      notifBellBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleNotifDropdown();
+      });
+
+      notifMarkAllBtn?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        markAllAdminNotificationsRead();
+      });
+
+      document.addEventListener('click', (event) => {
+        const wrapper = document.getElementById('notif-wrapper');
+        if (wrapper && !wrapper.contains(event.target)) {
+          closeNotifDropdown();
+        }
       });
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
@@ -5126,6 +5848,7 @@
       document.getElementById('today-label').textContent = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
       renderAll();
       loadOrderReviews({ silent: true });
+      loadAdminNotifications();
       dashboardReady = true;
       pendingOrderEvents.forEach((event) => {
         if (event.type === 'new') handleNewOrder(event.order);

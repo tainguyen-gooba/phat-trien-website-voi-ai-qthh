@@ -31,7 +31,7 @@ const Utils = {
   /**
    * Hiển thị thông báo Toast góc màn hình
    */
-  showToast(message, type = 'info', duration = 3500) {
+  showToast(message, type = 'info', duration = 1500) {
     let container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');

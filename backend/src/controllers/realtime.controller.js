@@ -293,12 +293,55 @@ class RealtimeController extends BaseController {
       if (couponId) {
         await connection.execute('UPDATE coupons SET usage_count = usage_count + 1 WHERE id = ?', [couponId]);
       }
+
+      const customerName = recipient.fullName || 'Khách hàng';
+      const itemsSummary = Array.isArray(orderItems)
+        ? orderItems.map((item) => `${item.qty}x ${item.name}`).slice(0, 3).join(', ') + (orderItems.length > 3 ? '...' : '')
+        : '';
+      const notifContent = `Khách hàng ${customerName} vừa đặt đơn #${orderCode} (${Number(orderData.total).toLocaleString('vi-VN')}đ) - ${itemsSummary}`;
+
+      const [notifResult] = await connection.execute(
+        `INSERT INTO notifications (user_id, title, content, type, metadata)
+         SELECT u.id, 'Đơn hàng mới', ?, 'order', ?
+         FROM users u
+         INNER JOIN roles r ON r.id = u.role_id
+         WHERE r.name = 'admin'`,
+        [
+          notifContent,
+          JSON.stringify({
+            orderCode,
+            customerName,
+            phone: recipient.phone,
+            total: orderData.total,
+            itemsCount: orderItems.length,
+            status: 'pending',
+            createdAt: orderData.createdAt
+          })
+        ]
+      );
+
       await connection.commit();
       transactionStarted = false;
+
+      const notifPayload = {
+        id: notifResult.insertId || Date.now(),
+        title: 'Khách hàng mới đặt đơn! 🛍️',
+        content: notifContent,
+        type: 'order',
+        order: { ...orderData, statusText: 'Chờ xác nhận' },
+        orderCode,
+        customerName,
+        total: orderData.total,
+        createdAt: orderData.createdAt,
+        isRead: false
+      };
+
       req.app.get('io')?.to('admins').emit('order:new', {
         order: { ...orderData, statusText: 'Chờ xác nhận' },
         customerId: String(req.user.id),
       });
+      req.app.get('io')?.to('admins').emit('notification:new', notifPayload);
+
       return this.sendSuccess(res, 'Đặt hàng thành công.', orderData, HTTP_STATUS.CREATED);
     } catch (error) {
       if (connection && transactionStarted) await connection.rollback();
@@ -695,6 +738,64 @@ class RealtimeController extends BaseController {
         { enabled: Boolean(enabled) },
         HTTP_STATUS.OK
       );
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * Lấy danh sách thông báo hệ thống của Quản trị viên
+   */
+  async getNotifications(req, res, next) {
+    try {
+      const [rows] = await pool.execute(
+        `SELECT id, title, content, type, is_read AS isRead, metadata, created_at AS createdAt
+         FROM notifications
+         WHERE user_id = ?
+         ORDER BY id DESC
+         LIMIT 40`,
+        [req.user.id]
+      );
+      const notifications = rows.map((row) => ({
+        ...row,
+        metadata: typeof row.metadata === 'string' ? JSON.parse(row.metadata) : row.metadata,
+        isRead: Boolean(row.isRead),
+      }));
+      return this.sendSuccess(res, 'Lấy danh sách thông báo thành công.', notifications, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * Đánh dấu 1 thông báo là đã đọc
+   */
+  async markNotificationRead(req, res, next) {
+    try {
+      const notifId = Number(req.params.id);
+      if (!Number.isSafeInteger(notifId) || notifId < 1) {
+        return this.sendError(res, 'Mã thông báo không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
+      }
+      await pool.execute(
+        'UPDATE notifications SET is_read = 1 WHERE id = ? AND user_id = ?',
+        [notifId, req.user.id]
+      );
+      return this.sendSuccess(res, 'Đã đánh dấu thông báo là đã đọc.', null, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * Đánh dấu tất cả thông báo là đã đọc
+   */
+  async markAllNotificationsRead(req, res, next) {
+    try {
+      await pool.execute(
+        'UPDATE notifications SET is_read = 1 WHERE user_id = ?',
+        [req.user.id]
+      );
+      return this.sendSuccess(res, 'Đã đánh dấu tất cả thông báo là đã đọc.', null, HTTP_STATUS.OK);
     } catch (error) {
       return next(error);
     }

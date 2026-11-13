@@ -38,4 +38,14 @@ router.get('/chat/:customerId', authenticate, authorize('admin', 'customer'), (r
   realtimeController.getChatHistory(req, res, next)
 ));
 
+router.get('/notifications', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.getNotifications(req, res, next)
+));
+router.patch('/notifications/read-all', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.markAllNotificationsRead(req, res, next)
+));
+router.patch('/notifications/:id/read', authenticate, authorize('admin'), (req, res, next) => (
+  realtimeController.markNotificationRead(req, res, next)
+));
+
 module.exports = router;

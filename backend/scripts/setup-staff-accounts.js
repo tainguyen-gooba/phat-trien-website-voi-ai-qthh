@@ -89,7 +89,9 @@ async function setupRolesAndAccounts() {
     console.error('Lỗi khi thiết lập tài khoản:', error);
   } finally {
     connection.release();
-    await pool.end();
+    if (require.main === module) {
+      await pool.end();
+    }
   }
 }
 

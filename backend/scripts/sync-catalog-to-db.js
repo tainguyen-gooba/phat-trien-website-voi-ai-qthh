@@ -291,4 +291,4 @@ if (require.main === module) {
     });
 }
 
-module.exports = { syncCatalogToDatabase, syncCatalogIfSparse };
+module.exports = { syncCatalogToDatabase, syncCatalogIfSparse, loadFrontendCatalog };

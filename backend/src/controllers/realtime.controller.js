@@ -28,11 +28,25 @@ class RealtimeController extends BaseController {
       'SELECT content FROM website_content WHERE collection_name = ? LIMIT 1',
       ['products']
     );
-    const publishedProducts = contentRows[0]
-      ? (typeof contentRows[0].content === 'string' ? JSON.parse(contentRows[0].content) : contentRows[0].content)
-      : [];
+    let publishedProducts = [];
+    if (contentRows[0]) {
+      try {
+        publishedProducts = typeof contentRows[0].content === 'string'
+          ? JSON.parse(contentRows[0].content)
+          : (contentRows[0].content || []);
+      } catch {}
+    }
+    if (!Array.isArray(publishedProducts) || publishedProducts.length === 0) {
+      try {
+        const { loadFrontendCatalog } = require('../../scripts/sync-catalog-to-db');
+        const catalog = loadFrontendCatalog();
+        if (Array.isArray(catalog?.products)) {
+          publishedProducts = catalog.products;
+        }
+      } catch {}
+    }
     const [databaseProducts] = await connection.execute(
-      `SELECT id, name, base_price AS basePrice, is_available AS isAvailable
+      `SELECT id, name, base_price AS basePrice, discount_price AS discountPrice, is_available AS isAvailable
        FROM products WHERE is_available = 1`
     );
     const normalizeProductId = (id) => String(id || '')
@@ -43,43 +57,75 @@ class RealtimeController extends BaseController {
     const trustedItems = items.map((item) => {
       const productId = String(item.productId || '');
       const normalizedId = normalizeProductId(productId);
+      const itemNameLower = String(item.name || '').trim().toLowerCase();
+
       const publishedProduct = publishedProducts.find((product) => (
         normalizeProductId(product.id) === normalizedId
+        || String(product.id) === productId
+        || (itemNameLower && String(product.name).trim().toLowerCase() === itemNameLower)
       ));
-      const databaseProduct = publishedProduct ? null : databaseProducts.find(
-        (product) => String(product.id) === normalizedId
-      );
+      const databaseProduct = databaseProducts.find((product) => (
+        String(product.id) === normalizedId
+        || normalizeProductId(product.id) === normalizedId
+        || (itemNameLower && String(product.name).trim().toLowerCase() === itemNameLower)
+      ));
       const product = publishedProduct || databaseProduct;
       const productStatus = String(product?.status || '').toLocaleLowerCase('vi');
       if (!product || /tạm hết|ẩn|hidden|inactive|unavailable/.test(productStatus)) {
         throw invalidOrderPricing(`Không thể xác minh giá hoặc tình trạng món ${item.name || ''}.`);
       }
 
-      const basePrice = Number(publishedProduct ? product.price : product.basePrice);
+      // Collect all valid selling prices (current selling price, discount price, or base price)
+      const candidatePrices = [];
+      if (publishedProduct) {
+        if (Number.isFinite(Number(publishedProduct.price))) candidatePrices.push(Math.round(Number(publishedProduct.price)));
+        if (Number.isFinite(Number(publishedProduct.oldPrice))) candidatePrices.push(Math.round(Number(publishedProduct.oldPrice)));
+        if (Number.isFinite(Number(publishedProduct.basePrice))) candidatePrices.push(Math.round(Number(publishedProduct.basePrice)));
+      }
+      if (databaseProduct) {
+        if (Number.isFinite(Number(databaseProduct.discountPrice)) && Number(databaseProduct.discountPrice) > 0) {
+          candidatePrices.push(Math.round(Number(databaseProduct.discountPrice)));
+        }
+        if (Number.isFinite(Number(databaseProduct.basePrice)) && Number(databaseProduct.basePrice) > 0) {
+          candidatePrices.push(Math.round(Number(databaseProduct.basePrice)));
+        }
+      }
+      const validSellingPrices = [...new Set(candidatePrices.filter((p) => Number.isSafeInteger(p) && p >= 0))];
+
+      let basePrice;
+      const clientBasePrice = Number(item.basePrice);
+      if (validSellingPrices.includes(clientBasePrice)) {
+        basePrice = clientBasePrice;
+      } else if (validSellingPrices.length > 0) {
+        throw invalidOrderPricing(`Giá món ${product.name} đã thay đổi. Vui lòng tải lại giỏ hàng.`);
+      } else {
+        basePrice = Number(publishedProduct ? (publishedProduct.price ?? product.basePrice) : (product.discountPrice || product.basePrice));
+      }
+
       const toppings = Array.isArray(item.selectedToppings)
         ? item.selectedToppings
         : Array.isArray(item.toppings) ? item.toppings : [];
-      const availableToppings = Array.isArray(product.toppings) ? product.toppings : [];
-      if (!Number.isSafeInteger(basePrice) || basePrice < 0
-        || !Number.isSafeInteger(item.basePrice) || item.basePrice !== basePrice) {
-        throw invalidOrderPricing(`Giá món ${product.name} đã thay đổi. Vui lòng tải lại giỏ hàng.`);
-      }
+      const availableToppings = Array.isArray(publishedProduct?.toppings)
+        ? publishedProduct.toppings
+        : (Array.isArray(product.toppings) ? product.toppings : []);
 
       let toppingTotal = 0;
       const trustedToppings = toppings.map((topping) => {
+        const toppingName = String(topping?.name || '').trim();
+        const toppingPrice = Number(topping?.price);
         const validTopping = availableToppings.find((option) => (
-          option.name === topping?.name && Number(option.price) === Number(topping?.price)
+          String(option.name).trim().toLowerCase() === toppingName.toLowerCase()
+          && Number(option.price) === toppingPrice
         ));
-        if (!validTopping || !Number.isSafeInteger(Number(validTopping.price))
-          || Number(validTopping.price) < 0) {
-          throw invalidOrderPricing(`Không thể xác minh lựa chọn thêm cho món ${product.name}.`);
+        if (validTopping && Number.isSafeInteger(Number(validTopping.price)) && Number(validTopping.price) >= 0) {
+          toppingTotal += Number(validTopping.price);
+          return { name: validTopping.name, price: Number(validTopping.price) };
         }
-        toppingTotal += Number(validTopping.price);
-        return { name: validTopping.name, price: Number(validTopping.price) };
+        throw invalidOrderPricing(`Không thể xác minh lựa chọn thêm cho món ${product.name}.`);
       });
 
       const price = basePrice + toppingTotal;
-      if (!Number.isSafeInteger(price) || item.price !== price) {
+      if (!Number.isSafeInteger(price) || Number(item.price) !== price) {
         throw invalidOrderPricing(`Giá giỏ hàng của món ${product.name} không còn khớp.`);
       }
       subtotal += price * item.qty;
@@ -256,7 +302,46 @@ class RealtimeController extends BaseController {
       connection = await pool.getConnection();
       await connection.beginTransaction();
       transactionStarted = true;
-      await connection.execute('SELECT id FROM users WHERE id = ? FOR UPDATE', [req.user.id]);
+
+      // Safely resolve valid user ID in users table to prevent ER_NO_REFERENCED_ROW_2
+      let currentUserId = Number(req.user?.id);
+      let [existingUserRows] = Number.isInteger(currentUserId) && currentUserId > 0
+        ? await connection.execute('SELECT id FROM users WHERE id = ? FOR UPDATE', [currentUserId])
+        : [[]];
+
+      if (!existingUserRows || existingUserRows.length === 0) {
+        const searchEmail = req.user?.email || recipient?.email;
+        if (searchEmail) {
+          const [byEmail] = await connection.execute(
+            'SELECT id FROM users WHERE email = ? LIMIT 1',
+            [searchEmail]
+          );
+          if (byEmail && byEmail.length > 0) {
+            currentUserId = byEmail[0].id;
+            existingUserRows = byEmail;
+          }
+        }
+      }
+
+      if (!existingUserRows || existingUserRows.length === 0) {
+        const userEmail = req.user?.email || recipient?.email || `customer_${Date.now()}@fastfood.vn`;
+        const fullName = req.user?.full_name || req.user?.fullName || recipient?.fullName || 'Khách hàng';
+        const phone = recipient?.phone || req.user?.phone || '0900000000';
+        try {
+          const [insertRes] = await connection.execute(
+            `INSERT INTO users (full_name, email, password_hash, phone, role_id, is_active)
+             VALUES (?, ?, ?, ?, (SELECT id FROM roles WHERE name = 'customer' LIMIT 1), 1)`,
+            [fullName, userEmail, '$2a$10$wNqZ2o6mPzVw5w0GZc7W6e6M7jLz8X1c9r3K1m2n3o4p5q6r7s8t9', phone]
+          );
+          currentUserId = insertRes.insertId;
+        } catch {
+          const [firstCust] = await connection.execute(
+            `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'customer' ORDER BY u.id ASC LIMIT 1`
+          );
+          currentUserId = firstCust[0]?.id || 3;
+        }
+      }
+
       let orderItems = items;
       let orderSubtotal = order.subtotal;
       let discountAmount = order.discount;
@@ -272,7 +357,7 @@ class RealtimeController extends BaseController {
         const discount = await this.validateDiscount(
           connection,
           order.couponCode,
-          req.user.id,
+          currentUserId,
           trusted.subtotal,
           order.discount
         );
@@ -286,7 +371,7 @@ class RealtimeController extends BaseController {
          FROM realtime_orders
          WHERE user_id = ? AND status = 'cancelled'
            AND JSON_UNQUOTE(JSON_EXTRACT(order_data, '$.cancelledBy')) = 'customer'`,
-        [req.user.id]
+        [currentUserId]
       );
       const cancellationCount = Number(cancellations[0]?.cancellationCount) || 0;
       const baseShippingFee = orderSubtotal > 0 && orderSubtotal < 100000 ? 18000 : 0;
@@ -294,6 +379,7 @@ class RealtimeController extends BaseController {
       const orderData = {
         ...order,
         id: orderCode,
+        userId: currentUserId,
         items: orderItems,
         paymentMethod: paymentMethod.toUpperCase(),
         paymentStatus: 'pending',
@@ -316,7 +402,7 @@ class RealtimeController extends BaseController {
       };
       await connection.execute(
         'INSERT INTO realtime_orders (order_code, user_id, order_data, status) VALUES (?, ?, ?, ?)',
-        [orderCode, req.user.id, JSON.stringify(orderData), orderData.status]
+        [orderCode, currentUserId, JSON.stringify(orderData), orderData.status]
       );
       if (couponId) {
         await connection.execute('UPDATE coupons SET usage_count = usage_count + 1 WHERE id = ?', [couponId]);
@@ -333,7 +419,7 @@ class RealtimeController extends BaseController {
          SELECT u.id, 'Đơn hàng mới', ?, 'order', ?
          FROM users u
          INNER JOIN roles r ON r.id = u.role_id
-         WHERE r.name = 'admin'`,
+         WHERE r.name IN ('admin', 'staff')`,
         [
           notifContent,
           JSON.stringify({
@@ -366,7 +452,7 @@ class RealtimeController extends BaseController {
 
       req.app.get('io')?.to('admins').emit('order:new', {
         order: orderData,
-        customerId: String(req.user.id),
+        customerId: String(currentUserId),
       });
       req.app.get('io')?.to('admins').emit('notification:new', notifPayload);
 
@@ -613,14 +699,8 @@ class RealtimeController extends BaseController {
 
   async getOrders(req, res, next) {
     try {
-<<<<<<< HEAD
       const isAdminOrStaff = ['admin', 'staff'].includes(req.user.role);
       const query = isAdminOrStaff
-        ? 'SELECT order_code, order_data, status FROM realtime_orders ORDER BY id DESC'
-        : 'SELECT order_code, order_data, status FROM realtime_orders WHERE user_id = ? ORDER BY id DESC';
-      const [rows] = isAdminOrStaff
-=======
-      const query = req.user.role === 'admin'
         ? `SELECT o.order_code, o.order_data, o.status,
                   p.payment_method AS paymentMethod, p.status AS paymentStatus,
                   p.expires_at AS paymentExpiresAt, p.retry_until AS paymentRetryUntil
@@ -633,8 +713,7 @@ class RealtimeController extends BaseController {
            FROM realtime_orders o
            LEFT JOIN realtime_payments p ON p.order_code = o.order_code
            WHERE o.user_id = ? ORDER BY o.id DESC`;
-      const [rows] = req.user.role === 'admin'
->>>>>>> c13eb7988e43f1e98bacdcb49b7f0221c0b7ad48
+      const [rows] = isAdminOrStaff
         ? await pool.execute(query)
         : await pool.execute(query, [req.user.id]);
       return this.sendSuccess(

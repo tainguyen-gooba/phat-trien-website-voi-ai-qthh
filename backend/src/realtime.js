@@ -106,15 +106,9 @@ function createRealtimeServer(httpServer) {
       }
     });
 
-<<<<<<< HEAD
-    socket.on('admin:content:publish', async (payload, acknowledge = () => { }) => {
-      if (user?.role !== 'admin') {
-        acknowledge({ success: false, message: 'Chỉ admin mới được cập nhật nội dung.' });
-=======
     socket.on('admin:content:publish', async (payload, acknowledge = () => {}) => {
       if (!['admin', 'staff'].includes(user?.role)) {
         acknowledge({ success: false, message: 'Chỉ quản trị viên hoặc thành viên mới được cập nhật nội dung.' });
->>>>>>> 5371ec6f26527d7bacb0385fecc5b17bb4aab470
         return;
       }
 
@@ -162,13 +156,8 @@ function createRealtimeServer(httpServer) {
       }
     });
 
-<<<<<<< HEAD
-    socket.on('chat:send', async (payload, acknowledge = () => { }) => {
-      if (!user || !['admin', 'customer'].includes(user.role)) {
-=======
     socket.on('chat:send', async (payload, acknowledge = () => {}) => {
       if (!user || !['admin', 'staff', 'customer'].includes(user.role)) {
->>>>>>> 5371ec6f26527d7bacb0385fecc5b17bb4aab470
         acknowledge({ success: false, message: 'Đăng nhập để sử dụng chat hỗ trợ.' });
         return;
       }
@@ -317,15 +306,9 @@ function createRealtimeServer(httpServer) {
       }
     });
 
-<<<<<<< HEAD
-    socket.on('admin:order:status', async (payload, acknowledge = () => { }) => {
-      if (user?.role !== 'admin') {
-        acknowledge({ success: false, message: 'Chỉ admin mới được cập nhật đơn hàng.' });
-=======
     socket.on('admin:order:status', async (payload, acknowledge = () => {}) => {
       if (!['admin', 'staff'].includes(user?.role)) {
         acknowledge({ success: false, message: 'Chỉ quản trị viên hoặc thành viên mới được cập nhật đơn hàng.' });
->>>>>>> 5371ec6f26527d7bacb0385fecc5b17bb4aab470
         return;
       }
 

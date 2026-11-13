@@ -4026,10 +4026,12 @@
         return;
       }
 
-      if (authenticatedUser.role !== 'admin') {
-        showAccessMessage('Bạn không có quyền truy cập', 'Trang quản trị chỉ dành cho tài khoản quản trị viên.');
+      if (!['admin', 'staff'].includes(authenticatedUser.role)) {
+        showAccessMessage('Bạn không có quyền truy cập', 'Trang quản trị chỉ dành cho tài khoản quản trị viên và thành viên ban quản trị.');
         return;
       }
+      const isAdmin = authenticatedUser.role === 'admin';
+      const isStaff = authenticatedUser.role === 'staff';
 
       const liveSocket = await window.initFastfoodRealtime(authenticatedUser);
       let reviewsUiReady = false;
@@ -4143,8 +4145,53 @@
         return;
       }
 
-      document.querySelector('.profile-copy strong').textContent = authenticatedUser.fullName;
-      document.querySelector('.profile-copy span').textContent = authenticatedUser.email;
+      const profileCopy = document.querySelector('.profile-copy');
+      const avatarEl = document.querySelector('.admin-profile .avatar');
+      const eyebrowEl = document.querySelector('.eyebrow');
+      if (isAdmin) {
+        if (avatarEl) {
+          avatarEl.textContent = 'AD';
+          avatarEl.style.background = 'var(--orange)';
+        }
+        if (profileCopy) {
+          profileCopy.innerHTML = `<strong>${escapeHtml(authenticatedUser.fullName || 'Quản trị viên')}</strong><span style="font-size:11px;font-weight:700;color:var(--orange-dark);background:var(--orange-pale);padding:2px 8px;border-radius:12px;margin-top:2px;display:inline-block;">👑 Quản trị viên (Toàn quyền)</span>`;
+        }
+        if (eyebrowEl) eyebrowEl.textContent = 'Xin chào, Quản trị viên (Toàn quyền)';
+      } else {
+        if (avatarEl) {
+          avatarEl.textContent = 'TV';
+          avatarEl.style.background = '#0284c7';
+        }
+        if (profileCopy) {
+          profileCopy.innerHTML = `<strong>${escapeHtml(authenticatedUser.fullName || 'Thành viên ban quản trị')}</strong><span style="font-size:11px;font-weight:700;color:#0369a1;background:#e0f2fe;padding:2px 8px;border-radius:12px;margin-top:2px;display:inline-block;">🛡️ Thành viên (Quyền hạn chế)</span>`;
+        }
+        if (eyebrowEl) eyebrowEl.textContent = `Xin chào, ${escapeHtml(authenticatedUser.fullName || 'Thành viên ban quản trị')} (Quyền hạn chế)`;
+
+        // Gắn huy hiệu khóa cho các chức năng chỉ dành riêng cho Admin
+        const usersBtn = document.querySelector('.nav-item[data-section="users"]');
+        if (usersBtn) {
+          usersBtn.title = 'Chỉ Quản trị viên (Admin) mới có quyền truy cập mục Người dùng & Phân quyền';
+          usersBtn.style.opacity = '0.55';
+          if (!usersBtn.querySelector('.nav-lock-badge')) {
+            const lockBadge = document.createElement('span');
+            lockBadge.className = 'nav-badge nav-lock-badge';
+            lockBadge.textContent = '🔒 Admin';
+            lockBadge.style.cssText = 'background:#f1f5f9;color:#64748b;font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid #cbd5e1;margin-left:auto;font-weight:600;';
+            usersBtn.appendChild(lockBadge);
+          }
+        }
+        const aiBotBtn = document.querySelector('.nav-item[data-section="ai-bot"]');
+        if (aiBotBtn) {
+          aiBotBtn.title = 'Chỉ Quản trị viên (Admin) mới có quyền cấu hình Trợ lý AI Chatbot';
+          aiBotBtn.style.opacity = '0.55';
+          const oldBadge = aiBotBtn.querySelector('.nav-badge-ai');
+          if (oldBadge) {
+            oldBadge.textContent = '🔒 Admin';
+            oldBadge.style.cssText = 'background:#f1f5f9;color:#64748b;font-size:10px;padding:2px 6px;border-radius:6px;border:1px solid #cbd5e1;margin-left:auto;font-weight:600;';
+          }
+        }
+      }
+
       document.getElementById('logout-button').addEventListener('click', () => {
         sessionStorage.removeItem(tokenKey);
         for (const key of ['fastfood_user', 'fastfood_cart', 'fastfood_orders', 'fastfood_active_order', 'fastfood_applied_coupon', 'fastfood_available_coupons']) {
@@ -4273,12 +4320,16 @@
           ],
         orders: [],
         users: [
-          { id: 'usr-1', name: 'Nguyễn Minh Anh', email: 'minhanh@gmail.com', phone: '0901 234 567', role: 'Khách hàng', status: 'Đang hoạt động' },
-          { id: 'usr-2', name: 'Trần Hoàng Nam', email: 'hoangnam@gmail.com', phone: '0902 345 678', role: 'Khách hàng', status: 'Đang hoạt động' },
-          { id: 'usr-3', name: 'Lê Thu Hà', email: 'thuha@gmail.com', phone: '0903 456 789', role: 'Chủ nhà hàng', status: 'Đang hoạt động' },
-          { id: 'usr-4', name: 'Phạm Quốc Bảo', email: 'quocbao@gmail.com', phone: '0904 567 890', role: 'Tài xế', status: 'Đang hoạt động' },
-          { id: 'usr-5', name: 'Võ Ngọc Linh', email: 'ngoclinh@gmail.com', phone: '0905 678 901', role: 'Khách hàng', status: 'Không hoạt động' },
-          { id: 'usr-6', name: 'Đặng Tuấn Kiệt', email: 'tuankiet@gmail.com', phone: '0906 789 012', role: 'Tài xế', status: 'Đã khóa' },
+          { id: 'usr-admin', name: 'Hệ Thống Quản Trị', email: 'admin@fastfood.vn', phone: '0901 000 001', role: 'Quản trị viên (Admin)', status: 'Đang hoạt động' },
+          { id: 'usr-staff1', name: 'Nguyễn Văn Thành (Thành viên 1)', email: 'staff1@fastfood.vn', phone: '0911 000 001', role: 'Thành viên ban quản trị', status: 'Đang hoạt động' },
+          { id: 'usr-staff2', name: 'Trần Thị Mai (Thành viên 2)', email: 'staff2@fastfood.vn', phone: '0911 000 002', role: 'Thành viên ban quản trị', status: 'Đang hoạt động' },
+          { id: 'usr-staff3', name: 'Lê Hoàng Long (Thành viên 3)', email: 'staff3@fastfood.vn', phone: '0911 000 003', role: 'Thành viên ban quản trị', status: 'Đang hoạt động' },
+          { id: 'usr-staff4', name: 'Phạm Thu Hương (Thành viên 4)', email: 'staff4@fastfood.vn', phone: '0911 000 004', role: 'Thành viên ban quản trị', status: 'Đang hoạt động' },
+          { id: 'usr-c1', name: 'Anh Em', email: 'ab@gmail.com', phone: '0789 985 265', role: 'Khách hàng', status: 'Đang hoạt động' },
+          { id: 'usr-c2', name: 'Thin Ca', email: 'anh@gmail.com', phone: '0349 023 478', role: 'Khách hàng', status: 'Đang hoạt động' },
+          { id: 'usr-c3', name: 'Thìn Ca', email: 'thin@gmail.com', phone: '0783 519 867', role: 'Khách hàng', status: 'Đang hoạt động' },
+          { id: 'usr-o1', name: 'Nguyễn Văn Chủ Quán', email: 'owner@fastfood.vn', phone: '0902 000 002', role: 'Chủ nhà hàng', status: 'Đang hoạt động' },
+          { id: 'usr-s1', name: 'Lê Tài Xế Giao Hàng', email: 'shipper@fastfood.vn', phone: '0904 000 004', role: 'Tài xế', status: 'Đang hoạt động' },
         ],
       };
 
@@ -5346,6 +5397,10 @@
 
       function openForm(record) {
         const collection = sections[activeSection].collection;
+        if (collection === 'users' && !isAdmin) {
+          showToast('Chỉ Quản trị viên (Admin) mới có quyền thêm/sửa người dùng.', true);
+          return;
+        }
         const schema = schemas[collection];
         editingId = record ? record.id : null;
         document.getElementById('save-button').disabled = false;
@@ -5483,7 +5538,14 @@
       document.getElementById('navigation').addEventListener('click', (event) => {
         const button = event.target.closest('[data-section]');
         if (!button) return;
-        activeSection = button.dataset.section;
+        const targetSection = button.dataset.section;
+        if (!isAdmin && (targetSection === 'users' || targetSection === 'ai-bot')) {
+          showToast(targetSection === 'users'
+            ? 'Bạn đang đăng nhập tài khoản Thành viên. Mục "Người dùng & Phân quyền" chỉ dành riêng cho Quản trị viên (Admin)!'
+            : 'Bạn đang đăng nhập tài khoản Thành viên. Mục "Trợ lý AI Chatbot" chỉ dành riêng cho Quản trị viên (Admin)!', true);
+          return;
+        }
+        activeSection = targetSection;
         if (activeSection === 'orders') {
           unreadOrdersBadgeCount = 0;
           updateOrdersNavBadge();
@@ -5552,18 +5614,30 @@
           showToast('Đơn hàng chỉ được tạo bởi khách hàng qua quy trình đặt hàng.', true);
           return;
         }
+        if (sections[activeSection].collection === 'users' && !isAdmin) {
+          showToast('Chỉ Quản trị viên (Admin) mới có quyền thêm người dùng.', true);
+          return;
+        }
         openForm(null);
       });
       tableBody.addEventListener('click', async (event) => {
         const button = event.target.closest('[data-action]');
         if (!button) return;
         const collection = sections[activeSection].collection;
+        if (collection === 'users' && !isAdmin) {
+          showToast('Chỉ Quản trị viên (Admin) mới có quyền chỉnh sửa hoặc xóa người dùng.', true);
+          return;
+        }
         if (collection === 'orders' && button.dataset.action === 'delete') {
           showToast('Không thể xóa đơn hàng tại đây; hãy cập nhật trạng thái để giữ đồng bộ.', true);
           return;
         }
         const record = data[collection].find((item) => item.id === button.dataset.id);
         if (!record) return;
+        if (collection === 'users' && record.email === 'admin@fastfood.vn' && button.dataset.action === 'delete') {
+          showToast('Không thể xóa tài khoản Quản trị viên tối cao!', true);
+          return;
+        }
         if (button.dataset.action === 'edit') {
           openForm(record);
           return;
@@ -5589,6 +5663,10 @@
         event.preventDefault();
         if (!form.reportValidity()) return;
         const collection = sections[activeSection].collection;
+        if (collection === 'users' && !isAdmin) {
+          showToast('Chỉ Quản trị viên (Admin) mới có quyền lưu thay đổi người dùng.', true);
+          return;
+        }
         const schema = schemas[collection];
         const wasEditing = Boolean(editingId);
         const saveButton = document.getElementById('save-button');

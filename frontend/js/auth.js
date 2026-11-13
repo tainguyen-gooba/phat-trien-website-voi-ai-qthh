@@ -68,7 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         UIComponents.showToast('Đăng nhập thành công! Đang chuyển trang...', 'success');
         window.setTimeout(() => {
-          window.location.href = returnPath;
+          if (returnPath && returnPath !== '/pages/home.html') {
+            window.location.href = returnPath;
+          } else if (['admin', 'staff'].includes(user.role)) {
+            window.location.href = './admin/dashboard.html';
+          } else {
+            window.location.href = returnPath;
+          }
         }, 500);
       } catch (error) {
         UIComponents.showToast(error.message || 'Không thể kết nối máy chủ đăng nhập.', 'error');

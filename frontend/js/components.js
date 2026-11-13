@@ -157,7 +157,7 @@ const UIComponents = {
     const cart = window.StorageManager ? window.StorageManager.getCart() : [];
     const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
     const user = window.StorageManager ? window.StorageManager.getUser() : null;
-    const isAdmin = Boolean((user && user.isLoggedIn && user.role === 'admin') || activePage === 'admin' || window.location.pathname.includes('/admin/'));
+    const isManager = Boolean((user && user.isLoggedIn && ['admin', 'staff'].includes(user.role)) || activePage === 'admin' || window.location.pathname.includes('/admin/'));
 
     headerContainer.className = 'site-header';
     headerContainer.innerHTML = `
@@ -186,8 +186,8 @@ const UIComponents = {
 
         <!-- Right Actions Controls -->
         <div class="header-actions">
-          <!-- Cart Link (Ẩn đối với Quản trị viên Admin) -->
-          ${!isAdmin ? `
+          <!-- Cart Link (Ẩn đối với Quản trị viên & Thành viên ban quản trị) -->
+          ${!isManager ? `
           <a href="./cart.html" class="cart-btn-link" title="Xem giỏ hàng">
             🛒
             <span id="nav-cart-badge" class="cart-counter" style="${totalItems > 0 ? '' : 'display:none;'}">${totalItems}</span>
@@ -195,7 +195,7 @@ const UIComponents = {
           ` : ''}
 
           <!-- Favorite / Yêu thích Link -->
-          ${!isAdmin ? `
+          ${!isManager ? `
           <a href="./favorites.html" class="favorite-nav-btn" title="Yêu thích của bạn">
             ♡
             <span id="nav-favorite-badge" class="cart-counter" style="display:none;">0</span>
@@ -208,7 +208,7 @@ const UIComponents = {
               <img src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80" alt="Avatar" class="user-avatar-mini" style="object-fit:cover;">
               <span>${user.fullName ? user.fullName.split(' ').slice(-1)[0] : 'Tài Khoản'}</span>
             </a>
-            ${user.role === 'admin' ? '<a href="./admin/dashboard.html" class="btn btn-primary btn-sm">Quản trị</a>' : ''}
+            ${['admin', 'staff'].includes(user.role) ? `<a href="./admin/dashboard.html" class="btn btn-primary btn-sm">${user.role === 'admin' ? 'Quản trị' : 'Quản lý'}</a>` : ''}
           ` : `
             <a href="./login.html" class="btn btn-outline btn-sm">Đăng Nhập</a>
             <a href="./register.html" class="btn btn-primary btn-sm">Đăng Ký</a>
@@ -540,8 +540,8 @@ const UIComponents = {
 
   confirmAddToCart(productId) {
     const user = window.StorageManager ? window.StorageManager.getUser() : null;
-    if (user && user.isLoggedIn && user.role === 'admin') {
-      this.showToast('Tài khoản Quản trị viên (Admin) chỉ dùng để quản lý hệ thống, không thể mua hàng!', 'warning', 3500);
+    if (user && user.isLoggedIn && ['admin', 'staff'].includes(user.role)) {
+      this.showToast('Tài khoản Quản trị / Thành viên chỉ dùng để quản trị hệ thống, không thể mua hàng!', 'warning', 3500);
       this.closeFoodModal();
       return;
     }

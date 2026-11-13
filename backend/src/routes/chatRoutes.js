@@ -39,11 +39,11 @@ router.post('/new-session', optionalAuth, chatController.newSession);
 router.get('/status', optionalAuth, chatController.getSupportStatus);
 router.get('/recommendations', chatController.getRecommendations);
 
-// Admin quản lý hộp thư "Nhân viên hỗ trợ"
-router.get('/admin/conversations', authenticate, authorize('admin'), chatController.getAdminConversations);
-router.get('/admin/sessions/:sessionId/messages', authenticate, authorize('admin'), chatController.getAdminSessionMessages);
-router.post('/admin/sessions/:sessionId/reply', authenticate, authorize('admin'), chatController.sendAdminReply);
-router.patch('/admin/status', authenticate, authorize('admin'), chatController.updateAdminBusyStatus);
-router.patch('/admin/sessions/:sessionId/automation', authenticate, authorize('admin'), chatController.toggleSessionAutomation);
+// Admin & Nhân viên quản lý hộp thư "Nhân viên hỗ trợ"
+router.get('/admin/conversations', authenticate, authorize('admin', 'staff'), chatController.getAdminConversations);
+router.get('/admin/sessions/:sessionId/messages', authenticate, authorize('admin', 'staff'), chatController.getAdminSessionMessages);
+router.post('/admin/sessions/:sessionId/reply', authenticate, authorize('admin', 'staff'), chatController.sendAdminReply);
+router.patch('/admin/status', authenticate, authorize('admin', 'staff'), chatController.updateAdminBusyStatus);
+router.patch('/admin/sessions/:sessionId/automation', authenticate, authorize('admin', 'staff'), chatController.toggleSessionAutomation);
 
 module.exports = router;

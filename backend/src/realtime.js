@@ -84,7 +84,7 @@ function createRealtimeServer(httpServer) {
     socket.join('public');
     if (user) {
       socket.join(`user:${user.id}`);
-      if (user.role === 'admin') {
+      if (['admin', 'staff'].includes(user.role)) {
         socket.join('admins');
         io.emit('support:status', chatController.getGlobalSupportState(io));
       }
@@ -99,16 +99,22 @@ function createRealtimeServer(httpServer) {
     });
 
     socket.on('disconnect', () => {
-      if (user?.role === 'admin') {
+      if (['admin', 'staff'].includes(user?.role)) {
         setTimeout(() => {
           io.emit('support:status', chatController.getGlobalSupportState(io));
         }, 100);
       }
     });
 
+<<<<<<< HEAD
     socket.on('admin:content:publish', async (payload, acknowledge = () => { }) => {
       if (user?.role !== 'admin') {
         acknowledge({ success: false, message: 'Chỉ admin mới được cập nhật nội dung.' });
+=======
+    socket.on('admin:content:publish', async (payload, acknowledge = () => {}) => {
+      if (!['admin', 'staff'].includes(user?.role)) {
+        acknowledge({ success: false, message: 'Chỉ quản trị viên hoặc thành viên mới được cập nhật nội dung.' });
+>>>>>>> 5371ec6f26527d7bacb0385fecc5b17bb4aab470
         return;
       }
 
@@ -156,14 +162,20 @@ function createRealtimeServer(httpServer) {
       }
     });
 
+<<<<<<< HEAD
     socket.on('chat:send', async (payload, acknowledge = () => { }) => {
       if (!user || !['admin', 'customer'].includes(user.role)) {
+=======
+    socket.on('chat:send', async (payload, acknowledge = () => {}) => {
+      if (!user || !['admin', 'staff', 'customer'].includes(user.role)) {
+>>>>>>> 5371ec6f26527d7bacb0385fecc5b17bb4aab470
         acknowledge({ success: false, message: 'Đăng nhập để sử dụng chat hỗ trợ.' });
         return;
       }
 
+      const isStaffOrAdmin = ['admin', 'staff'].includes(user.role);
       const message = typeof payload?.message === 'string' ? payload.message.trim() : '';
-      const customerId = user.role === 'admin' ? Number(payload?.customerId) : Number(user.id);
+      const customerId = isStaffOrAdmin ? Number(payload?.customerId) : Number(user.id);
       if (!message || message.length > 1000 || !Number.isSafeInteger(customerId) || customerId < 1) {
         acknowledge({ success: false, message: 'Nội dung tin nhắn không hợp lệ.' });
         return;
@@ -171,7 +183,7 @@ function createRealtimeServer(httpServer) {
 
       let connection;
       try {
-        if (user.role === 'admin') {
+        if (isStaffOrAdmin) {
           const [customers] = await pool.execute(
             `SELECT u.id FROM users u
              INNER JOIN roles r ON r.id = u.role_id
@@ -190,7 +202,7 @@ function createRealtimeServer(httpServer) {
           `INSERT IGNORE INTO chat_automation (customer_id) VALUES (?)`,
           [customerId]
         );
-        if (user.role === 'admin') {
+        if (isStaffOrAdmin) {
           await connection.execute(
             `UPDATE chat_automation
              SET paused_until = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 10 MINUTE)
@@ -226,7 +238,7 @@ function createRealtimeServer(httpServer) {
           });
         }
 
-        const recipientId = user.role === 'admin' ? customerId : null;
+        const recipientId = isStaffOrAdmin ? customerId : null;
         if (recipientId) {
           await pool.execute(
             `INSERT INTO notifications (user_id, title, content, type, metadata)
@@ -305,9 +317,15 @@ function createRealtimeServer(httpServer) {
       }
     });
 
+<<<<<<< HEAD
     socket.on('admin:order:status', async (payload, acknowledge = () => { }) => {
       if (user?.role !== 'admin') {
         acknowledge({ success: false, message: 'Chỉ admin mới được cập nhật đơn hàng.' });
+=======
+    socket.on('admin:order:status', async (payload, acknowledge = () => {}) => {
+      if (!['admin', 'staff'].includes(user?.role)) {
+        acknowledge({ success: false, message: 'Chỉ quản trị viên hoặc thành viên mới được cập nhật đơn hàng.' });
+>>>>>>> 5371ec6f26527d7bacb0385fecc5b17bb4aab470
         return;
       }
 

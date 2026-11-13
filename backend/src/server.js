@@ -38,6 +38,17 @@ const server = httpServer.listen(PORT, async () => {
     } catch (syncErr) {
       logger.warn(`[Database] Không thể tự động đồng bộ danh mục: ${syncErr.message}`);
     }
+    try {
+      const { pool } = require('./config/db.config');
+      const [[staffRow]] = await pool.query("SELECT COUNT(*) AS cnt FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'staff'");
+      if (!staffRow?.cnt || Number(staffRow.cnt) < 4) {
+        const { setupRolesAndAccounts } = require('../scripts/setup-staff-accounts');
+        await setupRolesAndAccounts();
+        logger.info('[Database] Đã tự động thiết lập vai trò staff và 4 tài khoản thành viên lên MySQL.');
+      }
+    } catch (accErr) {
+      logger.warn(`[Database] Không thể tự động kiểm tra tài khoản thành viên: ${accErr.message}`);
+    }
   } else {
     logger.warn(`[Database] CẢNH BÁO: ${dbStatus.message}`);
     logger.warn(`[Database] Gợi ý: ${dbStatus.hint}`);

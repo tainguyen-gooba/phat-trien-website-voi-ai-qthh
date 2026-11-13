@@ -1,0 +1,7 @@
+tk mk admin:
+admin@fastfood.vn
+tk khách:
+1.ab@gmail.com
+2.anh@gmail.com
+3.Thin@gmail.com
+mk: 123456 mk chung nha

@@ -1,7 +1,67 @@
-tk mk admin:
-admin@fastfood.vn
-tk khách:
-1.ab@gmail.com
-2.anh@gmail.com
-3.Thin@gmail.com
-mk: 123456 mk chung nha
+===================================================================
+                    DANH SÁCH TÀI KHOẢN HỆ THỐNG FASTFOOD
+===================================================================
+MẬT KHẨU CHUNG CHO TẤT CẢ TÀI KHOẢN: 123456
+
+-------------------------------------------------------------------
+1. TÀI KHOẢN QUẢN TRỊ VIÊN (ADMIN) - TOÀN QUYỀN HỆ THỐNG (FULL QUYỀN):
+-------------------------------------------------------------------
+- Email: admin@fastfood.vn
+- Mật khẩu: 123456
+- Vai trò: Quản trị viên (Admin)
+- Quyền hạn:
+  + Toàn quyền truy cập tất cả chức năng trên website & trang Admin
+  + Quản lý Người dùng & Phân quyền (Xem, thêm, sửa, xóa, khóa tài khoản)
+  + Cấu hình Trợ lý AI Chatbot Quản Trị & Tự động hóa hệ thống
+  + Quản lý Danh mục, Sản phẩm món ăn, Quán ăn (Thêm, sửa, xóa)
+  + Quản lý Đơn hàng & Cập nhật tiến độ đơn
+  + Hộp thư Tin nhắn khách hàng & Đánh giá nhận xét
+
+-------------------------------------------------------------------
+2. 4 TÀI KHOẢN THÀNH VIÊN BAN QUẢN TRỊ (STAFF) - QUYỀN HẠN CHẾ:
+-------------------------------------------------------------------
+* Thành viên 1:
+  - Họ tên: Nguyễn Văn Thành
+  - Email: staff1@fastfood.vn
+  - Mật khẩu: 123456
+  - Số điện thoại: 0911000001
+
+* Thành viên 2:
+  - Họ tên: Trần Thị Mai
+  - Email: staff2@fastfood.vn
+  - Mật khẩu: 123456
+  - Số điện thoại: 0911000002
+
+* Thành viên 3:
+  - Họ tên: Lê Hoàng Long
+  - Email: staff3@fastfood.vn
+  - Mật khẩu: 123456
+  - Số điện thoại: 0911000003
+
+* Thành viên 4:
+  - Họ tên: Phạm Thu Hương
+  - Email: staff4@fastfood.vn
+  - Mật khẩu: 123456
+  - Số điện thoại: 0911000004
+
+* Phân quyền & Giới hạn của Thành viên:
+  + ĐƯỢC PHÉP:
+    - Xem thống kê doanh thu, đơn hàng, biểu đồ tổng quan (Dashboard)
+    - Quản lý Sản phẩm (Xem, thêm, sửa giá, sửa ảnh, xóa món ăn)
+    - Quản lý Danh mục (Xem, thêm, sửa, xóa danh mục món)
+    - Quản lý Quán ăn (Xem, thêm, sửa thông tin, xóa quán)
+    - Quản lý Đơn hàng (Xem chi tiết đơn, cập nhật trạng thái đơn hàng)
+    - Hộp thư hỗ trợ khách hàng (Nhận và trả lời tin nhắn của khách realtime)
+    - Xem và phản hồi Đánh giá nhận xét từ khách hàng
+  + BỊ HẠN CHẾ (KHÔNG ĐƯỢC PHÉP):
+    - ❌ KHÔNG được truy cập mục "Người dùng": Không được xem danh sách, không được tạo, sửa, xóa hay phân quyền tài khoản người dùng khác.
+    - ❌ KHÔNG được cấu hình Trợ lý AI Chatbot & Cài đặt hệ thống.
+    - ❌ KHÔNG được xóa hoặc chỉnh sửa tài khoản Quản trị viên tối cao (Admin).
+
+-------------------------------------------------------------------
+3. TÀI KHOẢN KHÁCH HÀNG (CUSTOMER):
+-------------------------------------------------------------------
+1. ab@gmail.com    | Mật khẩu: 123456
+2. anh@gmail.com   | Mật khẩu: 123456
+3. thin@gmail.com  | Mật khẩu: 123456
+===================================================================

@@ -194,8 +194,8 @@ class RealtimeController extends BaseController {
   }
 
   async createOrder(req, res, next) {
-    if (req.user?.role === 'admin') {
-      return this.sendError(res, 'Tài khoản Quản trị viên (Admin) chỉ dùng để quản lý hệ thống, không có quyền đặt hàng hoặc thanh toán.', HTTP_STATUS.FORBIDDEN);
+    if (['admin', 'staff'].includes(req.user?.role)) {
+      return this.sendError(res, 'Tài khoản Quản trị / Nhân viên chỉ dùng để quản lý hệ thống, không có quyền đặt hàng hoặc thanh toán.', HTTP_STATUS.FORBIDDEN);
     }
 
     const order = req.body?.order;
@@ -585,10 +585,11 @@ class RealtimeController extends BaseController {
 
   async getOrders(req, res, next) {
     try {
-      const query = req.user.role === 'admin'
+      const isAdminOrStaff = ['admin', 'staff'].includes(req.user.role);
+      const query = isAdminOrStaff
         ? 'SELECT order_code, order_data, status FROM realtime_orders ORDER BY id DESC'
         : 'SELECT order_code, order_data, status FROM realtime_orders WHERE user_id = ? ORDER BY id DESC';
-      const [rows] = req.user.role === 'admin'
+      const [rows] = isAdminOrStaff
         ? await pool.execute(query)
         : await pool.execute(query, [req.user.id]);
       return this.sendSuccess(
@@ -623,7 +624,7 @@ class RealtimeController extends BaseController {
       if (!Number.isSafeInteger(customerId) || customerId < 1) {
         return this.sendError(res, 'Tài khoản chat không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
       }
-      if (req.user.role !== 'admin' && String(req.user.id) !== String(customerId)) {
+      if (!['admin', 'staff'].includes(req.user.role) && String(req.user.id) !== String(customerId)) {
         return this.sendError(res, 'Bạn không có quyền xem cuộc trò chuyện này.', HTTP_STATUS.FORBIDDEN);
       }
 

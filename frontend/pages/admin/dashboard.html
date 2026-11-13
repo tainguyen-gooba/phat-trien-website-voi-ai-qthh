@@ -4937,27 +4937,72 @@
       async function persist(collection) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          const apiUrl = window.location.port === '5000'
+            ? `${window.location.origin}/api/v1`
+            : 'http://localhost:5000/api/v1';
+
           if (collection === 'categories' || collection === 'products' || collection === 'restaurants') {
-            if (!liveSocket) throw new Error('Không thể kết nối dịch vụ realtime.');
-            const result = await new Promise((resolve, reject) => {
-              liveSocket.timeout(5000).emit(
-                'admin:content:publish',
-                { collection, records: data[collection] },
-                (error, response) => error ? reject(error) : resolve(response)
-              );
-            });
-            if (!result?.success) throw new Error(result?.message || 'Không thể đồng bộ dữ liệu website.');
+            let published = false;
+            if (liveSocket && liveSocket.connected) {
+              try {
+                const result = await new Promise((resolve, reject) => {
+                  liveSocket.timeout(5000).emit(
+                    'admin:content:publish',
+                    { collection, records: data[collection] },
+                    (error, response) => error ? reject(error) : resolve(response)
+                  );
+                });
+                if (result?.success) published = true;
+              } catch (socketErr) {
+                console.warn('[Realtime] Socket emit failed, trying REST fallback:', socketErr.message);
+              }
+            }
+            if (!published) {
+              const res = await fetch(`${apiUrl}/realtime/content/${collection}`, {
+                method: 'PUT',
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${token}`
+                },
+                body: JSON.stringify({ records: data[collection] })
+              });
+              const resData = await res.json();
+              if (!res.ok || !resData.success) {
+                throw new Error(resData?.message || 'Không thể đồng bộ dữ liệu website.');
+              }
+            }
           } else if (collection === 'orders') {
             const currentRecord = data.orders.find((order) => order.id === editingId);
-            if (currentRecord && liveSocket) {
-              const result = await new Promise((resolve, reject) => {
-                liveSocket.timeout(5000).emit('admin:order:status', currentRecord, (error, response) => (
-                  error ? reject(error) : resolve(response)
-                ));
-              });
-              if (!result?.success) throw new Error(result?.message || 'Không thể đồng bộ trạng thái đơn hàng.');
+            if (currentRecord) {
+              let updated = false;
+              if (liveSocket && liveSocket.connected) {
+                try {
+                  const result = await new Promise((resolve, reject) => {
+                    liveSocket.timeout(5000).emit('admin:order:status', currentRecord, (error, response) => (
+                      error ? reject(error) : resolve(response)
+                    ));
+                  });
+                  if (result?.success) updated = true;
+                } catch (socketErr) {
+                  console.warn('[Realtime] Socket emit failed, trying REST fallback:', socketErr.message);
+                }
+              }
+              if (!updated) {
+                const cleanCode = String(currentRecord.orderNo || currentRecord.id).replace(/^#/, '').trim();
+                const res = await fetch(`${apiUrl}/realtime/orders/${cleanCode}/status`, {
+                  method: 'PATCH',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    Authorization: `Bearer ${token}`
+                  },
+                  body: JSON.stringify({ status: currentRecord.status })
+                });
+                const resData = await res.json();
+                if (!res.ok || !resData.success) {
+                  throw new Error(resData?.message || 'Không thể đồng bộ trạng thái đơn hàng.');
+                }
+              }
             }
-
           }
           return true;
         } catch (error) {

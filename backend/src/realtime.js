@@ -12,6 +12,22 @@ const ORDER_STATUSES = {
   'Đang giao': 'delivering',
   'Đã giao': 'delivered',
   'Đã hủy': 'cancelled',
+  pending: 'pending',
+  preparing: 'preparing',
+  delivering: 'delivering',
+  delivered: 'delivered',
+  cancelled: 'cancelled',
+  placed: 'pending',
+  confirmed: 'preparing',
+  completed: 'delivered',
+};
+
+const DISPLAY_STATUS_MAP = {
+  pending: 'Chờ xác nhận',
+  preparing: 'Đang chuẩn bị',
+  delivering: 'Đang giao',
+  delivered: 'Đã giao',
+  cancelled: 'Đã hủy',
 };
 
 function buildChatAssistantReply(message) {
@@ -97,12 +113,27 @@ function createRealtimeServer(httpServer) {
       }
 
       const { collection, records } = payload || {};
+      const isValidValue = (val) => {
+        if (val === null || val === undefined) return true;
+        const t = typeof val;
+        if (t === 'string') return val.length <= 5000;
+        if (t === 'number') return Number.isFinite(val);
+        if (t === 'boolean') return true;
+        if (Array.isArray(val)) {
+          return val.length <= 100 && val.every((item) => (
+            item && typeof item === 'object'
+              ? Object.values(item).every(isValidValue)
+              : isValidValue(item)
+          ));
+        }
+        if (t === 'object') {
+          return Object.values(val).every(isValidValue);
+        }
+        return false;
+      };
       const invalidRecord = (record) => !record || typeof record !== 'object' || Array.isArray(record)
         || !/^[a-zA-Z0-9_-]{1,80}$/.test(String(record.id || ''))
-        || Object.values(record).some((value) => (
-          typeof value === 'string' && value.length > 500
-        ) || (typeof value === 'number' && !Number.isFinite(value))
-          || (value !== null && !['string', 'number', 'boolean'].includes(typeof value)));
+        || !Object.values(record).every(isValidValue);
       if (!CONTENT_COLLECTIONS.has(collection) || !Array.isArray(records)
         || records.length > 500 || records.some(invalidRecord)) {
         acknowledge({ success: false, message: 'Dữ liệu cập nhật không hợp lệ.' });
@@ -280,70 +311,94 @@ function createRealtimeServer(httpServer) {
         return;
       }
 
-      const orderCode = typeof payload?.orderNo === 'string'
-        ? payload.orderNo.replace(/^#/, '').trim()
-        : '';
-      const status = ORDER_STATUSES[payload?.status];
+      const orderCode = String(payload?.orderNo || payload?.id || payload?.orderCode || '').replace(/^#/, '').trim();
+      const rawInput = typeof payload?.status === 'string' ? payload.status.trim() : '';
+      const status = ORDER_STATUSES[rawInput];
+      const displayStatus = DISPLAY_STATUS_MAP[status] || rawInput;
+
       if (!orderCode || !status) {
         acknowledge({ success: false, message: 'Mã đơn hoặc trạng thái không hợp lệ.' });
         return;
       }
 
       try {
-        const [orders] = await pool.execute(
-          'SELECT id, user_id, status FROM orders WHERE order_code = ? LIMIT 1',
-          [orderCode]
-        );
         const [realtimeOrders] = await pool.execute(
-          'SELECT id, user_id, status FROM realtime_orders WHERE order_code = ? LIMIT 1',
+          'SELECT id, user_id, status, order_data FROM realtime_orders WHERE order_code = ? LIMIT 1',
           [orderCode]
         );
-        const order = orders[0] || realtimeOrders[0];
+        const [orders] = await pool.execute(
+          'SELECT id, customer_id, order_status FROM orders WHERE order_code = ? LIMIT 1',
+          [orderCode]
+        );
+        const order = realtimeOrders[0] || orders[0];
         if (!order) {
           acknowledge({ success: false, message: 'Không tìm thấy đơn hàng cần cập nhật.' });
           return;
         }
-        if (order.status === 'cancelled' && status !== 'cancelled') {
+
+        const currentStatus = realtimeOrders[0]?.status || orders[0]?.order_status;
+        if (currentStatus === 'cancelled' && status !== 'cancelled') {
           acknowledge({ success: false, message: 'Đơn hàng đã hủy không thể khôi phục trạng thái.' });
           return;
         }
 
-        if (orders[0]) {
-          await pool.execute(
-            `UPDATE orders SET status = ?, delivered_time = IF(? = 'delivered', CURRENT_TIMESTAMP, delivered_time)
-             WHERE id = ?`,
-            [status, status, orders[0].id]
-          );
-        }
         if (realtimeOrders[0]) {
+          let updatedOrderData = realtimeOrders[0].order_data;
+          try {
+            const parsed = typeof updatedOrderData === 'string' ? JSON.parse(updatedOrderData) : (updatedOrderData || {});
+            parsed.status = status;
+            parsed.statusText = displayStatus;
+            updatedOrderData = JSON.stringify(parsed);
+          } catch (_) {}
           await pool.execute(
-            'UPDATE realtime_orders SET status = ? WHERE id = ?',
-            [status, realtimeOrders[0].id]
+            'UPDATE realtime_orders SET status = ?, order_data = ? WHERE id = ?',
+            [status, updatedOrderData, realtimeOrders[0].id]
           );
         }
-        if (order.user_id) {
+
+        if (orders[0]) {
+          const legacyStatusMap = {
+            pending: 'placed',
+            preparing: 'preparing',
+            delivering: 'delivering',
+            delivered: 'completed',
+            cancelled: 'cancelled',
+          };
+          const legacyStatus = legacyStatusMap[status] || status;
+          await pool.execute(
+            `UPDATE orders 
+             SET order_status = ?,
+                 completed_at = IF(? = 'completed', COALESCE(completed_at, CURRENT_TIMESTAMP), completed_at),
+                 cancelled_at = IF(? = 'cancelled', COALESCE(cancelled_at, CURRENT_TIMESTAMP), cancelled_at)
+             WHERE id = ?`,
+            [legacyStatus, legacyStatus, legacyStatus, orders[0].id]
+          );
+        }
+
+        const targetUserId = realtimeOrders[0]?.user_id || orders[0]?.customer_id;
+        if (targetUserId) {
           const [notification] = await pool.execute(
             `INSERT INTO notifications (user_id, title, content, type, metadata)
              VALUES (?, 'Cập nhật đơn hàng', ?, 'order', ?)`,
-            [order.user_id, `Đơn ${orderCode}: ${payload.status}`, JSON.stringify({ orderCode, status })]
+            [targetUserId, `Đơn hàng #${orderCode}: ${displayStatus}`, JSON.stringify({ orderCode, status, displayStatus })]
           );
-          io.to(`user:${order.user_id}`).emit('notification:new', {
+          io.to(`user:${targetUserId}`).emit('notification:new', {
             id: notification.insertId,
             title: 'Cập nhật đơn hàng',
-            content: `Đơn ${orderCode}: ${payload.status}`,
+            content: `Đơn hàng #${orderCode}: ${displayStatus}`,
             type: 'order',
             orderCode,
             status,
           });
+          io.to(`user:${targetUserId}`).emit('order:updated', { orderCode, status, displayStatus });
         }
 
-        const update = { orderCode, status, displayStatus: payload.status };
+        const update = { orderCode, status, displayStatus };
         io.to('admins').emit('order:updated', update);
-        io.to(`user:${order.user_id}`).emit('order:updated', update);
         acknowledge({ success: true, updated: true });
       } catch (error) {
         logger.error('Không thể cập nhật trạng thái đơn hàng realtime.', { message: error.message });
-        acknowledge({ success: false, message: 'Không thể cập nhật trạng thái đơn hàng.' });
+        acknowledge({ success: false, message: 'Không thể cập nhật trạng thái đơn hàng: ' + error.message });
       }
     });
   });

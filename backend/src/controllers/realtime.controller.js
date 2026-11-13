@@ -800,6 +800,147 @@ class RealtimeController extends BaseController {
       return next(error);
     }
   }
+
+  /**
+   * Cập nhật trạng thái đơn hàng (REST API endpoint cho Admin)
+   */
+  async updateOrderStatus(req, res, next) {
+    const cleanOrderCode = typeof req.params.orderCode === 'string'
+      ? req.params.orderCode.replace(/^#/, '').trim()
+      : '';
+    const ORDER_STATUS_MAP = {
+      'Chờ xác nhận': 'pending',
+      'Đang chuẩn bị': 'preparing',
+      'Đang giao': 'delivering',
+      'Đã giao': 'delivered',
+      'Đã hủy': 'cancelled',
+      pending: 'pending',
+      preparing: 'preparing',
+      delivering: 'delivering',
+      delivered: 'delivered',
+      cancelled: 'cancelled',
+      placed: 'pending',
+      confirmed: 'preparing',
+      completed: 'delivered',
+    };
+    const DISPLAY_STATUS_MAP = {
+      pending: 'Chờ xác nhận',
+      preparing: 'Đang chuẩn bị',
+      delivering: 'Đang giao',
+      delivered: 'Đã giao',
+      cancelled: 'Đã hủy',
+    };
+    const rawStatus = typeof req.body?.status === 'string' ? req.body.status.trim() : '';
+    const status = ORDER_STATUS_MAP[rawStatus];
+    const displayStatus = DISPLAY_STATUS_MAP[status] || rawStatus;
+
+    if (!cleanOrderCode || !status) {
+      return this.sendError(res, 'Mã đơn hoặc trạng thái không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
+    }
+
+    try {
+      const [realtimeOrders] = await pool.execute(
+        'SELECT id, user_id, status, order_data FROM realtime_orders WHERE order_code = ? LIMIT 1',
+        [cleanOrderCode]
+      );
+      const [orders] = await pool.execute(
+        'SELECT id, customer_id, order_status FROM orders WHERE order_code = ? LIMIT 1',
+        [cleanOrderCode]
+      );
+      const order = realtimeOrders[0] || orders[0];
+      if (!order) {
+        return this.sendError(res, 'Không tìm thấy đơn hàng cần cập nhật.', HTTP_STATUS.NOT_FOUND);
+      }
+
+      const currentStatus = realtimeOrders[0]?.status || orders[0]?.order_status;
+      if (currentStatus === 'cancelled' && status !== 'cancelled') {
+        return this.sendError(res, 'Đơn hàng đã hủy không thể khôi phục trạng thái.', HTTP_STATUS.BAD_REQUEST);
+      }
+
+      if (realtimeOrders[0]) {
+        let updatedOrderData = realtimeOrders[0].order_data;
+        try {
+          const parsed = typeof updatedOrderData === 'string' ? JSON.parse(updatedOrderData) : (updatedOrderData || {});
+          parsed.status = status;
+          parsed.statusText = displayStatus;
+          updatedOrderData = JSON.stringify(parsed);
+        } catch (_) {}
+        await pool.execute(
+          'UPDATE realtime_orders SET status = ?, order_data = ? WHERE id = ?',
+          [status, updatedOrderData, realtimeOrders[0].id]
+        );
+      }
+
+      if (orders[0]) {
+        const legacyStatusMap = {
+          pending: 'placed',
+          preparing: 'preparing',
+          delivering: 'delivering',
+          delivered: 'completed',
+          cancelled: 'cancelled',
+        };
+        const legacyStatus = legacyStatusMap[status] || status;
+        await pool.execute(
+          `UPDATE orders 
+           SET order_status = ?,
+               completed_at = IF(? = 'completed', COALESCE(completed_at, CURRENT_TIMESTAMP), completed_at),
+               cancelled_at = IF(? = 'cancelled', COALESCE(cancelled_at, CURRENT_TIMESTAMP), cancelled_at)
+           WHERE id = ?`,
+          [legacyStatus, legacyStatus, legacyStatus, orders[0].id]
+        );
+      }
+
+      const io = req.app.get('io');
+      const targetUserId = realtimeOrders[0]?.user_id || orders[0]?.customer_id;
+      if (targetUserId) {
+        const [notification] = await pool.execute(
+          `INSERT INTO notifications (user_id, title, content, type, metadata)
+           VALUES (?, 'Cập nhật đơn hàng', ?, 'order', ?)`,
+          [targetUserId, `Đơn hàng #${cleanOrderCode}: ${displayStatus}`, JSON.stringify({ orderCode: cleanOrderCode, status, displayStatus })]
+        );
+        io?.to(`user:${targetUserId}`).emit('notification:new', {
+          id: notification.insertId,
+          title: 'Cập nhật đơn hàng',
+          content: `Đơn hàng #${cleanOrderCode}: ${displayStatus}`,
+          type: 'order',
+          orderCode: cleanOrderCode,
+          status,
+        });
+        io?.to(`user:${targetUserId}`).emit('order:updated', { orderCode: cleanOrderCode, status, displayStatus });
+      }
+
+      const update = { orderCode: cleanOrderCode, status, displayStatus };
+      io?.to('admins').emit('order:updated', update);
+
+      return this.sendSuccess(res, 'Cập nhật trạng thái đơn hàng thành công.', update, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
+  /**
+   * Cập nhật nội dung website (REST API fallback)
+   */
+  async publishWebsiteContent(req, res, next) {
+    const collection = String(req.params.collection || '').trim();
+    const records = req.body?.records;
+    if (!['categories', 'products', 'restaurants'].includes(collection) || !Array.isArray(records)) {
+      return this.sendError(res, 'Dữ liệu nội dung không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
+    }
+    try {
+      await pool.execute(
+        `INSERT INTO website_content (collection_name, content)
+         VALUES (?, ?)
+         ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = CURRENT_TIMESTAMP`,
+        [collection, JSON.stringify(records)]
+      );
+      const io = req.app.get('io');
+      io?.emit('content:updated', { collection, records, updatedAt: new Date().toISOString() });
+      return this.sendSuccess(res, 'Cập nhật nội dung website thành công.', { collection }, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
 }
 
 module.exports = new RealtimeController();

@@ -32,6 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
       return 'active';
     };
     const getStatusText = (order) => ({
+      awaiting_payment: 'Chờ thanh toán',
+      payment_failed: 'Thanh toán không thành công',
       pending: 'Chờ xác nhận',
       preparing: 'Đang chuẩn bị',
       delivering: 'Đang giao',
@@ -99,9 +101,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const paymentMethod = String(order.paymentMethod || '').toLowerCase();
           const paymentStatus = String(order.paymentStatus || 'pending').toLowerCase();
           const paymentLabel = paymentMethod === 'momo' ? 'MoMo'
-            : paymentMethod === 'banking' ? 'QR ngân hàng' : 'COD';
+            : paymentMethod === 'banking' ? 'VietQR'
+              : paymentMethod === 'vnpay' ? 'VNPay' : 'COD';
           const paymentStatusLabel = paymentStatus === 'completed' ? 'Đã thanh toán'
-            : paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chờ thanh toán';
+            : paymentStatus === 'failed' ? 'Thanh toán không thành công'
+              : paymentMethod === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chờ thanh toán';
 
           return `
             <article class="card" style="margin-bottom:1.5rem;">
@@ -140,6 +144,16 @@ document.addEventListener('DOMContentLoaded', () => {
                   <a href="./order-tracking.html?id=${encodeURIComponent(order.id)}" class="btn btn-outline btn-sm">
                     🚚 Theo Dõi Đơn Hàng
                   </a>
+                ` : ''}
+                ${order.canRetryPayment ? `
+                  <a href="./payment.html?orderCode=${encodeURIComponent(order.id)}" class="btn btn-primary btn-sm">
+                    ${paymentStatus === 'failed' ? 'Thanh toán lại' : 'Thanh toán'}
+                  </a>
+                ` : ''}
+                ${order.canSwitchToCod ? `
+                  <button type="button" class="btn btn-outline btn-sm" data-cod-order-id="${orderId}">
+                    Đổi sang COD
+                  </button>
                 ` : ''}
                 ${group === 'delivered' && (!order.driverReview || !order.restaurantReview) ? `
                   <button type="button" class="btn btn-outline btn-sm" data-review-order-id="${orderId}" style="color:var(--primary-color); border-color:var(--primary-color);">
@@ -186,6 +200,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const reorderButton = event.target.closest('[data-reorder-id]');
       if (reorderButton) {
         reOrder(reorderButton.dataset.reorderId);
+        return;
+      }
+
+      const codButton = event.target.closest('[data-cod-order-id]');
+      if (codButton) {
+        switchOrderToCod(codButton.dataset.codOrderId, codButton);
         return;
       }
 
@@ -243,6 +263,29 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
+    async function switchOrderToCod(orderId, button) {
+      if (!window.confirm('Đổi đơn hàng này sang thanh toán COD khi nhận hàng?')) return;
+      button.disabled = true;
+      try {
+        const response = await fetch(
+          `${apiUrl}/payments/${encodeURIComponent(orderId)}/switch-to-cod`,
+          {
+            method: 'POST',
+            headers: { Accept: 'application/json', Authorization: `Bearer ${authToken}` },
+          }
+        );
+        const result = await response.json();
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Không thể đổi sang COD.');
+        }
+        UIComponents.showToast('Đã đổi đơn hàng sang thanh toán COD.', 'success');
+        await syncOrders();
+      } catch (error) {
+        button.disabled = false;
+        UIComponents.showToast(error.message || 'Không thể đổi sang COD.', 'error');
+      }
+    }
+
     async function cancelOrder(orderId, button) {
       const order = orders.find(item => String(item.id) === String(orderId));
       if (!order || !canCancelOrder(order)) {
@@ -291,6 +334,8 @@ document.addEventListener('DOMContentLoaded', () => {
         status: update.status || update.displayStatus,
         statusText: update.displayStatus || getStatusText(orders[index]),
         statusStep: update.statusStep || orders[index].statusStep,
+        paymentStatus: update.paymentStatus || orders[index].paymentStatus,
+        paymentMethod: update.paymentMethod || orders[index].paymentMethod,
       };
       StorageManager.set(StorageManager.KEYS.ORDERS, orders);
       renderHistory();
@@ -305,12 +350,17 @@ document.addEventListener('DOMContentLoaded', () => {
         syncOrders();
         return;
       }
-      orders[index] = { ...orders[index], paymentStatus: update.paymentStatus };
+      orders[index] = {
+        ...orders[index],
+        paymentStatus: update.paymentStatus,
+        paymentMethod: update.paymentMethod || orders[index].paymentMethod,
+      };
       StorageManager.set(StorageManager.KEYS.ORDERS, orders);
       renderHistory();
       UIComponents.showToast(update.paymentStatus === 'completed'
         ? `Đã xác nhận thanh toán đơn ${update.orderCode}.`
         : `Thanh toán đơn ${update.orderCode} chưa thành công.`, update.paymentStatus === 'completed' ? 'success' : 'warning');
+      syncOrders();
     });
 
     if (authToken) syncOrders();

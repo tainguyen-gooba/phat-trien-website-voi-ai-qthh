@@ -95,8 +95,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   const canCancelOrder = normalizedStatuses.some(status => (
-    status === 'pending' || status === 'preparing'
-    || status.includes('cho xac nhan') || status.includes('dang chuan bi')
+    status === 'awaiting_payment' || status === 'payment_failed'
+    || status === 'pending' || status === 'preparing'
+    || status.includes('cho thanh toan') || status.includes('thanh toan khong thanh cong')
+    || status.includes('cho xac nhan')
+    || status.includes('dang chuan bi')
   ));
 
   container.innerHTML = `

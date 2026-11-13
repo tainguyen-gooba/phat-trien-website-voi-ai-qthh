@@ -6,6 +6,8 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const momoEnvironment = process.env.MOMO_ENV
   || (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox');
+const vnpayEnvironment = process.env.VNPAY_ENV
+  || (process.env.NODE_ENV === 'production' ? 'production' : 'sandbox');
 
 const config = {
   env: process.env.NODE_ENV || 'development',
@@ -43,6 +45,14 @@ const config = {
       endpoint: process.env.MOMO_API_URL || (momoEnvironment === 'production'
         ? 'https://payment.momo.vn/v2/gateway/api/create'
         : 'https://test-payment.momo.vn/v2/gateway/api/create'),
+    },
+    vnpay: {
+      environment: vnpayEnvironment === 'production' ? 'production' : 'sandbox',
+      tmnCode: process.env.VNPAY_TMN_CODE || '',
+      hashSecret: process.env.VNPAY_HASH_SECRET || '',
+      endpoint: process.env.VNPAY_URL || (vnpayEnvironment === 'production'
+        ? 'https://pay.vnpay.vn/vpcpay.html'
+        : 'https://sandbox.vnpayment.vn/paymentv2/vpcpay.html'),
     },
     sepay: {
       apiKey: process.env.SEPAY_API_KEY || '',

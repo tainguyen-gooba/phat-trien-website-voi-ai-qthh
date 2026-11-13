@@ -182,7 +182,7 @@ phat-trien-website-voi-ai-qthh/
 | 10 | `coupons` | Mã giảm giá toàn sàn hoặc riêng của quán |
 | 11 | `orders` | Đơn hàng, quy trình trạng thái, phí ship, tổng tiền |
 | 12 | `order_items` | Chi tiết món đã đặt (lưu cứng giá tại thời điểm mua) |
-| 13 | `payments` | Giao dịch thanh toán (COD, VNPay, MoMo, Banking) |
+| 13 | `payments` | Giao dịch thanh toán (COD, VietQR, MoMo; hỗ trợ đọc giao dịch VNPay cũ) |
 | 14 | `reviews` | Đánh giá sao (1-5) và nhận xét của khách sau khi giao |
 | 15 | `notifications`| Thông báo hệ thống, đơn hàng, khuyến mãi |
 | 16 | `staff_assignments`| Phân quyền nhân viên thuộc quán (quản lý, bếp, phục vụ) |

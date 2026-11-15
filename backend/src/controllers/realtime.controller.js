@@ -273,7 +273,8 @@ class RealtimeController extends BaseController {
 
     const order = req.body?.order;
     const orderCode = typeof order?.id === 'string' ? order.id : '';
-    const paymentMethod = String(order?.paymentMethod || '').toLowerCase();
+    const rawPaymentMethod = String(order?.paymentMethod || '').toLowerCase();
+    const paymentMethod = rawPaymentMethod === 'vietqr' ? 'banking' : rawPaymentMethod;
     const items = order?.items;
     const recipient = normalizeCustomerProfile(order?.recipient);
     const validOrderCode = isValidOrderCode(orderCode);
@@ -394,9 +395,9 @@ class RealtimeController extends BaseController {
         total: orderSubtotal + shippingFee - discountAmount,
         cancellationCount,
         shippingIncreasePercent: cancellationCount * 3,
-        status: 'pending',
+        status: paymentMethod === 'cod' ? 'pending' : 'awaiting_payment',
         statusStep: 1,
-        statusText: 'Chờ xác nhận',
+        statusText: paymentMethod === 'cod' ? 'Chờ xác nhận' : 'Chờ thanh toán',
         createdAt: new Date().toISOString(),
       };
       await connection.execute(

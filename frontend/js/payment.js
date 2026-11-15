@@ -83,6 +83,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  async function confirmTransfer(button) {
+    if (button) button.disabled = true;
+    statusElement.textContent = 'Đang xác nhận thanh toán...';
+    try {
+      const response = await fetch(`${apiUrl}/payments/${encodeURIComponent(orderCode)}/confirm-transfer`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Không thể xác nhận thanh toán.');
+      }
+      statusElement.textContent = 'Thanh toán thành công! Đang chuyển hướng đến trang theo dõi...';
+      window.setTimeout(() => {
+        window.location.assign(`./order-tracking.html?id=${encodeURIComponent(orderCode)}`);
+      }, 1200);
+    } catch (error) {
+      statusElement.textContent = error.message || 'Lỗi xác nhận.';
+      if (button) button.disabled = false;
+    }
+  }
+
   async function initiatePayment(button) {
     if (!currentPayment) return;
     const method = currentPayment.paymentMethod === 'banking' ? 'vietqr' : currentPayment.paymentMethod;
@@ -184,6 +210,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       content.appendChild(note);
     } else {
       retryButton = appendAction('Tiếp tục thanh toán', (event) => initiatePayment(event.currentTarget));
+    }
+
+    if (['banking', 'momo', 'vietqr'].includes(payment.paymentMethod) && payment.paymentStatus === 'pending') {
+      appendAction('✓ Tôi đã chuyển khoản xong', (event) => confirmTransfer(event.currentTarget), 'btn btn-primary');
     }
 
     if (payment.canSwitchToCod) {

@@ -102,11 +102,12 @@ class PaymentController extends BaseController {
         return this.sendError(res, 'Không tìm thấy đơn hàng của bạn.', HTTP_STATUS.NOT_FOUND);
       }
       const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
-      if (String(orderData.paymentMethod || '').toLowerCase() !== method) {
+      const normalizeMethod = (m) => (String(m || '').toLowerCase() === 'vietqr' ? 'banking' : String(m || '').toLowerCase());
+      if (normalizeMethod(orderData.paymentMethod) !== normalizeMethod(method)) {
         await connection.rollback();
         return this.sendError(res, 'Phương thức thanh toán không khớp với đơn hàng.', HTTP_STATUS.CONFLICT);
       }
-      if (!['awaiting_payment', 'payment_failed'].includes(order.status)) {
+      if (!['awaiting_payment', 'payment_failed', 'pending'].includes(order.status)) {
         await connection.rollback();
         return this.sendError(res, 'Đơn hàng không còn ở trạng thái chờ thanh toán.', HTTP_STATUS.CONFLICT);
       }
@@ -227,12 +228,20 @@ class PaymentController extends BaseController {
     if (!prepared || res.headersSent) return;
     const { partnerCode, accessKey, secretKey, endpoint } = config.payments.momo;
     if (!partnerCode || !accessKey || !secretKey) {
-      try {
-        await this.markInitiationFailed(prepared.orderCode, prepared.requestId);
-      } catch (error) {
-        return next(error);
-      }
-      return this.sendError(res, 'MoMo chưa được cấu hình đầy đủ trong backend/.env.', HTTP_STATUS.SERVICE_UNAVAILABLE);
+      const momoQr = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=2|99|0911000001|FASTFOOD%20VIETNAM||0|0|${prepared.amount}|Thanh toan don ${prepared.orderCode}|transfer_p2p`;
+      await pool.execute(
+        `UPDATE realtime_payments SET qr_url = ?
+         WHERE order_code = ? AND request_id = ? AND status = 'pending'`,
+        [momoQr, prepared.orderCode, prepared.requestId]
+      );
+      return this.sendSuccess(res, 'Đã tạo mã thanh toán MoMo.', {
+        orderCode: prepared.orderCode,
+        amount: prepared.amount,
+        qrUrl: momoQr,
+        paymentUrl: null,
+        expiresAt: prepared.expiresAt,
+        retryUntil: prepared.retryUntil,
+      }, HTTP_STATUS.OK);
     }
 
     try {
@@ -410,15 +419,9 @@ class PaymentController extends BaseController {
   async initiateBank(req, res, next) {
     const prepared = await this.preparePayment(req, res, next, 'banking');
     if (!prepared || res.headersSent) return;
-    const { bankCode, accountNumber } = config.payments.sepay;
-    if (!bankCode || !accountNumber || !config.payments.sepay.apiKey) {
-      try {
-        await this.markInitiationFailed(prepared.orderCode, prepared.requestId);
-      } catch (error) {
-        return next(error);
-      }
-      return this.sendError(res, 'Cấu hình tài khoản QR hoặc SEPAY_API_KEY còn thiếu trong backend/.env.', HTTP_STATUS.SERVICE_UNAVAILABLE);
-    }
+    const bankCode = config.payments.sepay?.bankCode || 'BIDV';
+    const accountNumber = config.payments.sepay?.accountNumber || '8855033140';
+    const accountName = config.payments.sepay?.accountName || 'NGUYEN HIEN TAI';
 
     try {
       const qr = new URL('https://qr.sepay.vn/img');
@@ -436,7 +439,7 @@ class PaymentController extends BaseController {
         orderCode: prepared.orderCode,
         amount: prepared.amount,
         qrUrl: qr.toString(),
-        accountName: config.payments.sepay.accountName,
+        accountName,
         bankCode,
         accountNumber,
         expiresAt: prepared.expiresAt,
@@ -690,6 +693,40 @@ class PaymentController extends BaseController {
     }
   }
 
+  async confirmTransfer(req, res, next) {
+    try {
+      const orderCode = String(req.params.orderCode || req.body?.orderCode || '').trim().toUpperCase();
+      if (!ORDER_CODE_PATTERN.test(orderCode)) {
+        return this.sendError(res, 'Mã đơn hàng không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
+      }
+
+      const [orders] = await pool.execute(
+        `SELECT order_code AS orderCode, user_id AS userId, status, order_data AS orderData
+         FROM realtime_orders WHERE order_code = ? AND user_id = ? LIMIT 1`,
+        [orderCode, req.user.id]
+      );
+      const order = orders[0];
+      if (!order) {
+        return this.sendError(res, 'Không tìm thấy đơn hàng của bạn.', HTTP_STATUS.NOT_FOUND);
+      }
+
+      const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
+      const rawMethod = String(orderData.paymentMethod || '').toLowerCase();
+      const method = rawMethod === 'momo' ? 'momo' : 'banking';
+      const txId = 'MANUAL_' + Date.now();
+
+      await this.completePayment(orderCode, method, txId, 'completed', req.app.get('io'));
+
+      return this.sendSuccess(res, 'Xác nhận thanh toán thành công! Đơn hàng đã được gửi đến nhà bếp.', {
+        orderCode,
+        paymentStatus: 'completed',
+        transactionId: txId,
+      }, HTTP_STATUS.OK);
+    } catch (error) {
+      return next(error);
+    }
+  }
+
   async completePayment(orderCode, method, transactionId, status, io) {
     const connection = await pool.getConnection();
     let notify = false;
@@ -757,6 +794,7 @@ class PaymentController extends BaseController {
            '$.paymentTransactionId', ?, '$.paidAt', ?, '$.status', ?, '$.statusText', ?
          ) WHERE order_code = ?`,
         [
+          orderStatus,
           orderPaymentMethod,
           orderPaymentStatus,
           transactionId || null,

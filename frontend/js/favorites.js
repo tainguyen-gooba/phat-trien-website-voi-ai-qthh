@@ -84,7 +84,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   : `<span class="product-category-name">${UIComponents.escapeHtml(product.restaurantName)}</span>`}
                 <span class="product-rating">★ ${product.rating}</span>
               </div>
-              <div style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.55rem;">📍 ${UIComponents.escapeHtml(window.getFastfoodRestaurantAddressForProduct(product))}</div>
+              <div class="product-address-line" style="font-size:0.78rem; color:var(--text-muted); margin-bottom:0.45rem;">📍 ${UIComponents.escapeHtml(window.getFastfoodRestaurantAddressForProduct(product))}</div>
               <a href="${UIComponents.escapeHtml(window.getFastfoodProductUrl(product))}" ${window.isFastfoodExternalUrl(product.url) ? 'target="_blank" rel="noopener noreferrer"' : ''} class="product-title" title="${UIComponents.escapeHtml(product.name)}">
                 ${UIComponents.escapeHtml(product.name)}
               </a>
@@ -93,8 +93,10 @@ document.addEventListener('DOMContentLoaded', () => {
                   <span class="product-price">${UIComponents.formatVND(product.price)}</span>
                   ${product.oldPrice ? `<span class="product-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
                 </div>
-                <button class="favorite-btn is-liked" data-product-id="${product.id}" title="Bỏ yêu thích" aria-label="Đã yêu thích món này">♥</button>
-                <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">+</button>
+                <div class="product-actions-group">
+                  <button class="favorite-btn is-liked" data-product-id="${product.id}" title="Bỏ yêu thích" aria-label="Đã yêu thích món này">♥</button>
+                  <button class="btn-add-cart" title="Thêm vào giỏ" onclick="UIComponents.openFoodModal('${product.id}')">+</button>
+                </div>
               </div>
             </div>
           </div>

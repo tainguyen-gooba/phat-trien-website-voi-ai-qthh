@@ -267,14 +267,13 @@ class RealtimeController extends BaseController {
   }
 
   async createOrder(req, res, next) {
-    if (['admin', 'staff'].includes(req.user?.role)) {
-      return this.sendError(res, 'Tài khoản Quản trị / Nhân viên chỉ dùng để quản lý hệ thống, không có quyền đặt hàng hoặc thanh toán.', HTTP_STATUS.FORBIDDEN);
+    if (req.user?.role === 'admin') {
+      return this.sendError(res, 'Tài khoản Quản trị viên (Admin) chỉ dùng để quản lý hệ thống, không có quyền đặt hàng hoặc thanh toán.', HTTP_STATUS.FORBIDDEN);
     }
 
     const order = req.body?.order;
     const orderCode = typeof order?.id === 'string' ? order.id : '';
-    const requestedPaymentMethod = String(order?.paymentMethod || '').toLowerCase();
-    const paymentMethod = requestedPaymentMethod === 'vietqr' ? 'banking' : requestedPaymentMethod;
+    const paymentMethod = String(order?.paymentMethod || '').toLowerCase();
     const items = order?.items;
     const recipient = normalizeCustomerProfile(order?.recipient);
     const validOrderCode = isValidOrderCode(orderCode);
@@ -393,11 +392,11 @@ class RealtimeController extends BaseController {
         subtotal: orderSubtotal,
         discount: discountAmount,
         total: orderSubtotal + shippingFee - discountAmount,
-        status: paymentMethod === 'cod' ? 'pending' : 'awaiting_payment',
-        statusText: paymentMethod === 'cod' ? 'Chờ xác nhận' : 'Chờ thanh toán',
         cancellationCount,
         shippingIncreasePercent: cancellationCount * 3,
+        status: 'pending',
         statusStep: 1,
+        statusText: 'Chờ xác nhận',
         createdAt: new Date().toISOString(),
       };
       await connection.execute(
@@ -451,7 +450,7 @@ class RealtimeController extends BaseController {
       };
 
       req.app.get('io')?.to('admins').emit('order:new', {
-        order: orderData,
+        order: { ...orderData, statusText: 'Chờ xác nhận' },
         customerId: String(currentUserId),
       });
       req.app.get('io')?.to('admins').emit('notification:new', notifPayload);
@@ -498,7 +497,7 @@ class RealtimeController extends BaseController {
         transactionStarted = false;
         return this.sendError(res, 'Không tìm thấy đơn hàng của bạn.', HTTP_STATUS.NOT_FOUND);
       }
-      if (!['awaiting_payment', 'payment_failed', 'pending', 'preparing'].includes(order.status)) {
+      if (!['pending', 'preparing'].includes(order.status)) {
         await connection.rollback();
         transactionStarted = false;
         return this.sendError(res, 'Chỉ có thể hủy đơn khi quán chưa bắt đầu giao hàng.', HTTP_STATUS.CONFLICT);
@@ -510,7 +509,7 @@ class RealtimeController extends BaseController {
         `UPDATE realtime_orders
          SET status = 'cancelled',
              order_data = JSON_SET(order_data, '$.cancelledBy', 'customer', '$.cancelledAt', ?)
-         WHERE id = ? AND status IN ('awaiting_payment', 'payment_failed', 'pending', 'preparing')`,
+         WHERE id = ? AND status IN ('pending', 'preparing')`,
         [new Date().toISOString(), order.id]
       );
       await connection.execute(
@@ -748,7 +747,7 @@ class RealtimeController extends BaseController {
       if (!Number.isSafeInteger(customerId) || customerId < 1) {
         return this.sendError(res, 'Tài khoản chat không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
       }
-      if (!['admin', 'staff'].includes(req.user.role) && String(req.user.id) !== String(customerId)) {
+      if (req.user.role !== 'admin' && String(req.user.id) !== String(customerId)) {
         return this.sendError(res, 'Bạn không có quyền xem cuộc trò chuyện này.', HTTP_STATUS.FORBIDDEN);
       }
 
@@ -989,7 +988,7 @@ class RealtimeController extends BaseController {
           parsed.status = status;
           parsed.statusText = displayStatus;
           updatedOrderData = JSON.stringify(parsed);
-        } catch (_) {}
+        } catch (_) { }
         await pool.execute(
           'UPDATE realtime_orders SET status = ?, order_data = ? WHERE id = ?',
           [status, updatedOrderData, realtimeOrders[0].id]

@@ -202,8 +202,10 @@ document.addEventListener('DOMContentLoaded', () => {
           <a href="./food-detail.html?id=${encodeURIComponent(p.id)}" class="product-title">${UIComponents.escapeHtml(p.name)}</a>
           <div class="product-bottom-row">
             <span class="product-price">${UIComponents.formatVND(p.price)}</span>
-            <button class="favorite-btn ${p.isLiked ? 'is-liked' : ''}" data-product-id="${p.id}" title="${p.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}">${p.isLiked ? '♥' : '♡'}</button>
-            <button class="btn-add-cart" onclick="UIComponents.openFoodModal('${p.id}')">+</button>
+            <div class="product-actions-group">
+              <button class="favorite-btn ${p.isLiked ? 'is-liked' : ''}" data-product-id="${p.id}" title="${p.isLiked ? 'Bỏ yêu thích' : 'Yêu thích món này'}">${p.isLiked ? '♥' : '♡'}</button>
+              <button class="btn-add-cart" onclick="UIComponents.openFoodModal('${p.id}')">+</button>
+            </div>
           </div>
         </div>
       </div>

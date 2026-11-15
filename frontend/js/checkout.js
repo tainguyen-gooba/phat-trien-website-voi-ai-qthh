@@ -167,14 +167,19 @@ document.addEventListener('DOMContentLoaded', () => {
           notes,
         },
         items: cart.map((item) => {
-          const selectedToppings = Array.isArray(item.selectedToppings) ? item.selectedToppings : [];
+          const selectedToppings = Array.isArray(item.selectedToppings)
+            ? item.selectedToppings
+            : (Array.isArray(item.toppings) ? item.toppings : []);
           const toppingTotal = selectedToppings.reduce((sum, topping) => sum + (Number(topping.price) || 0), 0);
+          const rawBasePrice = Number.isSafeInteger(Number(item.basePrice))
+            ? Number(item.basePrice)
+            : (Number.isSafeInteger(Number(item.price)) ? Math.max(0, Number(item.price) - toppingTotal) : 45000);
           return {
             productId: String(item.productId || ''),
             name: item.name,
-            qty: item.qty,
-            basePrice: Number.isSafeInteger(item.basePrice) ? item.basePrice : item.price - toppingTotal,
-            price: item.price,
+            qty: Math.max(1, parseInt(item.qty, 10) || 1),
+            basePrice: rawBasePrice,
+            price: Number.isSafeInteger(Number(item.price)) ? Number(item.price) : (rawBasePrice + toppingTotal),
             selectedToppings,
           };
         }),

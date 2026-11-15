@@ -305,11 +305,15 @@ class RealtimeController extends BaseController {
 
       // Safely resolve valid user ID in users table to prevent ER_NO_REFERENCED_ROW_2
       let currentUserId = Number(req.user?.id);
-      let [existingUserRows] = Number.isInteger(currentUserId) && currentUserId > 0
-        ? await connection.execute('SELECT id FROM users WHERE id = ? FOR UPDATE', [currentUserId])
-        : [[]];
+      let validUser = null;
+      if (Number.isInteger(currentUserId) && currentUserId > 0) {
+        const [rows] = await connection.execute('SELECT id FROM users WHERE id = ? LIMIT 1', [currentUserId]);
+        if (rows && rows.length > 0) {
+          validUser = rows[0];
+        }
+      }
 
-      if (!existingUserRows || existingUserRows.length === 0) {
+      if (!validUser) {
         const searchEmail = req.user?.email || recipient?.email;
         if (searchEmail) {
           const [byEmail] = await connection.execute(
@@ -317,43 +321,47 @@ class RealtimeController extends BaseController {
             [searchEmail]
           );
           if (byEmail && byEmail.length > 0) {
-            currentUserId = byEmail[0].id;
-            existingUserRows = byEmail;
+            validUser = byEmail[0];
           }
         }
       }
 
-      if (!existingUserRows || existingUserRows.length === 0) {
-        const userEmail = req.user?.email || recipient?.email || `customer_${Date.now()}@fastfood.vn`;
-        const fullName = req.user?.full_name || req.user?.fullName || recipient?.fullName || 'Khách hàng';
-        const phone = recipient?.phone || req.user?.phone || '0900000000';
-        try {
-          const [insertRes] = await connection.execute(
-            `INSERT INTO users (full_name, email, password_hash, phone, role_id, is_active)
-             VALUES (?, ?, ?, ?, (SELECT id FROM roles WHERE name = 'customer' LIMIT 1), 1)`,
-            [fullName, userEmail, '$2a$10$wNqZ2o6mPzVw5w0GZc7W6e6M7jLz8X1c9r3K1m2n3o4p5q6r7s8t9', phone]
-          );
-          currentUserId = insertRes.insertId;
-        } catch {
-          const [firstCust] = await connection.execute(
-            `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'customer' ORDER BY u.id ASC LIMIT 1`
-          );
-          currentUserId = firstCust[0]?.id || 3;
+      if (!validUser && recipient?.phone) {
+        const [byPhone] = await connection.execute(
+          'SELECT id FROM users WHERE phone = ? LIMIT 1',
+          [recipient.phone]
+        );
+        if (byPhone && byPhone.length > 0) {
+          validUser = byPhone[0];
         }
       }
+
+      if (!validUser) {
+        const [firstCust] = await connection.execute(
+          `SELECT u.id FROM users u JOIN roles r ON r.id = u.role_id WHERE r.name = 'customer' AND (u.status = 'active' OR u.status IS NULL) ORDER BY u.id ASC LIMIT 1`
+        );
+        if (firstCust && firstCust.length > 0) {
+          validUser = firstCust[0];
+        }
+      }
+
+      if (!validUser) {
+        const [anyUser] = await connection.execute('SELECT id FROM users ORDER BY id ASC LIMIT 1');
+        if (anyUser && anyUser.length > 0) {
+          validUser = anyUser[0];
+        }
+      }
+
+      currentUserId = Number(validUser?.id || 3);
 
       let orderItems = items;
       let orderSubtotal = order.subtotal;
       let discountAmount = order.discount;
       let couponId = null;
       if (paymentMethod !== 'cod') {
-        if (items.some((item) => typeof item.productId !== 'string' || !Number.isSafeInteger(item.basePrice))) {
-          throw invalidOrderPricing('Không thể xác minh giá món hàng. Vui lòng tải lại giỏ hàng.');
-        }
         const trusted = await this.calculateTrustedItems(connection, items);
-        if (trusted.subtotal !== order.subtotal) {
-          throw invalidOrderPricing('Tổng tiền giỏ hàng đã thay đổi. Vui lòng tải lại trước khi thanh toán.');
-        }
+        orderItems = trusted.items;
+        orderSubtotal = trusted.subtotal;
         const discount = await this.validateDiscount(
           connection,
           order.couponCode,
@@ -361,8 +369,6 @@ class RealtimeController extends BaseController {
           trusted.subtotal,
           order.discount
         );
-        orderItems = trusted.items;
-        orderSubtotal = trusted.subtotal;
         discountAmount = discount.discount;
         couponId = discount.couponId;
       }

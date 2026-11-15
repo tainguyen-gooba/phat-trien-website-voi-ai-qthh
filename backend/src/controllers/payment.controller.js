@@ -228,7 +228,9 @@ class PaymentController extends BaseController {
     if (!prepared || res.headersSent) return;
     const { partnerCode, accessKey, secretKey, endpoint } = config.payments.momo;
     if (!partnerCode || !accessKey || !secretKey) {
-      const momoQr = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=2|99|0911000001|FASTFOOD%20VIETNAM||0|0|${prepared.amount}|Thanh toan don ${prepared.orderCode}|transfer_p2p`;
+      const momoPhone = config.payments.momo?.phone || '0911000001';
+      const momoName = config.payments.momo?.accountName || 'FASTFOOD VIET NAM';
+      const momoQr = `https://qr.sepay.vn/img?acc=${momoPhone}&bank=MOMO&amount=${prepared.amount}&des=${prepared.orderCode}&template=compact`;
       await pool.execute(
         `UPDATE realtime_payments SET qr_url = ?
          WHERE order_code = ? AND request_id = ? AND status = 'pending'`,
@@ -239,6 +241,8 @@ class PaymentController extends BaseController {
         amount: prepared.amount,
         qrUrl: momoQr,
         paymentUrl: null,
+        momoPhone,
+        momoName,
         expiresAt: prepared.expiresAt,
         retryUntil: prepared.retryUntil,
       }, HTTP_STATUS.OK);
@@ -686,6 +690,8 @@ class PaymentController extends BaseController {
         accountName: config.payments.sepay.accountName,
         bankCode: config.payments.sepay.bankCode,
         accountNumber: config.payments.sepay.accountNumber,
+        momoPhone: config.payments.momo?.phone || '0911000001',
+        momoName: config.payments.momo?.accountName || 'FASTFOOD VIET NAM',
         paidAt: row.paidAt,
       }, HTTP_STATUS.OK);
     } catch (error) {

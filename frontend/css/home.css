@@ -313,7 +313,7 @@
 .flash-deals-banner {
   background: linear-gradient(135deg, #FF5B4D 0%, #F28A24 100%);
   border-radius: var(--radius-xl);
-  padding: 2rem 1.5rem;
+  padding: 2.25rem 1.75rem 2.75rem;
   color: #FFFFFF;
   margin-bottom: 4rem;
   position: relative;
@@ -326,7 +326,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 1.25rem;
-  margin-bottom: 2rem;
+  margin-bottom: 1.75rem;
 }
 
 .flash-timer-box {
@@ -342,8 +342,30 @@
 }
 
 .flash-deals-products {
+  display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 0.85rem;
+  gap: 0.95rem;
+  align-items: stretch;
+}
+
+.flash-deals-products .product-card {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #FFFFFF;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.flash-deals-products .product-card .product-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.flash-deals-products .product-card .product-bottom-row {
+  margin-top: auto;
+  padding-top: 0.5rem;
 }
 
 .timer-digit {

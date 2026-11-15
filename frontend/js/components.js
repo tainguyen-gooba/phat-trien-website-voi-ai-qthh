@@ -440,7 +440,7 @@ const UIComponents = {
       <div class="modal-card">
         <!-- Hero Image Header with Gradient & Close Button -->
         <div class="modal-hero-wrap">
-          <img src="${product.image}" alt="${this.escapeHtml(product.name)}" class="modal-hero-img" onerror="this.onerror=null; this.style.visibility='hidden';">
+          <img src="${product.image}" alt="${this.escapeHtml(product.name)}" class="modal-hero-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';">
           ${this.renderImageCredit(product)}
           <div class="modal-hero-overlay"></div>
           <button class="modal-close-btn" type="button" title="Đóng cửa sổ" onclick="UIComponents.closeFoodModal()">✕</button>

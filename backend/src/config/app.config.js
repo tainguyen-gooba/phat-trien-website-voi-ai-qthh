@@ -42,6 +42,8 @@ const config = {
       partnerCode: process.env.MOMO_PARTNER_CODE || '',
       accessKey: process.env.MOMO_ACCESS_KEY || '',
       secretKey: process.env.MOMO_SECRET_KEY || '',
+      phone: process.env.MOMO_PHONE || '0911000001',
+      accountName: process.env.MOMO_ACCOUNT_NAME || 'FASTFOOD VIET NAM',
       endpoint: process.env.MOMO_API_URL || (momoEnvironment === 'production'
         ? 'https://payment.momo.vn/v2/gateway/api/create'
         : 'https://test-payment.momo.vn/v2/gateway/api/create'),

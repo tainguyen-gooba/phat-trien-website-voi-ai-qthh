@@ -199,6 +199,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         + `${payment.accountName ? ` · Chủ TK: ${payment.accountName}` : ''}`
         + ` · Nội dung: ${orderCode}`;
       content.appendChild(details);
+    } else if (payment.paymentMethod === 'momo' && payment.qrUrl) {
+      const badge = document.createElement('div');
+      badge.style.cssText = 'display:inline-flex; align-items:center; gap:0.4rem; background:#D82D8B; color:#fff; font-weight:700; padding:0.35rem 0.95rem; border-radius:999px; margin-bottom:0.75rem; font-size:0.85rem; box-shadow:0 4px 12px rgba(216,45,139,0.25);';
+      badge.innerHTML = '<span>Ví Điện Tử MoMo</span>';
+      content.appendChild(badge);
+
+      const image = document.createElement('img');
+      image.className = 'payment-qr';
+      image.alt = 'Mã QR MoMo thanh toán đơn hàng';
+      image.src = payment.qrUrl;
+      content.appendChild(image);
+
+      const details = document.createElement('p');
+      details.className = 'payment-details';
+      const phone = payment.momoPhone || '0911000001';
+      const name = payment.momoName || 'FASTFOOD VIET NAM';
+      details.innerHTML = `Số MoMo: <strong>${phone}</strong> · Người nhận: <strong>${name}</strong><br>Số tiền: <strong style="color:var(--primary-color); font-size:1.1rem;">${window.UIComponents?.formatVND(payment.amount)}</strong><br>Lời nhắn chuyển: <strong style="color:var(--primary-color); font-size:1.1rem;">${orderCode}</strong>`;
+      content.appendChild(details);
     } else if (['momo', 'vnpay'].includes(payment.paymentMethod) && payment.paymentUrl) {
       const link = document.createElement('a');
       link.className = 'btn btn-primary';
@@ -213,7 +231,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     if (['banking', 'momo', 'vietqr'].includes(payment.paymentMethod) && payment.paymentStatus === 'pending') {
-      appendAction('✓ Tôi đã chuyển khoản xong', (event) => confirmTransfer(event.currentTarget), 'btn btn-primary');
+      const btnText = payment.paymentMethod === 'momo' ? '✓ Tôi đã thanh toán MoMo xong' : '✓ Tôi đã chuyển khoản xong';
+      appendAction(btnText, (event) => confirmTransfer(event.currentTarget), 'btn btn-primary');
     }
 
     if (payment.canSwitchToCod) {

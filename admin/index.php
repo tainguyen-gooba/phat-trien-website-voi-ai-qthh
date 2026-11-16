@@ -3781,7 +3781,7 @@ $initialData = [
         </button>
       </nav>
       <div class="sidebar-bottom">
-        <a class="sidebar-link" href="/index.html">
+        <a class="sidebar-link" href="<?= getUrl('index.php') ?>">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M14 5h5v14h-5M10 8l-4 4 4 4M6 12h12" />
           </svg>Về trang chủ

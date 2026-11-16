@@ -361,7 +361,11 @@ class ChatController extends BaseController {
       policies: productRecommendationService.getSystemPolicies(),
       searchedOrderCode: null,
     };
-
+const greetingRegex = /^(lo|hi|hello|chao|xin chao|hey|alo|h lo)$/;
+    if (greetingRegex.test(normalizedMsg)) {
+      contextData.reply = "Dạ chào bạn! FASTFOOD rất vui được hỗ trợ bạn. Hôm nay bạn đang thèm món gì hay muốn tìm món ăn nào để mình tư vấn cho nhé?";
+      return contextData;
+    }
     const orderCodeMatch = message.match(/#?(FF[\w\d-]{4,15})/i);
     if (orderCodeMatch) {
       const searchedCode = orderCodeMatch[1].toUpperCase();

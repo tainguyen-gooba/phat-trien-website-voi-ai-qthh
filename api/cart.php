@@ -71,19 +71,41 @@ if ($method === 'POST') {
             }
 
             $idKey = (string)$product['id'];
-            $price = !empty($product['discount_price']) && (float)$product['discount_price'] > 0
+            $basePrice = !empty($product['discount_price']) && (float)$product['discount_price'] > 0
                 ? (float)$product['discount_price']
                 : (float)$product['base_price'];
 
-            if (isset($_SESSION['cart'][$idKey])) {
-                $_SESSION['cart'][$idKey]['qty'] += $qty;
+            // Xử lý toppings đính kèm
+            $toppings = !empty($input['toppings']) && is_array($input['toppings']) ? $input['toppings'] : [];
+            $toppingsExtra = 0;
+            $cleanToppings = [];
+            foreach ($toppings as $t) {
+                $tPrice = (float)($t['price'] ?? 0);
+                $tName = trim($t['name'] ?? '');
+                if ($tName) {
+                    $toppingsExtra += $tPrice;
+                    $cleanToppings[] = ['name' => $tName, 'price' => $tPrice];
+                }
+            }
+            $unitPrice = $basePrice + $toppingsExtra;
+
+            // Khóa giỏ hàng phân biệt theo món + danh sách topping đã chọn
+            $toppingSignature = !empty($cleanToppings) ? '_' . substr(md5(json_encode($cleanToppings)), 0, 8) : '';
+            $cartKey = $idKey . $toppingSignature;
+
+            if (isset($_SESSION['cart'][$cartKey])) {
+                $_SESSION['cart'][$cartKey]['qty'] += $qty;
             } else {
-                $_SESSION['cart'][$idKey] = [
-                    'id'       => $idKey,
-                    'name'     => $product['name'],
-                    'price'    => $price,
-                    'image'    => $product['image_url'] ?? '',
-                    'qty'      => $qty,
+                $_SESSION['cart'][$cartKey] = [
+                    'id'            => $cartKey,
+                    'productId'     => $idKey,
+                    'name'          => $product['name'],
+                    'basePrice'     => $basePrice,
+                    'toppings'      => $cleanToppings,
+                    'toppingsExtra' => $toppingsExtra,
+                    'price'         => $unitPrice,
+                    'image'         => $product['image_url'] ?? '',
+                    'qty'           => $qty,
                 ];
             }
 

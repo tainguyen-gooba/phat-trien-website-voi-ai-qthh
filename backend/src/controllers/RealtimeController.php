@@ -89,8 +89,58 @@ class RealtimeController extends BaseController {
         $body = $this->getJsonBody();
         $records = $body['records'] ?? [];
 
-        // Save changes to database
-        $this->sendSuccess("Đồng bộ {$collection} thành công!", ['count' => count($records)]);
+        $db = Database::getConnection();
+
+        // 1. Lưu toàn bộ records định dạng JSON vào bảng website_content
+        $stmt = $db->prepare("INSERT INTO website_content (collection_name, content, updated_at) 
+                              VALUES (?, ?, NOW()) 
+                              ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = NOW()");
+        $stmt->execute([$collection, json_encode($records, JSON_UNESCAPED_UNICODE)]);
+
+        // 2. Nếu là products, đồng bộ trực tiếp vào bảng products MySQL
+        if ($collection === 'products' && is_array($records)) {
+            $upProdStmt = $db->prepare("UPDATE products SET 
+                name = ?, 
+                base_price = ?, 
+                discount_price = ?, 
+                image_url = ?, 
+                description = ?, 
+                is_available = ?, 
+                updated_at = NOW() 
+                WHERE id = ?");
+
+            foreach ($records as $item) {
+                $rawId = $item['id'] ?? '';
+                $numId = (int)preg_replace('/\D/', '', $rawId);
+                if ($numId <= 0) continue;
+
+                $name = trim($item['name'] ?? '');
+                $basePrice = (float)($item['oldPrice'] ?? $item['basePrice'] ?? $item['price'] ?? 0);
+                $discountPrice = (float)($item['price'] ?? 0);
+                if ($discountPrice >= $basePrice) {
+                    $basePrice = $discountPrice;
+                    $discountPrice = 0;
+                }
+                $imageUrl = trim($item['image'] ?? $item['image_url'] ?? '');
+                $desc = trim($item['description'] ?? '');
+                $status = trim($item['status'] ?? 'Đang bán');
+                $isAvailable = (mb_strpos(mb_strtolower($status), 'hết') !== false || mb_strpos(mb_strtolower($status), 'ẩn') !== false) ? 0 : 1;
+
+                if ($name) {
+                    $upProdStmt->execute([
+                        $name,
+                        $basePrice,
+                        $discountPrice,
+                        $imageUrl,
+                        $desc,
+                        $isAvailable,
+                        $numId
+                    ]);
+                }
+            }
+        }
+
+        $this->sendSuccess("Đồng bộ {$collection} và cập nhật cơ sở dữ liệu thành công!", ['count' => count($records)]);
     }
 
     public function getReviews(): void {

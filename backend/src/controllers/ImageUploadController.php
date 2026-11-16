@@ -26,9 +26,13 @@ class ImageUploadController extends BaseController {
             $extMap = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
             $ext = $extMap[$contentType] ?? 'jpg';
             $filename = 'img_' . uniqid() . '.' . $ext;
-            $targetDir = dirname(__DIR__, 3) . '/frontend/assets/uploads';
-            if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
-            file_put_contents($targetDir . '/' . $filename, $rawBody);
+            $rootUploadDir = dirname(__DIR__, 3) . '/assets/uploads';
+            if (!is_dir($rootUploadDir)) mkdir($rootUploadDir, 0777, true);
+            file_put_contents($rootUploadDir . '/' . $filename, $rawBody);
+            
+            $frontendDir = dirname(__DIR__, 3) . '/frontend/assets/uploads';
+            if (is_dir($frontendDir)) copy($rootUploadDir . '/' . $filename, $frontendDir . '/' . $filename);
+
             $this->sendCreated('Tải ảnh thành công!', ['url' => '/assets/uploads/' . $filename]);
             return;
         }
@@ -39,12 +43,15 @@ class ImageUploadController extends BaseController {
         }
 
         $filename = 'img_' . uniqid() . '.' . $ext;
-        $targetDir = dirname(__DIR__, 3) . '/frontend/assets/uploads';
-        if (!is_dir($targetDir)) mkdir($targetDir, 0777, true);
+        $rootUploadDir = dirname(__DIR__, 3) . '/assets/uploads';
+        if (!is_dir($rootUploadDir)) mkdir($rootUploadDir, 0777, true);
 
-        if (!move_uploaded_file($file['tmp_name'], $targetDir . '/' . $filename)) {
+        if (!move_uploaded_file($file['tmp_name'], $rootUploadDir . '/' . $filename)) {
             $this->sendError('Không thể lưu tệp ảnh lên máy chủ.', HttpStatusCodes::INTERNAL_SERVER_ERROR);
         }
+
+        $frontendDir = dirname(__DIR__, 3) . '/frontend/assets/uploads';
+        if (is_dir($frontendDir)) copy($rootUploadDir . '/' . $filename, $frontendDir . '/' . $filename);
 
         $this->sendCreated('Tải ảnh thành công!', ['url' => '/assets/uploads/' . $filename]);
     }

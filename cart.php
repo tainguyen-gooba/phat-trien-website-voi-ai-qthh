@@ -62,6 +62,11 @@ require_once ROOT_PATH . '/includes/header.php';
                      alt="<?= escapeHtml($item['name']) ?>" style="width:72px; height:72px; border-radius:8px; object-fit:cover;">
                 <div>
                   <h4 style="font-size:1rem; font-weight:700; margin:0 0 0.35rem;"><?= escapeHtml($item['name']) ?></h4>
+                  <?php if (!empty($item['toppings']) && is_array($item['toppings'])): ?>
+                    <div style="font-size:0.8rem; color:#ea580c; margin-bottom:0.35rem; font-weight:600;">
+                      ✨ <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']) . ' (+' . formatVND($t['price']) . ')'; }, $item['toppings'])) ?>
+                    </div>
+                  <?php endif; ?>
                   <span style="color:var(--primary-color); font-weight:700;"><?= formatVND($item['price']) ?></span>
                 </div>
               </div>

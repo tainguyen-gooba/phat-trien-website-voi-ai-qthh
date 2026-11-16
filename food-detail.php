@@ -42,6 +42,47 @@ $extraCss  = ['css/pages.css'];
 $hasDiscount = !empty($product['discount_price']) && (float)$product['discount_price'] > 0 && (float)$product['discount_price'] < (float)$product['base_price'];
 $currentPrice = $hasDiscount ? $product['discount_price'] : $product['base_price'];
 
+// Lấy danh sách Toppings từ website_content
+$toppings = [];
+$wcRow = $db->query("SELECT content FROM website_content WHERE collection_name = 'products'")->fetch();
+if ($wcRow && !empty($wcRow['content'])) {
+    $wcProds = json_decode($wcRow['content'], true);
+    if (is_array($wcProds)) {
+        foreach ($wcProds as $item) {
+            $itemNum = (int)preg_replace('/\D/', '', $item['id'] ?? '');
+            if ($itemNum === (int)$product['id'] || (!empty($item['name']) && trim($item['name']) === trim($product['name']))) {
+                if (!empty($item['toppings']) && is_array($item['toppings'])) {
+                    $toppings = $item['toppings'];
+                }
+                break;
+            }
+        }
+    }
+}
+if (empty($toppings)) {
+    $catName = strtolower($product['category_name'] ?? '');
+    if (strpos($catName, 'burger') !== false || strpos($catName, 'gà rán') !== false) {
+        $toppings = [
+            ['name' => 'Thêm phô mai lát Cheddar', 'price' => 10000],
+            ['name' => 'Thịt ba chỉ xông khói (Bacon)', 'price' => 15000],
+            ['name' => 'Trứng ốp la lòng đào', 'price' => 8000],
+        ];
+    } elseif (strpos($catName, 'trà sữa') !== false || strpos($catName, 'uống') !== false) {
+        $toppings = [
+            ['name' => 'Trân châu đường đen dẻo', 'price' => 6000],
+            ['name' => 'Thạch nha đam thanh mát', 'price' => 5000],
+            ['name' => 'Kem cheese béo mặn thơm ngậy', 'price' => 10000],
+            ['name' => 'Pudding trứng béo mịn', 'price' => 7000],
+        ];
+    } else {
+        $toppings = [
+            ['name' => 'Thêm trứng ốp la lòng đào', 'price' => 8000],
+            ['name' => 'Thêm chả lụa / chả trứng', 'price' => 10000],
+            ['name' => 'Canh rong biển súp ấm', 'price' => 12000],
+        ];
+    }
+}
+
 // Món ăn liên quan
 $relatedStmt = $db->prepare("SELECT p.*, r.name AS restaurant_name 
                              FROM products p 
@@ -105,8 +146,29 @@ require_once ROOT_PATH . '/includes/header.php';
           <?= nl2br(escapeHtml($product['description'] ?: 'Món ăn thơm ngon, nóng hổi, chuẩn vị chế biến từ nguyên liệu tươi sạch hàng ngày.')) ?>
         </p>
 
+        <!-- Toppings Selection Area -->
+        <?php if (!empty($toppings)): ?>
+          <div class="modal-toppings-card" style="margin-bottom:1.5rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:1rem 1.25rem;">
+            <div class="modal-toppings-title" style="font-weight:750; font-size:0.95rem; color:#1e293b; margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:center;">
+              <span>✨ Tùy chọn thêm (Toppings):</span>
+              <small style="color:#64748b; font-size:0.8rem;"><?= count($toppings) ?> tùy chọn</small>
+            </div>
+            <div class="modal-toppings-list">
+              <?php foreach ($toppings as $idx => $t): ?>
+                <label class="modal-topping-item" id="detail-topping-item-<?= $idx ?>" style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.85rem; margin-bottom:0.5rem; border-radius:8px; background:#fff; border:1px solid #e2e8f0; cursor:pointer;">
+                  <span class="modal-topping-left" style="display:flex; align-items:center; gap:0.65rem; font-size:0.9rem; font-weight:600; color:#334155;">
+                    <input type="checkbox" class="detail-topping-cb" data-name="<?= escapeHtml($t['name']) ?>" data-price="<?= (float)$t['price'] ?>" onchange="onDetailToppingToggle(this, 'detail-topping-item-<?= $idx ?>')">
+                    <span><?= escapeHtml($t['name']) ?></span>
+                  </span>
+                  <span class="modal-topping-price" style="font-weight:750; color:#ea580c; font-size:0.9rem;">+<?= formatVND($t['price']) ?></span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
         <!-- Thao tác mua hàng -->
-        <div style="display:flex; align-items:center; gap:1.25rem; margin-top:2rem; flex-wrap:wrap;">
+        <div style="display:flex; align-items:center; gap:1.25rem; margin-top:1.5rem; flex-wrap:wrap;">
           <?php if ($isManager): ?>
             <div style="flex:1; padding:1rem 1.25rem; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; border-radius:var(--radius-md); font-weight:700; font-size:0.95rem;">
               👑 <span>Tài khoản Quản trị viên (Admin) chỉ dùng để quản trị hệ thống.</span>
@@ -148,29 +210,61 @@ require_once ROOT_PATH . '/includes/header.php';
 
 <script>
 let qty = 1;
+const basePrice = <?= (float)$currentPrice ?>;
 const productId = <?= (int)$product['id'] ?>;
+
+function onDetailToppingToggle(checkbox, itemId) {
+  const itemEl = document.getElementById(itemId);
+  if (itemEl) {
+    itemEl.style.borderColor = checkbox.checked ? '#f97316' : '#e2e8f0';
+    itemEl.style.background = checkbox.checked ? '#fff7ed' : '#fff';
+  }
+  calculateDetailTotal();
+}
 
 function updateQty(delta) {
   qty = Math.max(1, qty + delta);
   document.getElementById('detail-qty-input').value = qty;
+  calculateDetailTotal();
+}
+
+function calculateDetailTotal() {
+  let toppingsTotal = 0;
+  document.querySelectorAll('.detail-topping-cb:checked').forEach(cb => {
+    toppingsTotal += (parseFloat(cb.dataset.price) || 0);
+  });
+  const total = (basePrice + toppingsTotal) * qty;
+  const display = document.getElementById('detail-total-price');
+  if (display) {
+    display.textContent = total.toLocaleString('vi-VN') + ' đ';
+  }
 }
 
 async function handleAddToCart(isBuyNow = false) {
   try {
+    const selectedToppings = [];
+    document.querySelectorAll('.detail-topping-cb:checked').forEach(cb => {
+      selectedToppings.push({
+        name: cb.dataset.name,
+        price: parseFloat(cb.dataset.price) || 0
+      });
+    });
+
     const res = await fetch('<?= getUrl('api/cart.php') ?>', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'add', productId, qty })
+      body: JSON.stringify({ action: 'add', productId, qty, toppings: selectedToppings })
     });
     const result = await res.json();
     if (result.success) {
       if (isBuyNow) {
         window.location.href = '<?= getUrl('cart.php') ?>';
       } else {
+        const topText = selectedToppings.length ? ` (kèm ${selectedToppings.length} topping)` : '';
         if (window.UIComponents?.showToast) {
-          window.UIComponents.showToast(`Đã thêm ${qty} món vào giỏ hàng!`, 'success');
+          window.UIComponents.showToast(`Đã thêm ${qty} phần món ăn${topText} vào giỏ hàng!`, 'success');
         } else {
-          alert(`Đã thêm ${qty} món vào giỏ hàng!`);
+          alert(`Đã thêm ${qty} phần món ăn vào giỏ hàng!`);
         }
         const badge = document.getElementById('nav-cart-badge');
         if (badge) {
@@ -178,6 +272,13 @@ async function handleAddToCart(isBuyNow = false) {
           badge.style.display = result.data.totalCount > 0 ? 'flex' : 'none';
         }
       }
+    } else {
+      alert(result.message || 'Không thể thêm vào giỏ.');
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
     } else {
       alert(result.message || 'Không thể thêm vào giỏ.');
     }

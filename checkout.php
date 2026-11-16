@@ -270,10 +270,15 @@ require_once ROOT_PATH . '/includes/header.php';
         <!-- Danh sách tóm tắt món -->
         <div style="max-height:240px; overflow-y:auto; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
           <?php foreach ($cart as $item): ?>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; font-size:0.9rem;">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem; font-size:0.9rem;">
               <div>
                 <strong><?= escapeHtml($item['name']) ?></strong>
                 <span style="color:var(--text-muted);"> × <?= $item['qty'] ?></span>
+                <?php if (!empty($item['toppings']) && is_array($item['toppings'])): ?>
+                  <div style="font-size:0.75rem; color:#ea580c; font-weight:600; margin-top:2px;">
+                    ✨ <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']); }, $item['toppings'])) ?>
+                  </div>
+                <?php endif; ?>
               </div>
               <span style="font-weight:700;"><?= formatVND((float)$item['price'] * (int)$item['qty']) ?></span>
             </div>

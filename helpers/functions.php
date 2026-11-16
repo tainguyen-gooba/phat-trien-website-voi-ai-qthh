@@ -93,7 +93,7 @@ function renderProductCard($p) {
           </div>
           <div class="product-actions-group">
             <button type="button" class="favorite-btn" onclick="toggleFavorite(<?= $id ?>, this)" title="Yêu thích món này">♡</button>
-            <button type="button" class="btn-add-cart" onclick="addToCart(<?= $id ?>)" title="Thêm vào giỏ">＋</button>
+            <button type="button" class="btn-add-cart" onclick="openFoodModal(<?= $id ?>)" title="Tùy chọn món & Topping">＋</button>
           </div>
         </div>
       </div>

@@ -687,9 +687,9 @@ class PaymentController extends BaseController {
         canSwitchToCod: !isCod && paymentStatus !== 'completed'
           && ['awaiting_payment', 'payment_failed'].includes(row.orderStatus)
           && (!retryUntil || new Date(retryUntil).getTime() > Date.now()),
-        accountName: config.payments.sepay.accountName,
-        bankCode: config.payments.sepay.bankCode,
-        accountNumber: config.payments.sepay.accountNumber,
+        accountName: config.payments.sepay?.accountName || 'NGUYEN HIEN TAI',
+        bankCode: config.payments.sepay?.bankCode || 'BIDV',
+        accountNumber: config.payments.sepay?.accountNumber || '8855033140',
         momoPhone: config.payments.momo?.phone || '0911000001',
         momoName: config.payments.momo?.accountName || 'FASTFOOD VIET NAM',
         paidAt: row.paidAt,
@@ -706,24 +706,51 @@ class PaymentController extends BaseController {
         return this.sendError(res, 'Mã đơn hàng không hợp lệ.', HTTP_STATUS.BAD_REQUEST);
       }
 
-      const [orders] = await pool.execute(
-        `SELECT order_code AS orderCode, user_id AS userId, status, order_data AS orderData
-         FROM realtime_orders WHERE order_code = ? AND user_id = ? LIMIT 1`,
-        [orderCode, req.user.id]
-      );
+      const isStaffOrAdmin = ['admin', 'staff'].includes(req.user?.role);
+      const query = isStaffOrAdmin
+        ? 'SELECT order_code AS orderCode, user_id AS userId, status, order_data AS orderData FROM realtime_orders WHERE order_code = ? LIMIT 1'
+        : 'SELECT order_code AS orderCode, user_id AS userId, status, order_data AS orderData FROM realtime_orders WHERE order_code = ? AND user_id = ? LIMIT 1';
+      const params = isStaffOrAdmin ? [orderCode] : [orderCode, req.user.id];
+
+      const [orders] = await pool.execute(query, params);
       const order = orders[0];
       if (!order) {
-        return this.sendError(res, 'Không tìm thấy đơn hàng của bạn.', HTTP_STATUS.NOT_FOUND);
+        return this.sendError(res, 'Không tìm thấy đơn hàng.', HTTP_STATUS.NOT_FOUND);
       }
 
       const orderData = typeof order.orderData === 'string' ? JSON.parse(order.orderData) : order.orderData;
       const rawMethod = String(orderData.paymentMethod || '').toLowerCase();
       const method = rawMethod === 'momo' ? 'momo' : 'banking';
-      const txId = 'MANUAL_' + Date.now();
 
+      // Kiểm tra trạng thái thanh toán thực tế trong database
+      const [payments] = await pool.execute(
+        `SELECT status, provider_transaction_id AS transactionId FROM realtime_payments
+         WHERE order_code = ? AND payment_method = ? LIMIT 1`,
+        [orderCode, method]
+      );
+      const paymentRecord = payments[0];
+      if (paymentRecord && paymentRecord.status === 'completed') {
+        return this.sendSuccess(res, 'Đơn hàng đã được xác nhận thanh toán thành công.', {
+          orderCode,
+          paymentStatus: 'completed',
+          transactionId: paymentRecord.transactionId,
+        }, HTTP_STATUS.OK);
+      }
+
+      // Khách hàng KHÔNG được phép tự bấm xác nhận khi chưa có webhook từ ngân hàng/SePay
+      if (!isStaffOrAdmin) {
+        return this.sendError(
+          res,
+          'Hệ thống chưa nhận được biến động số dư từ ngân hàng cho đơn hàng này. Vui lòng kiểm tra lại tài khoản hoặc đợi 10 - 30 giây để SePay tự động xử lý.',
+          HTTP_STATUS.BAD_REQUEST
+        );
+      }
+
+      // Chỉ Admin / Staff mới có quyền xác nhận thủ công sau khi kiểm tra sao kê
+      const txId = `STAFF_${req.user.id}_${Date.now()}`;
       await this.completePayment(orderCode, method, txId, 'completed', req.app.get('io'));
 
-      return this.sendSuccess(res, 'Xác nhận thanh toán thành công! Đơn hàng đã được gửi đến nhà bếp.', {
+      return this.sendSuccess(res, 'Nhân viên đã xác nhận thanh toán thủ công thành công.', {
         orderCode,
         paymentStatus: 'completed',
         transactionId: txId,

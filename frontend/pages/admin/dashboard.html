@@ -2742,10 +2742,43 @@
 
     .analytics-heading-main {
       display: flex;
-      width: 100%;
+      flex: 1 1 auto;
+      min-width: 0;
       align-items: flex-start;
       justify-content: space-between;
       gap: 16px;
+    }
+
+    .analytics-heading-controls {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex: 0 0 auto;
+    }
+
+    .revenue-time-select {
+      height: 32px;
+      padding: 0 12px;
+      border-radius: 999px;
+      border: 1px solid #e7ded5;
+      background: #fff;
+      color: #4b3e36;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      outline: none;
+      transition: all .2s ease;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .03);
+    }
+
+    .revenue-time-select:hover {
+      border-color: #ea580c;
+      color: #ea580c;
+    }
+
+    .revenue-time-select:focus {
+      border-color: #ea580c;
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, .15);
     }
 
     .chart-summary {
@@ -3738,8 +3771,8 @@
             <div class="analytics-heading">
               <div class="analytics-heading-main">
                 <div>
-                  <h2 class="analytics-title">Doanh thu 7 ngày gần nhất</h2>
-                  <p class="analytics-caption">Tổng giá trị đơn hàng chưa bị hủy theo từng ngày</p>
+                  <h2 class="analytics-title" id="revenue-chart-heading">Doanh thu 7 ngày gần nhất</h2>
+                  <p class="analytics-caption" id="revenue-chart-caption">Tổng giá trị đơn hàng chưa bị hủy theo từng ngày</p>
                 </div>
                 <div class="chart-summary">
                   <div class="chart-summary-item"><span>Tổng doanh thu</span><strong id="chart-total-revenue">0
@@ -3748,7 +3781,14 @@
                   </div>
                 </div>
               </div>
-              <span class="realtime-badge" id="realtime-status" role="status">Đang kết nối</span>
+              <div class="analytics-heading-controls">
+                <select id="revenue-time-select" class="revenue-time-select" aria-label="Chọn khoảng thời gian doanh thu">
+                  <option value="1">1 ngày</option>
+                  <option value="7" selected>7 ngày</option>
+                  <option value="30">1 tháng</option>
+                </select>
+                <span class="realtime-badge" id="realtime-status" role="status">Đang kết nối</span>
+              </div>
             </div>
             <svg class="revenue-chart" id="revenue-chart" viewBox="0 0 760 270" role="img"
               aria-labelledby="revenue-chart-title revenue-chart-description"></svg>
@@ -3760,7 +3800,7 @@
             <div class="analytics-heading">
               <div>
                 <h2 class="analytics-title">Tỉ trọng doanh thu món ăn</h2>
-                <p class="analytics-caption">Phân bổ theo sản phẩm trên các đơn hàng 7 ngày</p>
+                <p class="analytics-caption" id="donut-chart-caption">Phân bổ theo sản phẩm trên các đơn hàng 7 ngày</p>
               </div>
             </div>
             <div class="donut-content">
@@ -5109,6 +5149,21 @@
         return `${parts.year}-${parts.month}-${parts.day}`;
       }
 
+      let revenueTimeRange = 7;
+
+      function getVietnamHour(order) {
+        const val = String(order.createdAt || order.date || '');
+        const date = new Date(val);
+        if (Number.isNaN(date.getTime())) return 12;
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Ho_Chi_Minh',
+          hour: 'numeric',
+          hour12: false,
+        }).formatToParts(date);
+        const hourPart = parts.find((p) => p.type === 'hour');
+        return hourPart ? parseInt(hourPart.value, 10) : date.getHours();
+      }
+
       function getLastSevenDays() {
         const [year, month, day] = vietnamDateKey(new Date()).split('-').map(Number);
         const today = new Date(Date.UTC(year, month - 1, day));
@@ -5126,24 +5181,121 @@
         });
       }
 
+      function getRevenueSlots(range) {
+        if (range === 1) {
+          const slotLabels = ['00:00', '03:00', '06:00', '09:00', '12:00', '15:00', '18:00', '21:00'];
+          return slotLabels.map((label, index) => {
+            const nextHour = (index + 1) * 3;
+            const tooltipLabel = `${label} - ${String(nextHour).padStart(2, '0')}:00`;
+            return {
+              key: `slot-${index}`,
+              slotIndex: index,
+              label,
+              tooltipLabel,
+              showLabel: true,
+              revenue: 0,
+              orders: 0,
+            };
+          });
+        }
+
+        const [year, month, day] = vietnamDateKey(new Date()).split('-').map(Number);
+        const today = new Date(Date.UTC(year, month - 1, day));
+        const count = range === 30 ? 30 : 7;
+        return Array.from({ length: count }, (_, index) => {
+          const date = new Date(today.getTime() - (count - 1 - index) * 24 * 60 * 60 * 1000);
+          const key = date.toISOString().slice(0, 10);
+          const label = new Intl.DateTimeFormat('vi-VN', {
+            timeZone: 'UTC',
+            day: '2-digit',
+            month: '2-digit',
+          }).format(date);
+          return {
+            key,
+            label,
+            tooltipLabel: label,
+            showLabel: count === 7 ? true : ((index % 5 === 0) || (index === count - 1)),
+            revenue: 0,
+            orders: 0,
+          };
+        });
+      }
+
       function compactMoney(amount) {
         return `${new Intl.NumberFormat('vi-VN', { notation: 'compact', maximumFractionDigits: 1 }).format(Number(amount) || 0)} đ`;
       }
 
       function renderSalesCharts() {
-        const days = getLastSevenDays();
-        const dayByKey = new Map(days.map((day) => [day.key, { ...day, revenue: 0, orders: 0 }]));
+        const slots = getRevenueSlots(revenueTimeRange);
         const salesOrders = data.orders.filter((order) => !isCancelledOrder(order));
-        salesOrders.forEach((order) => {
-          const day = dayByKey.get(orderDateKey(order));
-          if (!day) return;
-          day.orders += 1;
-          day.revenue += Math.max(0, Number(order.total) || 0);
-        });
-        const dailySales = [...dayByKey.values()];
-        const hasRecentOrders = dailySales.some((day) => day.orders > 0);
+        let matchingOrders = [];
+
+        if (revenueTimeRange === 1) {
+          const todayKey = vietnamDateKey(new Date());
+          matchingOrders = salesOrders.filter((order) => orderDateKey(order) === todayKey);
+          matchingOrders.forEach((order) => {
+            const hour = getVietnamHour(order);
+            const slotIndex = Math.min(7, Math.max(0, Math.floor(hour / 3)));
+            if (slots[slotIndex]) {
+              slots[slotIndex].orders += 1;
+              slots[slotIndex].revenue += Math.max(0, Number(order.total) || 0);
+            }
+          });
+        } else {
+          const slotByKey = new Map(slots.map((s) => [s.key, s]));
+          matchingOrders = salesOrders.filter((order) => slotByKey.has(orderDateKey(order)));
+          matchingOrders.forEach((order) => {
+            const slot = slotByKey.get(orderDateKey(order));
+            if (slot) {
+              slot.orders += 1;
+              slot.revenue += Math.max(0, Number(order.total) || 0);
+            }
+          });
+        }
+
+        const rangeConfigs = {
+          1: {
+            title: 'Doanh thu hôm nay (1 ngày)',
+            caption: 'Tổng giá trị đơn hàng chưa bị hủy theo từng khung giờ hôm nay',
+            emptyRevenue: 'Chưa có đơn hàng nào trong ngày hôm nay.',
+            donutCaption: 'Phân bổ theo sản phẩm trong ngày hôm nay',
+            donutEmpty: 'Chưa có dữ liệu sản phẩm trong hôm nay.',
+            donutAria: 'Tỉ trọng doanh thu sản phẩm hôm nay',
+          },
+          7: {
+            title: 'Doanh thu 7 ngày gần nhất',
+            caption: 'Tổng giá trị đơn hàng chưa bị hủy theo từng ngày',
+            emptyRevenue: 'Chưa có đơn hàng trong 7 ngày gần nhất.',
+            donutCaption: 'Phân bổ theo sản phẩm trên các đơn hàng 7 ngày',
+            donutEmpty: 'Chưa có dữ liệu sản phẩm trong 7 ngày gần nhất.',
+            donutAria: 'Tỉ trọng doanh thu sản phẩm trong 7 ngày',
+          },
+          30: {
+            title: 'Doanh thu 1 tháng (30 ngày gần nhất)',
+            caption: 'Tổng giá trị đơn hàng chưa bị hủy trong 30 ngày qua',
+            emptyRevenue: 'Chưa có đơn hàng trong 30 ngày gần nhất.',
+            donutCaption: 'Phân bổ theo sản phẩm trên các đơn hàng 30 ngày qua',
+            donutEmpty: 'Chưa có dữ liệu sản phẩm trong 30 ngày gần nhất.',
+            donutAria: 'Tỉ trọng doanh thu sản phẩm trong 30 ngày qua',
+          },
+        };
+
+        const config = rangeConfigs[revenueTimeRange] || rangeConfigs[7];
+        const headingEl = document.getElementById('revenue-chart-heading');
+        const captionEl = document.getElementById('revenue-chart-caption');
+        const emptyEl = document.getElementById('revenue-empty');
+        const donutCaptionEl = document.getElementById('donut-chart-caption');
+        const emptyDonut = document.getElementById('donut-empty');
+
+        if (headingEl) headingEl.textContent = config.title;
+        if (captionEl) captionEl.textContent = config.caption;
+        if (emptyEl) emptyEl.textContent = config.emptyRevenue;
+        if (donutCaptionEl) donutCaptionEl.textContent = config.donutCaption;
+        if (emptyDonut) emptyDonut.textContent = config.donutEmpty;
+
+        const hasRecentOrders = slots.some((s) => s.orders > 0);
         const chart = document.getElementById('revenue-chart');
-        document.getElementById('revenue-empty').hidden = hasRecentOrders;
+        emptyEl.hidden = hasRecentOrders;
         chart.hidden = !hasRecentOrders;
 
         if (hasRecentOrders) {
@@ -5151,10 +5303,10 @@
           const chartBottom = 214;
           const chartLeft = 72;
           const chartRight = 742;
-          const maxRevenue = Math.max(100000, Math.ceil(Math.max(...dailySales.map((day) => day.revenue)) / 50000) * 50000);
-          const points = dailySales.map((day, index) => ({
+          const maxRevenue = Math.max(100000, Math.ceil(Math.max(...slots.map((s) => s.revenue)) / 50000) * 50000);
+          const points = slots.map((day, index) => ({
             ...day,
-            x: chartLeft + index * (chartRight - chartLeft) / (dailySales.length - 1),
+            x: chartLeft + index * (chartRight - chartLeft) / (slots.length - 1),
             y: chartBottom - day.revenue / maxRevenue * (chartBottom - chartTop),
           }));
           const linePath = points.slice(1).reduce((path, point, index) => {
@@ -5168,18 +5320,18 @@
             const value = maxRevenue * (4 - index) / 4;
             return `<line class="chart-grid" x1="${chartLeft}" y1="${y.toFixed(1)}" x2="${chartRight}" y2="${y.toFixed(1)}"></line><text x="${chartLeft - 12}" y="${(y + 3).toFixed(1)}" text-anchor="end">${escapeHtml(compactMoney(value))}</text>`;
           }).join('');
-          const labels = points.map((point) => `<text x="${point.x.toFixed(1)}" y="246" text-anchor="middle">${escapeHtml(point.label)}</text>`).join('');
+          const labels = points.map((point) => point.showLabel !== false ? `<text x="${point.x.toFixed(1)}" y="246" text-anchor="middle">${escapeHtml(point.label)}</text>` : '').join('');
           const markers = points.map((point, index) => (
-            `<g class="chart-point-group"><line class="chart-guide" x1="${point.x.toFixed(1)}" y1="${chartTop}" x2="${point.x.toFixed(1)}" y2="${chartBottom}"></line><circle class="chart-point-halo" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${index === points.length - 1 ? 9 : 7}"></circle><circle class="chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${index === points.length - 1 ? 4.5 : 3.5}"><title>${escapeHtml(point.label)}: ${escapeHtml(money(point.revenue))} · ${point.orders} đơn</title></circle></g>`
+            `<g class="chart-point-group"><line class="chart-guide" x1="${point.x.toFixed(1)}" y1="${chartTop}" x2="${point.x.toFixed(1)}" y2="${chartBottom}"></line><circle class="chart-point-halo" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${points.length > 15 ? 5 : (index === points.length - 1 ? 9 : 7)}"></circle><circle class="chart-point" cx="${point.x.toFixed(1)}" cy="${point.y.toFixed(1)}" r="${points.length > 15 ? 2.8 : (index === points.length - 1 ? 4.5 : 3.5)}"><title>${escapeHtml(point.tooltipLabel || point.label)}: ${escapeHtml(money(point.revenue))} · ${point.orders} đơn</title></circle></g>`
           )).join('');
-          chart.innerHTML = `<title id="revenue-chart-title">Doanh thu từng ngày trong 7 ngày gần nhất</title><desc id="revenue-chart-description">Biểu đồ đường doanh thu, tổng ${escapeHtml(money(dailySales.reduce((sum, day) => sum + day.revenue, 0)))} từ ${dailySales.reduce((sum, day) => sum + day.orders, 0)} đơn không bị hủy.</desc><defs><linearGradient id="sales-area-gradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#f97316" stop-opacity=".19"></stop><stop offset="100%" stop-color="#f97316" stop-opacity=".01"></stop></linearGradient><linearGradient id="sales-line-gradient" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#fb923c"></stop><stop offset="100%" stop-color="#ea580c"></stop></linearGradient></defs>${grid}<line class="chart-axis" x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}"></line><path class="chart-area" d="${areaPath}"></path><path class="chart-line" d="${linePath}"></path>${markers}${labels}`;
+          chart.innerHTML = `<title id="revenue-chart-title">${escapeHtml(config.title)}</title><desc id="revenue-chart-description">Biểu đồ đường doanh thu, tổng ${escapeHtml(money(slots.reduce((sum, day) => sum + day.revenue, 0)))} từ ${slots.reduce((sum, day) => sum + day.orders, 0)} đơn không bị hủy.</desc><defs><linearGradient id="sales-area-gradient" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stop-color="#f97316" stop-opacity=".19"></stop><stop offset="100%" stop-color="#f97316" stop-opacity=".01"></stop></linearGradient><linearGradient id="sales-line-gradient" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stop-color="#fb923c"></stop><stop offset="100%" stop-color="#ea580c"></stop></linearGradient></defs>${grid}<line class="chart-axis" x1="${chartLeft}" y1="${chartBottom}" x2="${chartRight}" y2="${chartBottom}"></line><path class="chart-area" d="${areaPath}"></path><path class="chart-line" d="${linePath}"></path>${markers}${labels}`;
         }
-        document.getElementById('chart-total-revenue').textContent = compactMoney(dailySales.reduce((sum, day) => sum + day.revenue, 0));
-        document.getElementById('chart-total-orders').textContent = new Intl.NumberFormat('vi-VN').format(dailySales.reduce((sum, day) => sum + day.orders, 0));
+        document.getElementById('chart-total-revenue').textContent = compactMoney(slots.reduce((sum, day) => sum + day.revenue, 0));
+        document.getElementById('chart-total-orders').textContent = new Intl.NumberFormat('vi-VN').format(slots.reduce((sum, day) => sum + day.orders, 0));
 
         const productTotals = new Map();
-        salesOrders.forEach((order) => {
-          if (!dayByKey.has(orderDateKey(order)) || !Array.isArray(order.items)) return;
+        matchingOrders.forEach((order) => {
+          if (!Array.isArray(order.items)) return;
           order.items.forEach((item) => {
             const name = String(item?.name || '').trim();
             const amount = (Number(item?.price) || 0) * (Number(item?.qty) || 0);
@@ -5195,7 +5347,6 @@
         const totalProductRevenue = topProducts.reduce((sum, product) => sum + product.revenue, 0);
         const donut = document.getElementById('sales-donut');
         const legend = document.getElementById('donut-legend');
-        const emptyDonut = document.getElementById('donut-empty');
         const palette = ['#f97316', '#fb923c', '#fdba74', '#fed7aa', '#ffedd5'];
         document.getElementById('donut-total').textContent = compactMoney(totalProductRevenue);
         emptyDonut.hidden = topProducts.length > 0;
@@ -5204,7 +5355,7 @@
         if (!topProducts.length) {
           donut.style.background = '#f2f2f2';
           legend.innerHTML = '';
-          donut.setAttribute('aria-label', 'Chưa có dữ liệu doanh thu sản phẩm trong 7 ngày gần nhất');
+          donut.setAttribute('aria-label', config.donutEmpty);
           return;
         }
 
@@ -5215,12 +5366,17 @@
           return `${palette[index]} ${start.toFixed(2)}% ${progress.toFixed(2)}%`;
         });
         donut.style.background = `conic-gradient(${slices.join(', ')})`;
-        donut.setAttribute('aria-label', `Tỉ trọng doanh thu ${topProducts.length} nhóm sản phẩm trong 7 ngày, tổng ${money(totalProductRevenue)}`);
+        donut.setAttribute('aria-label', `${config.donutAria}: ${topProducts.length} nhóm sản phẩm, tổng ${money(totalProductRevenue)}`);
         legend.innerHTML = topProducts.map((product, index) => {
           const share = Math.round(product.revenue / totalProductRevenue * 100);
           return `<li><span class="legend-swatch" style="background-color:${palette[index]}" aria-hidden="true"></span><span class="legend-name" title="${escapeHtml(product.name)}">${escapeHtml(product.name)}</span><span class="legend-value">${share}% · ${escapeHtml(compactMoney(product.revenue))}</span></li>`;
         }).join('');
       }
+
+      document.getElementById('revenue-time-select')?.addEventListener('change', (event) => {
+        revenueTimeRange = Number(event.target.value) || 7;
+        renderSalesCharts();
+      });
 
       function renderStats() {
         document.getElementById('stat-orders').textContent = data.orders.length;

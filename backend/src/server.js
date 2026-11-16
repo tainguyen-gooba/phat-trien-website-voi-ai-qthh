@@ -46,8 +46,25 @@ const server = httpServer.listen(PORT, async () => {
         await setupRolesAndAccounts();
         logger.info('[Database] Đã tự động thiết lập vai trò staff và 4 tài khoản thành viên lên MySQL.');
       }
+
+      // Đảm bảo các cột thanh toán realtime_payments luôn đầy đủ
+      const [paymentColumns] = await pool.query(
+        `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = 'realtime_payments'
+           AND COLUMN_NAME IN ('expires_at', 'retry_until')`,
+        [config.db.database]
+      );
+      const cols = new Set(paymentColumns.map(c => c.COLUMN_NAME));
+      if (!cols.has('expires_at')) {
+        await pool.query('ALTER TABLE realtime_payments ADD COLUMN expires_at DATETIME NULL AFTER qr_url');
+        logger.info('[Database] Đã tự động thêm cột expires_at vào realtime_payments.');
+      }
+      if (!cols.has('retry_until')) {
+        await pool.query('ALTER TABLE realtime_payments ADD COLUMN retry_until DATETIME NULL AFTER expires_at');
+        logger.info('[Database] Đã tự động thêm cột retry_until vào realtime_payments.');
+      }
     } catch (accErr) {
-      logger.warn(`[Database] Không thể tự động kiểm tra tài khoản thành viên: ${accErr.message}`);
+      logger.warn(`[Database] Không thể tự động kiểm tra tài khoản thành viên / cột thanh toán: ${accErr.message}`);
     }
   } else {
     logger.warn(`[Database] CẢNH BÁO: ${dbStatus.message}`);

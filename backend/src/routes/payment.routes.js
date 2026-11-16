@@ -20,7 +20,7 @@ router.post('/vnpay/initiate', authenticate, authorize('customer'), (req, res, n
 router.post('/bank/initiate', authenticate, authorize('customer'), (req, res, next) => (
   paymentController.initiateBank(req, res, next)
 ));
-router.post('/:orderCode/confirm-transfer', authenticate, authorize('customer'), (req, res, next) => (
+router.post('/:orderCode/confirm-transfer', authenticate, authorize('customer', 'staff', 'admin'), (req, res, next) => (
   paymentController.confirmTransfer(req, res, next)
 ));
 router.post('/:orderCode/switch-to-cod', authenticate, authorize('customer'), (req, res, next) => (

@@ -58,9 +58,9 @@ const config = {
     },
     sepay: {
       apiKey: process.env.SEPAY_API_KEY || '',
-      bankCode: process.env.SEPAY_BANK_CODE || '',
-      accountNumber: process.env.SEPAY_ACCOUNT_NUMBER || '',
-      accountName: process.env.SEPAY_ACCOUNT_NAME || '',
+      bankCode: process.env.SEPAY_BANK_CODE || 'BIDV',
+      accountNumber: process.env.SEPAY_ACCOUNT_NUMBER || '8855033140',
+      accountName: process.env.SEPAY_ACCOUNT_NAME || 'NGUYEN HIEN TAI',
     },
   },
 };

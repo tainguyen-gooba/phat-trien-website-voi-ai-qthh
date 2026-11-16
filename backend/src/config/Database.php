@@ -13,10 +13,10 @@ class Database {
     public static function getConnection(): PDO {
         if (self::$instance === null) {
             $host = getenv('DB_HOST') ?: '127.0.0.1';
-            $port = getenv('DB_PORT') ?: '3306';
+            $port = getenv('DB_PORT') ?: '3301';
             $name = getenv('DB_NAME') ?: 'fastfood_db';
             $user = getenv('DB_USER') ?: 'root';
-            $pass = getenv('DB_PASS') ?: '';
+            $pass = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : (getenv('DB_PASS') ?: '');
             $charset = 'utf8mb4';
 
             $dsn = "mysql:host={$host};port={$port};dbname={$name};charset={$charset}";

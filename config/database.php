@@ -2,11 +2,11 @@
 /**
  * FASTFOOD - Cấu hình kết nối MySQL Database (PDO)
  */
-define('DB_HOST', 'localhost');
-define('DB_PORT', '3306');
-define('DB_NAME', 'fastfood_db');
-define('DB_USER', 'root');
-define('DB_PASS', '');
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+define('DB_PORT', getenv('DB_PORT') ?: '3301');
+define('DB_NAME', getenv('DB_NAME') ?: 'fastfood_db');
+define('DB_USER', getenv('DB_USER') ?: 'root');
+define('DB_PASS', getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : (getenv('DB_PASS') ?: ''));
 
 function getDB() {
     static $pdo = null;

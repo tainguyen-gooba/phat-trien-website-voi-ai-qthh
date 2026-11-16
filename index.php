@@ -121,11 +121,20 @@ require_once ROOT_PATH . '/includes/header.php';
 
     <div class="category-grid" id="category-grid-container">
       <?php foreach ($categories as $cat): ?>
-        <a href="<?= getUrl('foods.php?category=' . urlencode($cat['slug'] ?: $cat['id'])) ?>" class="category-card">
-          <div class="category-icon-box">
-            <?= $cat['icon_url'] ?: '🍔' ?>
+        <?php
+          $catUrl = getUrl('foods.php?category=' . urlencode($cat['slug'] ?: $cat['id']));
+          $icon = trim($cat['icon_url'] ?? '');
+          $isImgUrl = preg_match('/^(https?:\/\/|\/|\.\/)/i', $icon);
+        ?>
+        <a href="<?= $catUrl ?>" class="category-item">
+          <div class="category-icon-circle">
+            <?php if ($isImgUrl): ?>
+              <img src="<?= escapeHtml($icon) ?>" alt="<?= escapeHtml($cat['name']) ?>" class="category-icon-img" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=240&auto=format&fit=crop&q=80';">
+            <?php else: ?>
+              <span style="font-size: 2rem;"><?= !empty($icon) ? escapeHtml($icon) : '🍔' ?></span>
+            <?php endif; ?>
           </div>
-          <span class="category-name"><?= escapeHtml($cat['name']) ?></span>
+          <span class="category-label"><?= escapeHtml($cat['name']) ?></span>
         </a>
       <?php endforeach; ?>
     </div>

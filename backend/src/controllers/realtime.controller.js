@@ -706,22 +706,45 @@ class RealtimeController extends BaseController {
   async getOrders(req, res, next) {
     try {
       const isAdminOrStaff = ['admin', 'staff'].includes(req.user.role);
-      const query = isAdminOrStaff
-        ? `SELECT o.order_code, o.order_data, o.status,
-                  p.payment_method AS paymentMethod, p.status AS paymentStatus,
-                  p.expires_at AS paymentExpiresAt, p.retry_until AS paymentRetryUntil
-           FROM realtime_orders o
-           LEFT JOIN realtime_payments p ON p.order_code = o.order_code
-           ORDER BY o.id DESC`
-        : `SELECT o.order_code, o.order_data, o.status,
-                  p.payment_method AS paymentMethod, p.status AS paymentStatus,
-                  p.expires_at AS paymentExpiresAt, p.retry_until AS paymentRetryUntil
-           FROM realtime_orders o
-           LEFT JOIN realtime_payments p ON p.order_code = o.order_code
-           WHERE o.user_id = ? ORDER BY o.id DESC`;
-      const [rows] = isAdminOrStaff
-        ? await pool.execute(query)
-        : await pool.execute(query, [req.user.id]);
+      let rows;
+      try {
+        const query = isAdminOrStaff
+          ? `SELECT o.order_code, o.order_data, o.status,
+                    p.payment_method AS paymentMethod, p.status AS paymentStatus,
+                    p.expires_at AS paymentExpiresAt, p.retry_until AS paymentRetryUntil
+             FROM realtime_orders o
+             LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+             ORDER BY o.id DESC`
+          : `SELECT o.order_code, o.order_data, o.status,
+                    p.payment_method AS paymentMethod, p.status AS paymentStatus,
+                    p.expires_at AS paymentExpiresAt, p.retry_until AS paymentRetryUntil
+             FROM realtime_orders o
+             LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+             WHERE o.user_id = ? ORDER BY o.id DESC`;
+        [rows] = isAdminOrStaff
+          ? await pool.execute(query)
+          : await pool.execute(query, [req.user.id]);
+      } catch (colErr) {
+        if (colErr.code === 'ER_BAD_FIELD_ERROR' || colErr.message?.includes('expires_at')) {
+          const fallbackQuery = isAdminOrStaff
+            ? `SELECT o.order_code, o.order_data, o.status,
+                      p.payment_method AS paymentMethod, p.status AS paymentStatus
+               FROM realtime_orders o
+               LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+               ORDER BY o.id DESC`
+            : `SELECT o.order_code, o.order_data, o.status,
+                      p.payment_method AS paymentMethod, p.status AS paymentStatus
+               FROM realtime_orders o
+               LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+               WHERE o.user_id = ? ORDER BY o.id DESC`;
+          [rows] = isAdminOrStaff
+            ? await pool.execute(fallbackQuery)
+            : await pool.execute(fallbackQuery, [req.user.id]);
+        } else {
+          throw colErr;
+        }
+      }
+
       return this.sendSuccess(
         res,
         'Lấy danh sách đơn hàng thành công.',

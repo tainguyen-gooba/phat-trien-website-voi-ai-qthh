@@ -6,7 +6,6 @@ MẬT KHẨU CHUNG CHO TẤT CẢ TÀI KHOẢN: 123456
 -------------------------------------------------------------------
 1. TÀI KHOẢN QUẢN TRỊ VIÊN (ADMIN) - TOÀN QUYỀN HỆ THỐNG (FULL QUYỀN):
 -------------------------------------------------------------------
-- Email: admin@fastfood.vn
 - Mật khẩu: 123456
 - Vai trò: Quản trị viên (Admin)
 - Quyền hạn:

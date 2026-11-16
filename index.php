@@ -28,9 +28,6 @@ $bestSellers = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS cate
                            WHERE p.is_available = 1 
                            ORDER BY p.is_featured DESC, p.id ASC LIMIT 8")->fetchAll();
 
-// 4. Lấy mã giảm giá / Coupons
-$coupons = $db->query("SELECT * FROM coupons WHERE is_active = 1 LIMIT 4")->fetchAll();
-
 // 5. Lấy quán ăn nổi bật
 $featuredRestaurants = $db->query("SELECT * FROM restaurants WHERE is_active = 1 ORDER BY rating_avg DESC, id ASC LIMIT 4")->fetchAll();
 
@@ -183,34 +180,6 @@ require_once ROOT_PATH . '/includes/header.php';
       <?php endforeach; ?>
     </div>
   </section>
-
-  <!-- 5. CHƯƠNG TRÌNH KHUYẾN MÃI / VOUCHERS -->
-  <?php if (!empty($coupons)): ?>
-  <section style="margin-bottom: 4rem;">
-    <div class="section-title-wrap">
-      <div>
-        <h2 class="section-title">Mã Giảm Giá & Ưu Đãi Độc Quyền</h2>
-        <p class="section-subtitle">Lưu mã ngay để được trừ tiền trực tiếp vào đơn hàng</p>
-      </div>
-    </div>
-
-    <div class="promo-grid" id="coupons-container">
-      <?php foreach ($coupons as $c): ?>
-        <div class="promo-card">
-          <div class="promo-icon-badge">🎟️</div>
-          <div class="promo-info">
-            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
-              <span class="promo-code-pill"><?= escapeHtml($c['code']) ?></span>
-              <button type="button" class="btn btn-sm btn-outline" style="padding:0.25rem 0.65rem; font-size:0.75rem; border-radius:var(--radius-sm);" onclick="copyCoupon('<?= escapeHtml($c['code']) ?>')">Sao chép</button>
-            </div>
-            <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-main); margin:0 0 0.25rem; line-height:1.3;"><?= escapeHtml($c['title'] ?: 'Mã giảm giá FASTFOOD') ?></h4>
-            <p style="font-size:0.8rem; color:var(--text-muted); margin:0;">Đơn tối thiểu <?= formatVND($c['min_order_value']) ?></p>
-          </div>
-        </div>
-      <?php endforeach; ?>
-    </div>
-  </section>
-  <?php endif; ?>
 
   <!-- 6. NHÀ HÀNG NỔI BẬT -->
   <?php if (!empty($featuredRestaurants)): ?>

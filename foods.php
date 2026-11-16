@@ -140,36 +140,8 @@ require_once ROOT_PATH . '/includes/header.php';
         </div>
       <?php else: ?>
         <div class="grid grid-cols-3" id="foods-grid-container">
-          <?php foreach ($products as $p): 
-            $hasDiscount = !empty($p['discount_price']) && (float)$p['discount_price'] > 0 && (float)$p['discount_price'] < (float)$p['base_price'];
-            $currentPrice = $hasDiscount ? $p['discount_price'] : $p['base_price'];
-          ?>
-            <div class="product-card">
-              <div class="product-img-wrap">
-                <?php if ($hasDiscount): 
-                  $discountPct = round((($p['base_price'] - $p['discount_price']) / $p['base_price']) * 100);
-                ?>
-                  <span class="product-badge-sale">-<?= $discountPct ?>%</span>
-                <?php endif; ?>
-                <img src="<?= escapeHtml($p['image_url'] ?: getAssetUrl('assets/images/logo.svg')) ?>" 
-                     alt="<?= escapeHtml($p['name']) ?>" class="product-img" loading="lazy">
-              </div>
-              <div class="product-content">
-                <span class="product-restaurant"><?= escapeHtml($p['restaurant_name'] ?: 'FASTFOOD Partner') ?></span>
-                <h3 class="product-title">
-                  <a href="<?= getUrl('food-detail.php?id=' . $p['id']) ?>"><?= escapeHtml($p['name']) ?></a>
-                </h3>
-                <div class="product-footer">
-                  <div class="product-pricing">
-                    <span class="product-price-current"><?= formatVND($currentPrice) ?></span>
-                    <?php if ($hasDiscount): ?>
-                      <span class="product-price-original"><?= formatVND($p['base_price']) ?></span>
-                    <?php endif; ?>
-                  </div>
-                  <button type="button" class="btn-add-cart" onclick="addToCart(<?= $p['id'] ?>)" title="Thêm vào giỏ">＋</button>
-                </div>
-              </div>
-            </div>
+          <?php foreach ($products as $p): ?>
+            <?= renderProductCard($p) ?>
           <?php endforeach; ?>
         </div>
       <?php endif; ?>
@@ -179,6 +151,14 @@ require_once ROOT_PATH . '/includes/header.php';
 </main>
 
 <script>
+function toggleFavorite(productId, btn) {
+  const isLiked = btn.classList.toggle('is-liked');
+  btn.textContent = isLiked ? '♥' : '♡';
+  if (window.UIComponents?.showToast) {
+    window.UIComponents.showToast(isLiked ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích.', 'info');
+  }
+}
+
 async function addToCart(productId) {
   try {
     const res = await fetch('<?= getUrl('api/cart.php') ?>', {

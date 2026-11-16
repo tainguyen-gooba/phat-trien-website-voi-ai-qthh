@@ -22,6 +22,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_to_cod'])) {
     exit;
 }
 
+// Xử lý xác nhận khách đã hoàn tất chuyển tiền (hỗ trợ tức thì cho VietQR & MoMo)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_paid'])) {
+    $upStmt = $db->prepare("UPDATE orders SET payment_status = 'paid', order_status = 'placed' WHERE order_code = ?");
+    $upStmt->execute([$orderCode]);
+    $upRt = $db->prepare("UPDATE realtime_orders SET status = 'pending' WHERE order_code = ?");
+    $upRt->execute([$orderCode]);
+    $upRp = $db->prepare("UPDATE realtime_payments SET status = 'completed', paid_at = NOW() WHERE order_code = ?");
+    $upRp->execute([$orderCode]);
+    header('Location: ' . getUrl("order-tracking.php?id=" . urlencode($orderCode)));
+    exit;
+}
+
 $stmt = $db->prepare("SELECT o.*, p.qr_url, p.status AS realtime_payment_status, p.expires_at 
                       FROM orders o
                       LEFT JOIN realtime_payments p ON o.order_code = p.order_code
@@ -69,12 +81,13 @@ require_once ROOT_PATH . '/includes/header.php';
 
 <main class="container payment-page">
   <section class="payment-panel">
-    <h1>Thanh Toán Đơn Hàng</h1>
+    <?php $isMomo = ($order['payment_method'] === 'momo'); ?>
+    <h1><?= $isMomo ? 'Thanh Toán Ví MoMo' : 'Thanh Toán Đơn Hàng' ?></h1>
     <div class="payment-order-code">Mã đơn: <strong><?= escapeHtml($orderCode) ?></strong></div>
     <div class="payment-amount"><?= formatVND($order['total_amount']) ?></div>
     
     <p class="payment-status-text" id="payment-status-desc">
-      Chờ thanh toán. Đơn chỉ được chuyển đến quán sau khi thanh toán thành công.
+      <?= $isMomo ? 'Mở App MoMo hoặc App Ngân hàng quét mã VietQR bên dưới để thanh toán.' : 'Mở App Ngân hàng bất kỳ hoặc App MoMo quét mã VietQR bên dưới để thanh toán.' ?>
     </p>
 
     <div class="payment-countdown" id="payment-countdown">
@@ -87,11 +100,11 @@ require_once ROOT_PATH . '/includes/header.php';
     <!-- Thông tin chuyển khoản chi tiết -->
     <div class="payment-details-box">
       <div class="payment-details-row">
-        <span style="color:#64748b;">Ngân hàng:</span>
-        <strong style="color:#0f172a; font-weight:700;"><?= SEPAY_BANK_CODE ?></strong>
+        <span style="color:#64748b;">Kênh thanh toán:</span>
+        <strong style="color:<?= $isMomo ? '#a50064' : '#0f172a' ?>; font-weight:700;"><?= $isMomo ? 'Ví MoMo / VietQR' : SEPAY_BANK_CODE ?></strong>
       </div>
       <div class="payment-details-row">
-        <span style="color:#64748b;">Số tài khoản:</span>
+        <span style="color:#64748b;"><?= $isMomo ? 'STK / Ví MoMo:' : 'Số tài khoản:' ?></span>
         <strong style="color:#0f172a; font-size:1.05rem; font-weight:700; letter-spacing:0.5px;"><?= SEPAY_ACCOUNT_NUMBER ?></strong>
       </div>
       <div class="payment-details-row">
@@ -118,6 +131,13 @@ require_once ROOT_PATH . '/includes/header.php';
 
     <!-- Action Buttons -->
     <div class="payment-actions">
+      <form action="<?= getUrl("payment.php?orderCode=" . urlencode($orderCode)) ?>" method="POST" style="margin:0;">
+        <input type="hidden" name="confirm_paid" value="1">
+        <button type="submit" class="btn btn-primary" style="background:#16a34a; border-color:#16a34a;">
+          ✅ Tôi đã hoàn tất chuyển tiền
+        </button>
+      </form>
+
       <button type="button" class="btn btn-primary" id="btn-check-payment" onclick="checkPaymentStatus()">
         🔄 Kiểm tra giao dịch
       </button>
@@ -125,7 +145,7 @@ require_once ROOT_PATH . '/includes/header.php';
       <form action="<?= getUrl("payment.php?orderCode=" . urlencode($orderCode)) ?>" method="POST" style="margin:0;">
         <input type="hidden" name="switch_to_cod" value="1">
         <button type="submit" class="btn btn-outline" onclick="return confirm('Bạn có muốn đổi đơn hàng này sang thanh toán tiền mặt (COD)?')">
-          Đổi sang thanh toán COD
+          Đổi sang COD
         </button>
       </form>
     </div>

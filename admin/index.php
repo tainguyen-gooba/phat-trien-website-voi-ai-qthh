@@ -3770,11 +3770,14 @@ $initialData = [
           </svg><span>Trợ lý AI Chatbot</span>
           <span class="nav-badge nav-badge-ai">AI</span>
         </button>
+        <?php
+          $totalReviewsCount = (int)($db->query("SELECT COUNT(*) FROM reviews")->fetchColumn() ?: 0);
+        ?>
         <button class="nav-item" type="button" data-section="reviews">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="m12 3 2.7 5.5 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z" />
           </svg><span>Đánh giá khách hàng</span>
-          <span class="nav-badge" id="reviews-nav-badge" hidden>0</span>
+          <span class="nav-badge" id="reviews-nav-badge" <?= $totalReviewsCount > 0 ? '' : 'hidden' ?>><?= $totalReviewsCount > 99 ? '99+' : $totalReviewsCount ?></span>
         </button>
       </nav>
       <div class="sidebar-bottom">

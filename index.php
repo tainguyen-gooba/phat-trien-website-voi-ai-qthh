@@ -160,29 +160,8 @@ require_once ROOT_PATH . '/includes/header.php';
     </div>
 
     <div class="grid flash-deals-products" id="flash-deals-container">
-      <?php foreach ($flashDeals as $p): 
-        $discountPct = round((($p['base_price'] - $p['discount_price']) / $p['base_price']) * 100);
-      ?>
-        <div class="product-card">
-          <div class="product-img-wrap">
-            <span class="product-badge-sale">-<?= $discountPct ?>%</span>
-            <img src="<?= escapeHtml($p['image_url'] ?: getAssetUrl('assets/images/logo.svg')) ?>" 
-                 alt="<?= escapeHtml($p['name']) ?>" class="product-img" loading="lazy">
-          </div>
-          <div class="product-content">
-            <span class="product-restaurant"><?= escapeHtml($p['restaurant_name'] ?: 'FASTFOOD Partner') ?></span>
-            <h3 class="product-title">
-              <a href="<?= getUrl('food-detail.php?id=' . $p['id']) ?>"><?= escapeHtml($p['name']) ?></a>
-            </h3>
-            <div class="product-footer">
-              <div class="product-pricing">
-                <span class="product-price-current"><?= formatVND($p['discount_price']) ?></span>
-                <span class="product-price-original"><?= formatVND($p['base_price']) ?></span>
-              </div>
-              <button type="button" class="btn-add-cart" onclick="addToCart(<?= $p['id'] ?>)" title="Thêm vào giỏ">＋</button>
-            </div>
-          </div>
-        </div>
+      <?php foreach ($flashDeals as $p): ?>
+        <?= renderProductCard($p) ?>
       <?php endforeach; ?>
     </div>
   </section>
@@ -199,36 +178,8 @@ require_once ROOT_PATH . '/includes/header.php';
     </div>
 
     <div class="grid grid-cols-4" id="best-sellers-container">
-      <?php foreach ($bestSellers as $p): 
-        $hasDiscount = !empty($p['discount_price']) && (float)$p['discount_price'] > 0 && (float)$p['discount_price'] < (float)$p['base_price'];
-        $currentPrice = $hasDiscount ? $p['discount_price'] : $p['base_price'];
-      ?>
-        <div class="product-card">
-          <div class="product-img-wrap">
-            <?php if ($hasDiscount): 
-              $discountPct = round((($p['base_price'] - $p['discount_price']) / $p['base_price']) * 100);
-            ?>
-              <span class="product-badge-sale">-<?= $discountPct ?>%</span>
-            <?php endif; ?>
-            <img src="<?= escapeHtml($p['image_url'] ?: getAssetUrl('assets/images/logo.svg')) ?>" 
-                 alt="<?= escapeHtml($p['name']) ?>" class="product-img" loading="lazy">
-          </div>
-          <div class="product-content">
-            <span class="product-restaurant"><?= escapeHtml($p['restaurant_name'] ?: 'FASTFOOD Partner') ?></span>
-            <h3 class="product-title">
-              <a href="<?= getUrl('food-detail.php?id=' . $p['id']) ?>"><?= escapeHtml($p['name']) ?></a>
-            </h3>
-            <div class="product-footer">
-              <div class="product-pricing">
-                <span class="product-price-current"><?= formatVND($currentPrice) ?></span>
-                <?php if ($hasDiscount): ?>
-                  <span class="product-price-original"><?= formatVND($p['base_price']) ?></span>
-                <?php endif; ?>
-              </div>
-              <button type="button" class="btn-add-cart" onclick="addToCart(<?= $p['id'] ?>)" title="Thêm vào giỏ">＋</button>
-            </div>
-          </div>
-        </div>
+      <?php foreach ($bestSellers as $p): ?>
+        <?= renderProductCard($p) ?>
       <?php endforeach; ?>
     </div>
   </section>
@@ -245,15 +196,15 @@ require_once ROOT_PATH . '/includes/header.php';
 
     <div class="promo-grid" id="coupons-container">
       <?php foreach ($coupons as $c): ?>
-        <div class="promo-coupon-card">
-          <div class="promo-coupon-left">
-            <span class="promo-coupon-badge">VOUCHER</span>
-            <strong class="promo-coupon-code"><?= escapeHtml($c['code']) ?></strong>
-          </div>
-          <div class="promo-coupon-right">
-            <h4 class="promo-coupon-title"><?= escapeHtml($c['title'] ?: 'Mã giảm giá FASTFOOD') ?></h4>
-            <p class="promo-coupon-desc">Đơn tối thiểu <?= formatVND($c['min_order_value']) ?></p>
-            <button type="button" class="btn btn-sm btn-outline" onclick="copyCoupon('<?= escapeHtml($c['code']) ?>')">Sao chép mã</button>
+        <div class="promo-card">
+          <div class="promo-icon-badge">🎟️</div>
+          <div class="promo-info">
+            <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:0.4rem;">
+              <span class="promo-code-pill"><?= escapeHtml($c['code']) ?></span>
+              <button type="button" class="btn btn-sm btn-outline" style="padding:0.25rem 0.65rem; font-size:0.75rem; border-radius:var(--radius-sm);" onclick="copyCoupon('<?= escapeHtml($c['code']) ?>')">Sao chép</button>
+            </div>
+            <h4 style="font-size:0.95rem; font-weight:700; color:var(--text-main); margin:0 0 0.25rem; line-height:1.3;"><?= escapeHtml($c['title'] ?: 'Mã giảm giá FASTFOOD') ?></h4>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin:0;">Đơn tối thiểu <?= formatVND($c['min_order_value']) ?></p>
           </div>
         </div>
       <?php endforeach; ?>
@@ -273,17 +224,57 @@ require_once ROOT_PATH . '/includes/header.php';
     </div>
 
     <div class="grid grid-cols-2" id="featured-restaurants-container">
-      <?php foreach ($featuredRestaurants as $r): ?>
-        <div class="restaurant-card">
-          <img src="<?= escapeHtml($r['banner_url'] ?: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80') ?>" 
-               alt="<?= escapeHtml($r['name']) ?>" class="restaurant-card-img" loading="lazy">
-          <div class="restaurant-card-body">
-            <h3 class="restaurant-card-name"><?= escapeHtml($r['name']) ?></h3>
-            <p class="restaurant-card-address">📍 <?= escapeHtml($r['address']) ?></p>
-            <div class="restaurant-card-meta">
-              <span class="restaurant-card-rating">⭐ <?= number_format((float)$r['rating_avg'], 1) ?> (<?= (int)$r['rating_count'] ?>+)</span>
-              <a href="<?= getUrl('foods.php?restaurant=' . $r['id']) ?>" class="btn btn-outline btn-sm">Xem menu quán</a>
+      <?php foreach ($featuredRestaurants as $r): 
+        $bannerUrl = escapeHtml($r['banner_url'] ?: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80');
+      ?>
+        <a href="<?= getUrl('foods.php?restaurant=' . $r['id']) ?>" class="restaurant-card">
+          <div class="restaurant-banner-wrap">
+            <img src="<?= $bannerUrl ?>" alt="<?= escapeHtml($r['name']) ?>" class="restaurant-banner" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80';">
+            <span class="restaurant-badge-promo">⚡ Giao 15-20p</span>
+          </div>
+          <div class="restaurant-body">
+            <h3 class="restaurant-name"><?= escapeHtml($r['name']) ?></h3>
+            <p class="restaurant-tags">📍 <?= escapeHtml($r['address']) ?></p>
+            <div class="restaurant-footer">
+              <span class="restaurant-rating-pill">⭐ <?= number_format((float)$r['rating_avg'], 1) ?> (<?= (int)$r['rating_count'] ?>+)</span>
+              <span style="color:var(--primary-color); font-weight:700;">Xem menu quán ➔</span>
             </div>
+          </div>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- 7. ĐÁNH GIÁ CỦA KHÁCH HÀNG -->
+  <?php if (!empty($reviews)): ?>
+  <section style="margin-bottom: 4rem;">
+    <div class="section-title-wrap">
+      <div>
+        <h2 class="section-title">Đánh Giá Từ Khách Hàng</h2>
+        <p class="section-subtitle">Những trải nghiệm chân thực nhất từ thực khách đã tin dùng FASTFOOD</p>
+      </div>
+    </div>
+
+    <div class="review-grid">
+      <?php foreach ($reviews as $rev): 
+        $avatar = $rev['avatar_url'] ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80';
+        $rating = (int)($rev['rating'] ?? 5);
+      ?>
+        <div class="review-card">
+          <div class="review-header">
+            <img src="<?= escapeHtml($avatar) ?>" alt="<?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?>" class="review-avatar-img">
+            <div>
+              <h4 style="font-size:1rem; font-weight:700; margin:0 0 0.2rem;"><?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?></h4>
+              <span style="font-size:0.75rem; color:var(--text-muted);"><?= escapeHtml($rev['restaurant_name'] ?: 'FASTFOOD Partner') ?></span>
+            </div>
+          </div>
+          <div class="review-stars">
+            <?= str_repeat('★', $rating) . str_repeat('☆', 5 - $rating) ?>
+          </div>
+          <p class="review-text">“<?= escapeHtml($rev['comment'] ?: 'Món ăn rất ngon, nóng hổi và giao hàng siêu tốc!') ?>”</p>
+          <div class="review-order-tag">
+            <span>📅 <?= formatDateTimeVN($rev['created_at']) ?></span>
           </div>
         </div>
       <?php endforeach; ?>
@@ -330,6 +321,14 @@ function copyCoupon(code) {
       alert(`Đã sao chép mã: ${code}`);
     }
   });
+}
+
+function toggleFavorite(productId, btn) {
+  const isLiked = btn.classList.toggle('is-liked');
+  btn.textContent = isLiked ? '♥' : '♡';
+  if (window.UIComponents?.showToast) {
+    window.UIComponents.showToast(isLiked ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích.', 'info');
+  }
 }
 </script>
 

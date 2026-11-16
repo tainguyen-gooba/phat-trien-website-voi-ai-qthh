@@ -138,28 +138,8 @@ require_once ROOT_PATH . '/includes/header.php';
       Món Ăn Liên Quan Được Yêu Thích
     </h3>
     <div class="grid grid-cols-4" id="related-foods-container">
-      <?php foreach ($relatedFoods as $rf): 
-        $rDiscount = !empty($rf['discount_price']) && (float)$rf['discount_price'] > 0 && (float)$rf['discount_price'] < (float)$rf['base_price'];
-        $rPrice = $rDiscount ? $rf['discount_price'] : $rf['base_price'];
-      ?>
-        <div class="product-card">
-          <div class="product-img-wrap">
-            <img src="<?= escapeHtml($rf['image_url'] ?: getAssetUrl('assets/images/logo.svg')) ?>" 
-                 alt="<?= escapeHtml($rf['name']) ?>" class="product-img" loading="lazy">
-          </div>
-          <div class="product-content">
-            <span class="product-restaurant"><?= escapeHtml($rf['restaurant_name'] ?: 'FASTFOOD Partner') ?></span>
-            <h3 class="product-title">
-              <a href="<?= getUrl('food-detail.php?id=' . $rf['id']) ?>"><?= escapeHtml($rf['name']) ?></a>
-            </h3>
-            <div class="product-footer">
-              <div class="product-pricing">
-                <span class="product-price-current"><?= formatVND($rPrice) ?></span>
-              </div>
-              <button type="button" class="btn-add-cart" onclick="addToCart(<?= $rf['id'] ?>)">＋</button>
-            </div>
-          </div>
-        </div>
+      <?php foreach ($relatedFoods as $rf): ?>
+        <?= renderProductCard($rf) ?>
       <?php endforeach; ?>
     </div>
   </section>
@@ -203,6 +183,13 @@ async function handleAddToCart(isBuyNow = false) {
     }
   } catch (err) {
     console.error(err);
+  }
+}
+function toggleFavorite(productId, btn) {
+  const isLiked = btn.classList.toggle('is-liked');
+  btn.textContent = isLiked ? '♥' : '♡';
+  if (window.UIComponents?.showToast) {
+    window.UIComponents.showToast(isLiked ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích.', 'info');
   }
 }
 </script>

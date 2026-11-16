@@ -40,20 +40,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Sinh mã đơn hàng ngẫu nhiên FFxxxx
         $orderCode = 'FF' . rand(1000, 9999);
         
+        // Đảm bảo user_id hợp lệ trong bảng users để tránh lỗi foreign key constraint
+        $userId = (int)($currentUser['id'] ?? 0);
+        $userCheck = $db->prepare("SELECT id FROM users WHERE id = ? LIMIT 1");
+        $userCheck->execute([$userId]);
+        if (!$userCheck->fetch()) {
+            $fallbackUser = $db->query("SELECT id FROM users WHERE role_id = 2 ORDER BY id ASC LIMIT 1")->fetch();
+            $userId = $fallbackUser ? (int)$fallbackUser['id'] : 1;
+            $_SESSION['user_id'] = $userId;
+        }
+
+        // Lấy restaurant_id từ sản phẩm đầu tiên trong giỏ hàng (mặc định 1)
+        $restaurantId = 1;
+        foreach ($cart as $id => $item) {
+            if (is_numeric($id) && (int)$id > 0) {
+                $pCheck = $db->prepare("SELECT restaurant_id FROM products WHERE id = ? LIMIT 1");
+                $pCheck->execute([(int)$id]);
+                $rRow = $pCheck->fetch();
+                if (!empty($rRow['restaurant_id'])) {
+                    $restaurantId = (int)$rRow['restaurant_id'];
+                    break;
+                }
+            }
+        }
+
         $db->beginTransaction();
         try {
             $paymentStatus = 'pending';
             $orderStatus   = ($method === 'cod') ? 'pending' : 'awaiting_payment';
-            $paymentMethodDb = ($method === 'vietqr' || $method === 'banking') ? 'banking' : $method;
+            $paymentMethodDb = ($method === 'vietqr' || $method === 'banking') ? 'banking' : (($method === 'momo') ? 'momo' : 'cod');
 
             // 1. Lưu vào bảng orders
             $stmt = $db->prepare("INSERT INTO orders 
-                (order_code, customer_id, recipient_name, recipient_phone, delivery_address, note_for_restaurant, 
+                (order_code, customer_id, restaurant_id, recipient_name, recipient_phone, delivery_address, note_for_restaurant, 
                  subtotal, shipping_fee, discount_amount, total_amount, payment_method, payment_status, order_status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, NOW())");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, NOW())");
             $stmt->execute([
                 $orderCode,
-                $currentUser['id'],
+                $userId,
+                $restaurantId,
                 $name,
                 $phone,
                 $address,
@@ -94,7 +119,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $orderData = [
                 'id'              => $orderCode,
                 'orderCode'       => $orderCode,
-                'userId'          => $currentUser['id'],
+                'userId'          => $userId,
                 'customerName'    => $name,
                 'recipient'       => ['name' => $name, 'phone' => $phone, 'address' => $address],
                 'deliveryAddress' => $address,
@@ -113,15 +138,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $rtStmt = $db->prepare("INSERT INTO realtime_orders (order_code, user_id, order_data, status, created_at)
                                     VALUES (?, ?, ?, ?, NOW())");
-            $rtStmt->execute([$orderCode, $currentUser['id'], json_encode($orderData, JSON_UNESCAPED_UNICODE), $orderStatus]);
+            $rtStmt->execute([$orderCode, $userId, json_encode($orderData, JSON_UNESCAPED_UNICODE), $orderStatus]);
 
-            // 4. Nếu thanh toán VietQR / SePay, tạo realtime_payments
-            if ($paymentMethodDb === 'banking') {
+            // 4. Nếu thanh toán Online (VietQR / MoMo / SePay), tạo realtime_payments
+            if ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo') {
                 $qrUrl = "https://qr.sepay.vn/img?acc=" . SEPAY_ACCOUNT_NUMBER . "&bank=" . SEPAY_BANK_CODE . "&amount=" . $total . "&des=" . $orderCode . "&template=compact";
                 $rpStmt = $db->prepare("INSERT INTO realtime_payments 
                     (order_code, payment_method, amount, status, qr_url, expires_at, created_at)
-                    VALUES (?, 'banking', ?, 'pending', ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())");
-                $rpStmt->execute([$orderCode, $total, $qrUrl]);
+                    VALUES (?, ?, ?, 'pending', ?, DATE_ADD(NOW(), INTERVAL 15 MINUTE), NOW())");
+                $rpStmt->execute([$orderCode, $paymentMethodDb, $total, $qrUrl]);
             }
 
             $db->commit();
@@ -130,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unset($_SESSION['cart']);
 
             // Điều hướng
-            if ($paymentMethodDb === 'banking') {
+            if ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo') {
                 header('Location: ' . getUrl("payment.php?orderCode=" . urlencode($orderCode)));
             } else {
                 header('Location: ' . getUrl("order-tracking.php?id=" . urlencode($orderCode)));

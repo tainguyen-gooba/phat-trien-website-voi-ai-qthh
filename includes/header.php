@@ -169,10 +169,6 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
               </div>
             </div>
           </div>
-
-          <?php if ($isManager): ?>
-            <a href="<?= getUrl('admin/index.php') ?>" class="btn btn-primary btn-sm"><?= isAdmin() ? 'Quản trị' : 'Quản lý' ?></a>
-          <?php endif; ?>
         <?php else: ?>
           <a href="<?= getUrl('login.php') ?>" class="btn btn-outline btn-sm">Đăng Nhập</a>
           <a href="<?= getUrl('register.php') ?>" class="btn btn-primary btn-sm">Đăng Ký</a>

@@ -249,24 +249,6 @@
   pointer-events: auto;
 }
 
-@media (min-width: 769px) {
-  .user-dropdown-wrap:hover .user-dropdown-menu {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-    pointer-events: auto;
-  }
-  .user-dropdown-wrap:hover .user-menu-pill {
-    border-color: var(--primary-color);
-    background: #fff7ed;
-    box-shadow: 0 4px 14px rgba(249, 115, 22, 0.15);
-  }
-  .user-dropdown-wrap:hover .dropdown-arrow-icon {
-    transform: rotate(180deg);
-    color: var(--primary-color);
-  }
-}
-
 @media (max-width: 480px) {
   .user-dropdown-menu {
     width: 260px;

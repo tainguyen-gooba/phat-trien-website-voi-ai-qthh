@@ -108,46 +108,55 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
 
               <ul class="user-dropdown-list">
                 <?php if ($isManager): ?>
+                  <!-- Dành cho Admin / Quản trị viên -->
                   <li>
                     <a href="<?= getUrl('admin/index.php') ?>" class="user-dropdown-item item-highlight">
-                      <span class="dropdown-item-icon">⚡</span>
+                      <span class="dropdown-item-icon">📊</span>
                       <div class="dropdown-item-text">
-                        <strong>Trang Quản Trị</strong>
-                        <small>Đơn hàng, doanh số & món ăn</small>
+                        <strong>Dashboard</strong>
+                        <small>Bảng điều khiển & doanh số</small>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<?= getUrl('profile.php') ?>" class="user-dropdown-item">
+                      <span class="dropdown-item-icon">👤</span>
+                      <div class="dropdown-item-text">
+                        <strong>Hồ sơ tài khoản</strong>
+                        <small>Xem và sửa thông tin cá nhân</small>
+                      </div>
+                    </a>
+                  </li>
+                <?php else: ?>
+                  <!-- Dành cho Người dùng / Khách hàng (bỏ trang quản trị) -->
+                  <li>
+                    <a href="<?= getUrl('profile.php') ?>" class="user-dropdown-item">
+                      <span class="dropdown-item-icon">👤</span>
+                      <div class="dropdown-item-text">
+                        <strong>Hồ sơ tài khoản</strong>
+                        <small>Xem và sửa thông tin cá nhân</small>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<?= getUrl('order-history.php') ?>" class="user-dropdown-item">
+                      <span class="dropdown-item-icon">📦</span>
+                      <div class="dropdown-item-text">
+                        <strong>Lịch sử đơn hàng</strong>
+                        <small>Theo dõi tình trạng đơn đặt món</small>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<?= getUrl('favorites.php') ?>" class="user-dropdown-item">
+                      <span class="dropdown-item-icon">💖</span>
+                      <div class="dropdown-item-text">
+                        <strong>Món ăn yêu thích</strong>
+                        <small>Danh sách các món đã lưu</small>
                       </div>
                     </a>
                   </li>
                 <?php endif; ?>
-
-                <li>
-                  <a href="<?= getUrl('profile.php') ?>" class="user-dropdown-item">
-                    <span class="dropdown-item-icon">👤</span>
-                    <div class="dropdown-item-text">
-                      <strong>Hồ sơ tài khoản</strong>
-                      <small>Xem và sửa thông tin cá nhân</small>
-                    </div>
-                  </a>
-                </li>
-
-                <li>
-                  <a href="<?= getUrl('order-history.php') ?>" class="user-dropdown-item">
-                    <span class="dropdown-item-icon">📦</span>
-                    <div class="dropdown-item-text">
-                      <strong>Lịch sử đơn hàng</strong>
-                      <small>Theo dõi tình trạng đơn đặt món</small>
-                    </div>
-                  </a>
-                </li>
-
-                <li>
-                  <a href="<?= getUrl('favorites.php') ?>" class="user-dropdown-item">
-                    <span class="dropdown-item-icon">💖</span>
-                    <div class="dropdown-item-text">
-                      <strong>Món ăn yêu thích</strong>
-                      <small>Danh sách các món đã lưu</small>
-                    </div>
-                  </a>
-                </li>
               </ul>
 
               <div class="user-dropdown-divider"></div>
@@ -189,7 +198,12 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
 
     document.addEventListener('click', function(e) {
       const wrap = document.getElementById('user-dropdown-wrap');
-      if (wrap && !wrap.contains(e.target)) {
+      if (!wrap) return;
+      const menu = document.getElementById('user-dropdown-menu');
+      if (menu && menu.contains(e.target) && !e.target.closest('a')) {
+        return;
+      }
+      if (!wrap.contains(e.target) || e.target.closest('a')) {
         wrap.classList.remove('open');
         const trigger = document.getElementById('user-menu-trigger');
         if (trigger) trigger.setAttribute('aria-expanded', 'false');

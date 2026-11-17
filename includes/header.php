@@ -84,7 +84,7 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
 
         <!-- User Session / Login -->
         <?php if ($currentUser): ?>
-          <a href="<?= getUrl('profile.php') ?>" class="user-menu-pill" title="Hồ sơ tài khoản">
+          <a href="<?= getUrl('logout.php') ?>" class="user-menu-pill" title="Nhấn vào ảnh để đăng xuất (<?= escapeHtml($currentUser['full_name']) ?>)">
             <img src="<?= escapeHtml($currentUser['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80') ?>" alt="Avatar" class="user-avatar-mini" style="object-fit:cover;">
             <span><?= escapeHtml(explode(' ', $currentUser['full_name'])[count(explode(' ', $currentUser['full_name'])) - 1] ?? 'Tài Khoản') ?></span>
           </a>
@@ -92,8 +92,6 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
           <?php if ($isManager): ?>
             <a href="<?= getUrl('admin/index.php') ?>" class="btn btn-primary btn-sm"><?= isAdmin() ? 'Quản trị' : 'Quản lý' ?></a>
           <?php endif; ?>
-
-          <a href="<?= getUrl('logout.php') ?>" class="btn btn-outline btn-sm" title="Đăng xuất">Đăng Xuất</a>
         <?php else: ?>
           <a href="<?= getUrl('login.php') ?>" class="btn btn-outline btn-sm">Đăng Nhập</a>
           <a href="<?= getUrl('register.php') ?>" class="btn btn-primary btn-sm">Đăng Ký</a>

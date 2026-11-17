@@ -3845,11 +3845,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           </div>
 
           <span class="profile-divider" aria-hidden="true"></span>
-          <div class="admin-profile">
+          <div class="admin-profile" id="admin-profile-clickable" style="cursor: pointer; transition: opacity 0.2s;" title="Nhấn vào ảnh để đăng xuất">
             <span class="avatar" aria-hidden="true">AD</span>
             <span class="profile-copy"><strong>Quản trị viên</strong><span>Quản trị hệ thống</span></span>
           </div>
-          <button class="logout-button" id="logout-button" type="button">Đăng xuất</button>
+          <button class="logout-button" id="logout-button" type="button" style="display: none;">Đăng xuất</button>
         </div>
       </header>
 
@@ -4378,6 +4378,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       document.querySelector('.profile-copy strong').textContent = authenticatedUser.fullName;
       document.querySelector('.profile-copy span').textContent = authenticatedUser.email;
+      document.getElementById('admin-profile-clickable')?.addEventListener('click', () => {
+        if (confirm('Bạn có muốn đăng xuất khỏi trang quản trị không?')) {
+          document.getElementById('logout-button')?.click();
+        }
+      });
       document.getElementById('logout-button').addEventListener('click', () => {
         sessionStorage.removeItem(tokenKey);
         for (const key of ['fastfood_user', 'fastfood_cart', 'fastfood_orders', 'fastfood_active_order', 'fastfood_applied_coupon', 'fastfood_available_coupons']) {

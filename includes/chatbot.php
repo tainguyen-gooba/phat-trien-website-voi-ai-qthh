@@ -1,0 +1,103 @@
+<!-- FASTFOOD UNIFIED SUPPORT CHATBOX COMPONENT -->
+<div class="ff-chatbot-wrapper" id="ff-chatbot-wrapper">
+  <!-- 1. Floating Chat Trigger Button -->
+  <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat Nhân viên hỗ trợ" title="Chat với Nhân viên hỗ trợ FASTFOOD">
+    <span class="ff-trigger-glow"></span>
+    <span class="ff-trigger-icon-wrap">
+      <!-- Support Headset / Chat Icon -->
+      <svg class="ff-icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
+        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+      </svg>
+      <!-- Close Icon (when chat is open) -->
+      <svg class="ff-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </span>
+    <span class="ff-trigger-badge">24/7</span>
+    <span class="ff-trigger-tooltip">Nhắn với Nhân viên hỗ trợ FASTFOOD!</span>
+  </button>
+
+  <!-- 2. Chat Window Container -->
+  <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện với Nhân viên hỗ trợ" hidden>
+    <!-- Chat Header -->
+    <header class="ff-chat-header">
+      <div class="ff-header-identity">
+        <div class="ff-avatar-wrap">
+          <span class="ff-avatar-icon" id="ff-header-avatar">👨‍💼</span>
+          <span class="ff-status-dot online" id="ff-header-status-dot" title="Nhân viên hỗ trợ đang sẵn sàng"></span>
+        </div>
+        <div class="ff-header-info">
+          <div class="ff-header-title-row">
+            <h3 class="ff-chat-name">Nhân viên hỗ trợ</h3>
+            <span class="ff-verified-badge" title="Hỗ trợ chính thức FASTFOOD">✓</span>
+          </div>
+          <p class="ff-chat-status" id="ff-chat-status-text">Hỗ trợ khách hàng trực tuyến 24/7</p>
+        </div>
+      </div>
+
+      <!-- Window Control Action Buttons -->
+      <div class="ff-header-actions">
+        <button type="button" class="ff-btn-icon" id="ff-btn-new-chat" title="Cuộc trò chuyện mới" aria-label="Bắt đầu cuộc trò chuyện mới">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>
+        </button>
+        <button type="button" class="ff-btn-icon" id="ff-btn-expand" title="Mở rộng khung chat" aria-label="Phóng to hoặc thu nhỏ">
+          <svg class="ff-icon-maximize" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
+          <svg class="ff-icon-restore" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;"><path d="M4 14h6v6"></path><path d="M20 10h-6V4"></path><path d="M14 10l7-7"></path><path d="M10 14L3 21"></path></svg>
+        </button>
+        <button type="button" class="ff-btn-icon" id="ff-btn-minimize" title="Thu nhỏ" aria-label="Thu nhỏ">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <button type="button" class="ff-btn-icon ff-btn-close" id="ff-btn-close" title="Đóng chat" aria-label="Đóng cửa sổ chat">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Chat Messages Window -->
+    <div class="ff-chat-body" id="ff-chat-body" aria-live="polite">
+      <!-- Welcome Message rendered by JavaScript -->
+    </div>
+
+    <!-- Typing Indicator Effect -->
+    <div class="ff-chat-typing" id="ff-chat-typing" hidden>
+      <div class="ff-typing-avatar">👨‍💼</div>
+      <div class="ff-typing-bubble">
+        <span>Nhân viên hỗ trợ đang phản hồi</span>
+        <div class="ff-typing-dots">
+          <span></span><span></span><span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Question Suggestions Bar (Chips) -->
+    <div class="ff-quick-chips-wrap">
+      <div class="ff-quick-chips" id="ff-quick-chips">
+        <button type="button" class="ff-chip-item" data-query="Hôm nay ăn gì?">🍜 Hôm nay ăn gì?</button>
+        <button type="button" class="ff-chip-item" data-query="Món nào dưới 50.000đ?">💰 Món nào dưới 50.000đ?</button>
+        <button type="button" class="ff-chip-item" data-query="Có combo nào tiết kiệm không?">🎁 Có combo nào tiết kiệm không?</button>
+        <button type="button" class="ff-chip-item" data-query="Món nào bán chạy nhất?">🔥 Món nào bán chạy nhất?</button>
+        <button type="button" class="ff-chip-item" data-query="Tôi muốn đặt đồ ăn">🛒 Tôi muốn đặt đồ ăn</button>
+        <button type="button" class="ff-chip-item" data-query="Kiểm tra đơn hàng của tôi">📦 Kiểm tra đơn hàng của tôi</button>
+      </div>
+    </div>
+
+    <!-- Chat Input Form -->
+    <footer class="ff-chat-footer">
+      <form class="ff-chat-form" id="ff-chat-form" autocomplete="off">
+        <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Nhắn tin cho Nhân viên hỗ trợ..." maxlength="1000" required>
+        <button type="submit" class="ff-chat-send-btn" id="ff-chat-send-btn" aria-label="Gửi tin nhắn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+        </button>
+      </form>
+      <div class="ff-chat-disclaimer">
+        <span>⚡ Kết nối trực tiếp đội ngũ hỗ trợ FASTFOOD</span>
+      </div>
+    </footer>
+  </section>
+</div>
+

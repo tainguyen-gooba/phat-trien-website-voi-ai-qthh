@@ -49,15 +49,21 @@ window.initFastfoodRealtime = function initFastfoodRealtime(user = null) {
             Object.entries(result.data).forEach(([collection, records]) => {
               changed = mergeLiveContent({ collection, records }) || changed;
             });
-            if (changed) window.location.reload();
+            if (changed) {
+              window.dispatchEvent(new CustomEvent('fastfood:content-synced', { detail: result.data }));
+            }
           })
           .catch((error) => console.error('[Realtime content load failed]', error.message));
       });
 
       socket.on('content:updated', (update) => {
         if (!mergeLiveContent(update)) return;
-        if (!window.location.pathname.endsWith('/pages/admin/dashboard.html')) window.location.reload();
-        else window.UIComponents?.showToast('Nội dung website đã được đồng bộ.', 'success');
+        const isAdminPath = window.location.pathname.includes('/admin') || window.location.pathname.includes('dashboard.html');
+        if (!isAdminPath) {
+          window.location.reload();
+        } else {
+          window.UIComponents?.showToast?.('Nội dung website đã được đồng bộ.', 'success');
+        }
       });
       socket.on('notification:new', (notification) => {
         window.dispatchEvent(new CustomEvent('fastfood:notification-new', { detail: notification }));

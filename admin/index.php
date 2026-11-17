@@ -136,6 +136,15 @@ $initialData = [
         'roleId'    => (int)$currentUser['role_id']
     ]
 ];
+
+require_once dirname(__DIR__) . '/backend/src/config/JwtConfig.php';
+$adminToken = \FastFood\Config\JwtConfig::encode([
+    'id' => (int)$currentUser['id'],
+    'email' => $currentUser['email'],
+    'fullName' => $currentUser['full_name'],
+    'role' => $isAdmin ? 'admin' : 'staff',
+    'roleId' => (int)$currentUser['role_id']
+]);
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -4179,13 +4188,27 @@ $initialData = [
         return;
       }
 
+      const serverToken = <?= json_encode($adminToken) ?>;
+      const serverUser = <?= json_encode([
+          'id' => (int)$currentUser['id'],
+          'fullName' => $currentUser['full_name'],
+          'email' => $currentUser['email'],
+          'role' => $isAdmin ? 'admin' : 'staff',
+          'roleId' => (int)$currentUser['role_id']
+      ]) ?>;
+
       const STORAGE_KEY = 'fastfood-admin-dashboard-v1';
       const pageSize = 5;
       const tokenKey = 'fastfood_auth_token';
-      const token = sessionStorage.getItem(tokenKey);
+      let token = sessionStorage.getItem(tokenKey);
+      if (!token && serverToken) {
+        token = serverToken;
+        sessionStorage.setItem(tokenKey, serverToken);
+      }
 
       function showAccessMessage(title, message) {
         const content = document.querySelector('.content');
+        if (!content) return;
         content.innerHTML = '';
         const panel = document.createElement('section');
         panel.className = 'table-panel';
@@ -4196,44 +4219,34 @@ $initialData = [
         description.textContent = message;
         const loginLink = document.createElement('a');
         loginLink.className = 'primary-button';
-        loginLink.href = '/pages/login.html';
+        loginLink.href = '/login.php';
         loginLink.textContent = 'Đến trang đăng nhập';
         panel.append(heading, description, loginLink);
         content.appendChild(panel);
       }
 
-      if (!token) {
-        window.location.replace('../login.html?next=%2Fpages%2Fadmin%2Fdashboard.html');
-        return;
-      }
-
-      let authenticatedUser;
+      let authenticatedUser = serverUser;
       try {
         const apiUrl = window.location.port === '5000'
           ? `${window.location.origin}/api/v1`
           : 'http://localhost:5000/api/v1';
-        const response = await fetch(`${apiUrl}/auth/me`, {
-          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-        });
-        const result = await response.json();
-
-        if (response.status === 401 || response.status === 403) {
-          sessionStorage.removeItem(tokenKey);
-          window.location.replace('../login.html?reason=session');
-          return;
+        if (token) {
+          const response = await fetch(`${apiUrl}/auth/me`, {
+            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+          });
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data?.user) {
+              authenticatedUser = result.data.user;
+            }
+          }
         }
-        if (!response.ok || !result.success || !result.data?.user) {
-          throw new Error(result.message || 'Không thể xác thực phiên đăng nhập.');
-        }
-        authenticatedUser = result.data.user;
       } catch (error) {
-        showAccessMessage('Không thể xác thực tài khoản', 'Hãy kiểm tra Backend và MySQL đang chạy, sau đó đăng nhập lại.');
-        return;
+        console.warn('API auth/me notice:', error);
       }
 
-      if (authenticatedUser.role !== 'admin') {
-        showAccessMessage('Bạn không có quyền truy cập', 'Trang quản trị chỉ dành cho tài khoản quản trị viên.');
-        return;
+      if (!authenticatedUser) {
+        authenticatedUser = serverUser;
       }
 
       const liveSocket = await window.initFastfoodRealtime(authenticatedUser);

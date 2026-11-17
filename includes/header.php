@@ -84,10 +84,82 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
 
         <!-- User Session / Login -->
         <?php if ($currentUser): ?>
-          <a href="<?= getUrl('logout.php') ?>" class="user-menu-pill" title="Nhấn vào ảnh để đăng xuất (<?= escapeHtml($currentUser['full_name']) ?>)">
-            <img src="<?= escapeHtml($currentUser['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80') ?>" alt="Avatar" class="user-avatar-mini" style="object-fit:cover;">
-            <span><?= escapeHtml(explode(' ', $currentUser['full_name'])[count(explode(' ', $currentUser['full_name'])) - 1] ?? 'Tài Khoản') ?></span>
-          </a>
+          <div class="user-dropdown-wrap" id="user-dropdown-wrap">
+            <button type="button" class="user-menu-pill" id="user-menu-trigger" aria-expanded="false" aria-haspopup="true" onclick="toggleUserDropdown(event)" title="Tài khoản: <?= escapeHtml($currentUser['full_name']) ?>">
+              <img src="<?= escapeHtml($currentUser['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80') ?>" alt="Avatar" class="user-avatar-mini" style="object-fit:cover;">
+              <span><?= escapeHtml(explode(' ', $currentUser['full_name'])[count(explode(' ', $currentUser['full_name'])) - 1] ?? 'Tài Khoản') ?></span>
+              <svg class="dropdown-arrow-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
+
+            <div class="user-dropdown-menu" id="user-dropdown-menu">
+              <!-- Header info in dropdown -->
+              <div class="user-dropdown-header">
+                <img src="<?= escapeHtml($currentUser['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80') ?>" alt="Avatar" class="user-dropdown-avatar">
+                <div class="user-dropdown-info">
+                  <strong class="user-dropdown-name"><?= escapeHtml($currentUser['full_name']) ?></strong>
+                  <span class="user-dropdown-email"><?= escapeHtml($currentUser['email']) ?></span>
+                  <span class="user-dropdown-role-badge <?= $isManager ? 'role-badge-admin' : 'role-badge-user' ?>">
+                    <?= $isManager ? (isAdmin() ? '⭐ Quản Trị Viên' : '🛡️ Quản Lý Hệ Thống') : '👤 Khách Hàng' ?>
+                  </span>
+                </div>
+              </div>
+
+              <div class="user-dropdown-divider"></div>
+
+              <ul class="user-dropdown-list">
+                <?php if ($isManager): ?>
+                  <li>
+                    <a href="<?= getUrl('admin/index.php') ?>" class="user-dropdown-item item-highlight">
+                      <span class="dropdown-item-icon">⚡</span>
+                      <div class="dropdown-item-text">
+                        <strong>Trang Quản Trị</strong>
+                        <small>Đơn hàng, doanh số & món ăn</small>
+                      </div>
+                    </a>
+                  </li>
+                <?php endif; ?>
+
+                <li>
+                  <a href="<?= getUrl('profile.php') ?>" class="user-dropdown-item">
+                    <span class="dropdown-item-icon">👤</span>
+                    <div class="dropdown-item-text">
+                      <strong>Hồ sơ tài khoản</strong>
+                      <small>Xem và sửa thông tin cá nhân</small>
+                    </div>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="<?= getUrl('order-history.php') ?>" class="user-dropdown-item">
+                    <span class="dropdown-item-icon">📦</span>
+                    <div class="dropdown-item-text">
+                      <strong>Lịch sử đơn hàng</strong>
+                      <small>Theo dõi tình trạng đơn đặt món</small>
+                    </div>
+                  </a>
+                </li>
+
+                <li>
+                  <a href="<?= getUrl('favorites.php') ?>" class="user-dropdown-item">
+                    <span class="dropdown-item-icon">💖</span>
+                    <div class="dropdown-item-text">
+                      <strong>Món ăn yêu thích</strong>
+                      <small>Danh sách các món đã lưu</small>
+                    </div>
+                  </a>
+                </li>
+              </ul>
+
+              <div class="user-dropdown-divider"></div>
+
+              <div class="user-dropdown-footer">
+                <a href="<?= getUrl('logout.php') ?>" class="user-dropdown-logout-btn">
+                  <span class="dropdown-item-icon">🚪</span>
+                  <strong>Đăng Xuất</strong>
+                </a>
+              </div>
+            </div>
+          </div>
 
           <?php if ($isManager): ?>
             <a href="<?= getUrl('admin/index.php') ?>" class="btn btn-primary btn-sm"><?= isAdmin() ? 'Quản trị' : 'Quản lý' ?></a>
@@ -102,4 +174,37 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
       </div>
     </div>
   </header>
+  <script>
+    function toggleUserDropdown(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      const wrap = document.getElementById('user-dropdown-wrap');
+      if (!wrap) return;
+      const isOpen = wrap.classList.toggle('open');
+      const trigger = document.getElementById('user-menu-trigger');
+      if (trigger) trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+
+    document.addEventListener('click', function(e) {
+      const wrap = document.getElementById('user-dropdown-wrap');
+      if (wrap && !wrap.contains(e.target)) {
+        wrap.classList.remove('open');
+        const trigger = document.getElementById('user-menu-trigger');
+        if (trigger) trigger.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape') {
+        const wrap = document.getElementById('user-dropdown-wrap');
+        if (wrap) {
+          wrap.classList.remove('open');
+          const trigger = document.getElementById('user-menu-trigger');
+          if (trigger) trigger.setAttribute('aria-expanded', 'false');
+        }
+      }
+    });
+  </script>
 

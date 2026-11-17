@@ -14,7 +14,20 @@ foreach ($cart as $item) {
     $subtotal += (float)$item['price'] * (int)$item['qty'];
 }
 $shippingFee = ($subtotal > 0 && $subtotal < 100000) ? 18000 : 0;
+
+// Xử lý giảm giá từ Coupon / Voucher
+$appliedCoupon = $_SESSION['applied_coupon'] ?? null;
 $discount = 0;
+if ($appliedCoupon && $subtotal > 0) {
+    if (($appliedCoupon['discount_type'] ?? '') === 'percentage') {
+        $discount = ($subtotal * (float)$appliedCoupon['discount_value']) / 100.0;
+        if (!empty($appliedCoupon['max_discount_amount']) && (float)$appliedCoupon['max_discount_amount'] > 0) {
+            $discount = min($discount, (float)$appliedCoupon['max_discount_amount']);
+        }
+    } else {
+        $discount = min($subtotal, (float)($appliedCoupon['discount_value'] ?? 0));
+    }
+}
 $total = max(0, $subtotal + $shippingFee - $discount);
 
 require_once ROOT_PATH . '/includes/header.php';
@@ -109,6 +122,35 @@ require_once ROOT_PATH . '/includes/header.php';
           <span style="font-weight:700;">-<?= formatVND($discount) ?></span>
         </div>
 
+        <!-- Mã Giảm Giá / Voucher Box -->
+        <div style="margin: 1rem 0; background: #fff7ed; border: 1.5px dashed #fb923c; border-radius: 12px; padding: 0.9rem;">
+          <?php if ($appliedCoupon): ?>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="background:#ea580c; color:#fff; font-weight:800; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:4px; text-transform:uppercase;">
+                  🎟️ <?= escapeHtml($appliedCoupon['code']) ?>
+                </span>
+                <div style="font-weight:700; color:#ea580c; font-size:0.85rem; margin-top:0.35rem;">
+                  -<?= formatVND($discount) ?> (<?= escapeHtml($appliedCoupon['title']) ?>)
+                </div>
+              </div>
+              <button type="button" class="btn btn-sm btn-outline text-danger" onclick="removeCoupon()" style="padding:0.25rem 0.6rem; font-size:0.75rem;">
+                Gỡ bỏ
+              </button>
+            </div>
+          <?php else: ?>
+            <label style="display:block; font-size:0.8rem; font-weight:700; color:#9a3412; margin-bottom:0.4rem;">
+              🎟️ Bạn có mã ưu đãi? (Ví dụ: NEW50)
+            </label>
+            <div style="display:flex; gap:0.5rem;">
+              <input type="text" id="cart-coupon-input" class="form-control form-control-sm" placeholder="Nhập mã (NEW50...)" style="text-transform:uppercase; font-weight:700; font-size:0.85rem;">
+              <button type="button" class="btn btn-sm btn-primary" onclick="applyCoupon()" style="white-space:nowrap; padding:0.4rem 0.85rem; font-size:0.85rem;">
+                Áp dụng
+              </button>
+            </div>
+          <?php endif; ?>
+        </div>
+
         <div class="summary-row total-row" style="border-top:1px solid var(--border-color); padding-top:1rem; margin-top:0.5rem;">
           <span style="font-size:1.1rem; font-weight:800;">Tổng thanh toán:</span>
           <span style="color:var(--primary-color); font-size:1.4rem; font-weight:800;"><?= formatVND($total) ?></span>
@@ -168,6 +210,48 @@ async function clearCart() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'clear' })
+    });
+    const result = await res.json();
+    if (result.success) {
+      location.reload();
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+async function applyCoupon() {
+  const input = document.getElementById('cart-coupon-input');
+  if (!input) return;
+  const code = input.value.trim();
+  if (!code) {
+    alert('Vui lòng nhập mã giảm giá.');
+    input.focus();
+    return;
+  }
+  try {
+    const res = await fetch('<?= getUrl('api/cart.php') ?>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'apply_coupon', code })
+    });
+    const result = await res.json();
+    if (result.success) {
+      location.reload();
+    } else {
+      alert(result.message || 'Không thể áp dụng mã giảm giá này.');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Lỗi kết nối khi áp dụng mã giảm giá.');
+  }
+}
+
+async function removeCoupon() {
+  try {
+    const res = await fetch('<?= getUrl('api/cart.php') ?>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove_coupon' })
     });
     const result = await res.json();
     if (result.success) {

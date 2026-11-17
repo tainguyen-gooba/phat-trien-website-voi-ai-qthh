@@ -134,6 +134,57 @@ if ($method === 'POST') {
             jsonSuccess('Đã làm trống giỏ hàng.', getCartSummary());
             break;
 
+        case 'apply_coupon':
+            $couponCode = strtoupper(trim($input['code'] ?? $_POST['code'] ?? ''));
+            if (!$couponCode) {
+                jsonError('Vui lòng nhập mã giảm giá.');
+            }
+            $db = getDB();
+            $stmt = $db->prepare("SELECT * FROM coupons WHERE UPPER(code) = ? AND is_active = 1 LIMIT 1");
+            $stmt->execute([$couponCode]);
+            $cp = $stmt->fetch();
+            if (!$cp) {
+                jsonError('Mã giảm giá "' . $couponCode . '" không hợp lệ hoặc đã hết hạn.');
+            }
+            $now = date('Y-m-d H:i:s');
+            if (!empty($cp['start_date']) && $cp['start_date'] > $now) {
+                jsonError('Mã giảm giá chưa đến ngày áp dụng.');
+            }
+            if (!empty($cp['end_date']) && $cp['end_date'] < $now) {
+                jsonError('Mã giảm giá đã hết hạn sử dụng.');
+            }
+            if ($cp['usage_limit'] > 0 && $cp['usage_count'] >= $cp['usage_limit']) {
+                jsonError('Mã giảm giá đã hết lượt sử dụng.');
+            }
+            if ($couponCode === 'NEW50') {
+                $cUser = currentUser();
+                if ($cUser) {
+                    $ordCheck = $db->prepare("SELECT COUNT(*) FROM orders WHERE customer_id = ? AND order_status != 'cancelled'");
+                    $ordCheck->execute([$cUser['id']]);
+                    if ((int)$ordCheck->fetchColumn() > 0) {
+                        jsonError('Mã NEW50 chỉ áp dụng cho đơn hàng đầu tiên của khách hàng mới.');
+                    }
+                }
+            }
+            $_SESSION['applied_coupon'] = [
+                'id'                  => (int)$cp['id'],
+                'code'                => $cp['code'],
+                'title'               => $cp['title'],
+                'discount_type'       => $cp['discount_type'],
+                'discount_value'      => (float)$cp['discount_value'],
+                'min_order_value'     => (float)$cp['min_order_value'],
+                'max_discount_amount' => (float)$cp['max_discount_amount']
+            ];
+            jsonSuccess('Áp dụng mã giảm giá ' . $cp['code'] . ' thành công!', [
+                'coupon' => $_SESSION['applied_coupon']
+            ]);
+            break;
+
+        case 'remove_coupon':
+            unset($_SESSION['applied_coupon']);
+            jsonSuccess('Đã hủy áp dụng mã giảm giá.');
+            break;
+
         default:
             jsonError('Hành động không hợp lệ.');
     }

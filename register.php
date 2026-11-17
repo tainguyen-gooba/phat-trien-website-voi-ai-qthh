@@ -16,6 +16,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $fullName        = trim($_POST['fullName'] ?? '');
     $email           = strtolower(trim($_POST['email'] ?? ''));
     $phone           = trim($_POST['phone'] ?? '');
+    $cleanPhone      = preg_replace('/[^0-9]/', '', $phone);
     $password        = trim($_POST['password'] ?? '');
     $passwordConfirm = trim($_POST['passwordConfirm'] ?? '');
 
@@ -23,36 +24,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Vui lòng nhập họ và tên hợp lệ (tối thiểu 3 ký tự).';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'Địa chỉ email không đúng định dạng.';
-    } elseif (!preg_match('/^[0-9+() -]{10,15}$/', $phone)) {
-        $error = 'Số điện thoại không hợp lệ.';
+    } elseif (strlen($cleanPhone) < 9 || strlen($cleanPhone) > 11) {
+        $error = 'Số điện thoại không hợp lệ (yêu cầu từ 9 - 11 chữ số).';
     } elseif (strlen($password) < 6) {
         $error = 'Mật khẩu phải có ít nhất 6 ký tự.';
     } elseif ($password !== $passwordConfirm) {
         $error = 'Mật khẩu xác nhận không trùng khớp.';
+    } elseif ($password === $email || $password === $phone || $password === $cleanPhone) {
+        $error = 'Mật khẩu không được trùng với Email hoặc Số điện thoại để đảm bảo bảo mật.';
     } else {
         $db = getDB();
-        $checkStmt = $db->prepare("SELECT id FROM users WHERE LOWER(email) = ? LIMIT 1");
-        $checkStmt->execute([$email]);
-        if ($checkStmt->fetch()) {
-            $error = 'Email này đã được sử dụng. Vui lòng chọn email khác hoặc đăng nhập.';
+
+        // 1. Kiểm tra trùng Email
+        $checkEmail = $db->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1");
+        $checkEmail->execute([$email]);
+        if ($checkEmail->fetch()) {
+            $error = 'Địa chỉ Email này đã được đăng ký. Vui lòng sử dụng email khác hoặc Đăng nhập.';
         } else {
-            $hash = password_hash($password, PASSWORD_BCRYPT);
-            $insertStmt = $db->prepare("INSERT INTO users (role_id, full_name, email, phone, password_hash, status, created_at)
-                                        VALUES (2, ?, ?, ?, ?, 'active', NOW())");
-            $insertStmt->execute([$fullName, $email, $phone, $hash]);
-            $newUserId = $db->lastInsertId();
+            // 2. Kiểm tra trùng Số điện thoại
+            $checkPhone = $db->prepare("SELECT id FROM users WHERE phone = ? OR REPLACE(REPLACE(REPLACE(phone, ' ', ''), '-', ''), '+84', '0') = ? LIMIT 1");
+            $checkPhone->execute([$phone, $cleanPhone]);
+            if ($checkPhone->fetch()) {
+                $error = 'Số điện thoại này đã được đăng ký. Vui lòng sử dụng số điện thoại khác hoặc Đăng nhập.';
+            } else {
+                $hash = password_hash($password, PASSWORD_BCRYPT);
+                $insertStmt = $db->prepare("INSERT INTO users (role_id, full_name, email, phone, password_hash, status, created_at)
+                                            VALUES (2, ?, ?, ?, ?, 'active', NOW())");
+                $insertStmt->execute([$fullName, $email, $phone, $hash]);
+                $newUserId = $db->lastInsertId();
 
-            setUserSession([
-                'id'         => $newUserId,
-                'full_name'  => $fullName,
-                'email'      => $email,
-                'phone'      => $phone,
-                'role_id'    => 2,
-                'avatar_url' => '',
-            ]);
+                // 3. Tự động áp dụng Voucher NEW50 (Giảm 50% cho khách hàng mới)
+                $cpStmt = $db->prepare("SELECT * FROM coupons WHERE code = 'NEW50' AND is_active = 1 LIMIT 1");
+                $cpStmt->execute();
+                $newCoupon = $cpStmt->fetch();
+                if ($newCoupon) {
+                    $_SESSION['applied_coupon'] = [
+                        'id'                  => (int)$newCoupon['id'],
+                        'code'                => $newCoupon['code'],
+                        'title'               => $newCoupon['title'],
+                        'discount_type'       => $newCoupon['discount_type'],
+                        'discount_value'      => (float)$newCoupon['discount_value'],
+                        'min_order_value'     => (float)$newCoupon['min_order_value'],
+                        'max_discount_amount' => (float)$newCoupon['max_discount_amount']
+                    ];
+                }
 
-            header('Location: ' . getUrl('index.php'));
-            exit;
+                // 4. Tạo thông báo quà tặng thành viên mới
+                try {
+                    $notifStmt = $db->prepare("INSERT INTO notifications (user_id, title, content, type, is_read, created_at)
+                                                VALUES (?, ?, ?, 'promotion', 0, NOW())");
+                    $notifStmt->execute([
+                        $newUserId,
+                        '🎉 Tặng bạn mới Voucher giảm 50%!',
+                        'Chào mừng bạn đến với FASTFOOD! Bạn đã được tặng Voucher NEW50 giảm 50% giá trị món ăn cho đơn hàng đầu tiên.'
+                    ]);
+                } catch (Exception $e) {}
+
+                setUserSession([
+                    'id'         => $newUserId,
+                    'full_name'  => $fullName,
+                    'email'      => $email,
+                    'phone'      => $phone,
+                    'role_id'    => 2,
+                    'avatar_url' => '',
+                ]);
+
+                $_SESSION['welcome_discount_applied'] = true;
+
+                header('Location: ' . getUrl('index.php'));
+                exit;
+            }
         }
     }
 }
@@ -73,6 +114,19 @@ require_once ROOT_PATH . '/includes/header.php';
       <p style="font-size: 0.9rem; color: var(--text-secondary);">
         Tạo tài khoản miễn phí để nhận ưu đãi ngập tràn từ FASTFOOD!
       </p>
+    </div>
+
+    <!-- Banner Khuyến Mãi Bạn Mới 50% -->
+    <div style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1.5px dashed #f97316; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.85rem;">
+      <div style="font-size: 2rem; flex-shrink: 0;">🎁</div>
+      <div>
+        <strong style="color: #ea580c; font-size: 0.95rem; display: block; margin-bottom: 2px;">
+          Tặng Ngay Voucher Giảm 50% Món Ăn
+        </strong>
+        <p style="font-size: 0.82rem; color: #7c2d12; margin: 0; line-height: 1.35;">
+          Đăng ký thành viên mới hôm nay nhận ngay mã <strong>NEW50</strong> (Giảm 50% giá trị sản phẩm) tự động áp dụng cho đơn hàng đầu tiên của bạn!
+        </p>
+      </div>
     </div>
 
     <?php if ($error): ?>

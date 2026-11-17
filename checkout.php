@@ -20,7 +20,21 @@ foreach ($cart as $item) {
     $subtotal += (float)$item['price'] * (int)$item['qty'];
 }
 $shippingFee = ($subtotal > 0 && $subtotal < 100000) ? 18000 : 0;
-$total = $subtotal + $shippingFee;
+
+// Xử lý giảm giá từ Coupon / Voucher
+$appliedCoupon = $_SESSION['applied_coupon'] ?? null;
+$discount = 0;
+if ($appliedCoupon && $subtotal > 0) {
+    if (($appliedCoupon['discount_type'] ?? '') === 'percentage') {
+        $discount = ($subtotal * (float)$appliedCoupon['discount_value']) / 100.0;
+        if (!empty($appliedCoupon['max_discount_amount']) && (float)$appliedCoupon['max_discount_amount'] > 0) {
+            $discount = min($discount, (float)$appliedCoupon['max_discount_amount']);
+        }
+    } else {
+        $discount = min($subtotal, (float)($appliedCoupon['discount_value'] ?? 0));
+    }
+}
+$total = max(0, $subtotal + $shippingFee - $discount);
 
 // Xử lý gửi Form Đặt Hàng
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -71,26 +85,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $paymentMethodDb = ($method === 'vietqr' || $method === 'banking') ? 'banking' : (($method === 'momo') ? 'momo' : 'cod');
 
             // 1. Lưu vào bảng orders
+            $couponId = !empty($appliedCoupon['id']) ? (int)$appliedCoupon['id'] : null;
             $stmt = $db->prepare("INSERT INTO orders 
-                (order_code, customer_id, restaurant_id, recipient_name, recipient_phone, delivery_address, note_for_restaurant, 
+                (order_code, customer_id, restaurant_id, coupon_id, recipient_name, recipient_phone, delivery_address, note_for_restaurant, 
                  subtotal, shipping_fee, discount_amount, total_amount, payment_method, payment_status, order_status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, NOW())");
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->execute([
                 $orderCode,
                 $userId,
                 $restaurantId,
+                $couponId,
                 $name,
                 $phone,
                 $address,
                 $notes,
                 $subtotal,
                 $shippingFee,
+                $discount,
                 $total,
                 $paymentMethodDb,
                 $paymentStatus,
                 $orderStatus
             ]);
             $orderId = $db->lastInsertId();
+
+            if ($couponId) {
+                try {
+                    $db->prepare("UPDATE coupons SET usage_count = usage_count + 1 WHERE id = ?")->execute([$couponId]);
+                } catch (Exception $e) {}
+            }
 
             // 2. Lưu từng món vào order_items
             $itemStmt = $db->prepare("INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, subtotal)
@@ -151,8 +174,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $db->commit();
 
-            // Xóa giỏ hàng
+            // Xóa giỏ hàng và voucher đã áp dụng
             unset($_SESSION['cart']);
+            unset($_SESSION['applied_coupon']);
 
             // Điều hướng
             if ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo') {
@@ -294,6 +318,30 @@ require_once ROOT_PATH . '/includes/header.php';
           <span>Phí vận chuyển:</span>
           <span style="font-weight:700;"><?= $shippingFee > 0 ? formatVND($shippingFee) : '<span style="color:var(--success);">Miễn phí</span>' ?></span>
         </div>
+
+        <?php if ($discount > 0): ?>
+          <div class="summary-row" style="color:var(--success);">
+            <span>Giảm giá khuyến mãi:</span>
+            <span style="font-weight:700;">-<?= formatVND($discount) ?></span>
+          </div>
+        <?php endif; ?>
+
+        <?php if ($appliedCoupon): ?>
+          <div style="margin: 0.75rem 0; background: #fff7ed; border: 1.5px dashed #fb923c; border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="background:#ea580c; color:#fff; font-weight:800; font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:4px; text-transform:uppercase;">
+                  🎟️ <?= escapeHtml($appliedCoupon['code']) ?>
+                </span>
+                <span style="font-weight:700; color:#ea580c; margin-left:0.35rem;">-<?= formatVND($discount) ?></span>
+              </div>
+              <a href="<?= getUrl('cart.php') ?>" style="font-size:0.75rem; color:var(--text-muted); text-decoration:underline;">Thay đổi</a>
+            </div>
+            <div style="font-size:0.74rem; color:#9a3412; margin-top:0.25rem;">
+              <?= escapeHtml($appliedCoupon['title']) ?>
+            </div>
+          </div>
+        <?php endif; ?>
 
         <div class="summary-row total-row" style="border-top:1px solid var(--border-color); padding-top:1rem; margin-top:0.75rem;">
           <span style="font-size:1.1rem; font-weight:800;">Tổng thanh toán:</span>

@@ -422,84 +422,109 @@ const UIComponents = {
   },
 
   // Modal xem nhanh & tùy biến món ăn (Quick View & Toppings)
-  openFoodModal(productId) {
-    const product = window.FASTFOOD_DATA.products.find(p => p.id === productId);
-    if (!product) return;
-
+  async openFoodModal(productId) {
     let overlay = document.getElementById('food-modal-overlay');
     if (!overlay) {
       overlay = document.createElement('div');
       overlay.id = 'food-modal-overlay';
       overlay.className = 'modal-overlay';
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) UIComponents.closeFoodModal();
+      });
       document.body.appendChild(overlay);
     }
 
-    const toppings = Array.isArray(product.toppings) ? product.toppings : [];
-
+    // Hiển thị khung chờ tải
     overlay.innerHTML = `
-      <div class="modal-card">
-        <!-- Hero Image Header with Gradient & Close Button -->
-        <div class="modal-hero-wrap">
-          <img src="${product.image}" alt="${this.escapeHtml(product.name)}" class="modal-hero-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';">
-          ${this.renderImageCredit(product)}
-          <div class="modal-hero-overlay"></div>
-          <button class="modal-close-btn" type="button" title="Đóng cửa sổ" onclick="UIComponents.closeFoodModal()">✕</button>
-        </div>
-
-        <!-- Scrollable Modal Body -->
-        <div class="modal-body-scroll">
-          <div class="modal-restaurant-badge">
-            <span>🍔</span>
-            <span>${this.escapeHtml(product.restaurantName || 'FASTFOOD')}</span>
-          </div>
-
-          <h3 class="modal-food-title">${this.escapeHtml(product.name)}</h3>
-          <p class="modal-food-desc">${this.escapeHtml(product.description || 'Món ăn chuẩn vị thơm ngon, chế biến nóng hổi ngay khi nhận đơn.')}</p>
-          
-          <div class="modal-price-row">
-            <span class="modal-current-price" id="modal-base-price-display">${UIComponents.formatVND(product.price)}</span>
-            ${product.oldPrice ? `<span class="modal-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
-          </div>
-
-          <!-- Toppings Selection Area -->
-          ${toppings.length ? `
-            <div class="modal-toppings-card">
-              <div class="modal-toppings-title">
-                <span>✨ Tùy chọn thêm (Toppings):</span>
-                <small>${toppings.length} tùy chọn</small>
-              </div>
-              <div class="modal-toppings-list">
-                ${toppings.map((t, idx) => `
-                  <label class="modal-topping-item" id="topping-item-${idx}">
-                    <span class="modal-topping-left">
-                      <input type="checkbox" class="modal-topping-cb" data-name="${this.escapeHtml(t.name)}" data-price="${t.price}" onchange="UIComponents.onToppingToggle(this, 'topping-item-${idx}', '${product.id}')">
-                      <span>${this.escapeHtml(t.name)}</span>
-                    </span>
-                    <span class="modal-topping-price">+${UIComponents.formatVND(t.price)}</span>
-                  </label>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
-        </div>
-
-        <!-- Sticky Bottom Actions Toolbar -->
-        <div class="modal-footer-toolbar">
-          <div class="modal-quantity-control quantity-control">
-            <button class="modal-qty-btn qty-btn" type="button" title="Giảm số lượng" onclick="UIComponents.adjustModalQty(-1, '${product.id}')">−</button>
-            <input type="text" id="modal-qty-input" class="modal-qty-input qty-input" value="1" readonly>
-            <button class="modal-qty-btn qty-btn" type="button" title="Tăng số lượng" onclick="UIComponents.adjustModalQty(1, '${product.id}')">+</button>
-          </div>
-
-          <button class="modal-add-btn" type="button" id="modal-submit-add-btn" onclick="UIComponents.confirmAddToCart('${product.id}')">
-            <span>Thêm Vào Giỏ Hàng</span>
-            <span id="modal-btn-total-price" class="modal-btn-price-badge">${UIComponents.formatVND(product.price)}</span>
-          </button>
-        </div>
+      <div class="modal-card" style="padding: 3rem; text-align: center;">
+        <div style="font-size: 2.5rem; margin-bottom: 0.5rem; animation: spin 1s linear infinite;">⏳</div>
+        <p style="font-weight: 700; color: var(--text-main);">Đang tải món ăn & tùy chọn...</p>
       </div>
     `;
-
     overlay.classList.add('active');
+
+    try {
+      const res = await fetch(`/api/food-detail.php?id=${encodeURIComponent(productId)}`);
+      const result = await res.json();
+      if (!result.success || !result.data) {
+        throw new Error(result.message || 'Không thể tải thông tin món.');
+      }
+
+      const product = result.data;
+      this._currentModalProduct = product;
+      const toppings = Array.isArray(product.toppings) ? product.toppings : [];
+
+      overlay.innerHTML = `
+        <div class="modal-card">
+          <!-- Hero Image Header with Close Button -->
+          <div class="modal-hero-wrap">
+            <img src="${product.image}" alt="${this.escapeHtml(product.name)}" class="modal-hero-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';">
+            <div class="modal-hero-overlay"></div>
+            <button class="modal-close-btn" type="button" title="Đóng cửa sổ" onclick="UIComponents.closeFoodModal()">✕</button>
+          </div>
+
+          <!-- Scrollable Modal Body -->
+          <div class="modal-body-scroll">
+            <div class="modal-restaurant-badge">
+              <span>🏪</span>
+              <span>${this.escapeHtml(product.restaurantName || 'FASTFOOD')}</span>
+            </div>
+
+            <h3 class="modal-food-title">${this.escapeHtml(product.name)}</h3>
+            <p class="modal-food-desc">${this.escapeHtml(product.description || 'Món ăn chuẩn vị thơm ngon, chế biến nóng hổi ngay khi nhận đơn.')}</p>
+            
+            <div class="modal-price-row">
+              <span class="modal-current-price" id="modal-base-price-display">${UIComponents.formatVND(product.price)}</span>
+              ${product.oldPrice && product.oldPrice > product.price ? `<span class="modal-old-price">${UIComponents.formatVND(product.oldPrice)}</span>` : ''}
+            </div>
+
+            <!-- Toppings Selection Area -->
+            ${toppings.length ? `
+              <div class="modal-toppings-card">
+                <div class="modal-toppings-title">
+                  <span>✨ Tùy chọn thêm (Toppings):</span>
+                  <small>${toppings.length} tùy chọn</small>
+                </div>
+                <div class="modal-toppings-list">
+                  ${toppings.map((t, idx) => `
+                    <label class="modal-topping-item" id="topping-item-${idx}">
+                      <span class="modal-topping-left">
+                        <input type="checkbox" class="modal-topping-cb" data-name="${this.escapeHtml(t.name)}" data-price="${t.price}" onchange="UIComponents.onToppingToggle(this, 'topping-item-${idx}', '${product.id}')">
+                        <span>${this.escapeHtml(t.name)}</span>
+                      </span>
+                      <span class="modal-topping-price">+${UIComponents.formatVND(t.price)}</span>
+                    </label>
+                  `).join('')}
+                </div>
+              </div>
+            ` : ''}
+          </div>
+
+          <!-- Sticky Bottom Actions Toolbar -->
+          <div class="modal-footer-toolbar">
+            <div class="modal-quantity-control quantity-control">
+              <button class="modal-qty-btn qty-btn" type="button" title="Giảm số lượng" onclick="UIComponents.adjustModalQty(-1, '${product.id}')">−</button>
+              <input type="text" id="modal-qty-input" class="modal-qty-input qty-input" value="1" readonly>
+              <button class="modal-qty-btn qty-btn" type="button" title="Tăng số lượng" onclick="UIComponents.adjustModalQty(1, '${product.id}')">+</button>
+            </div>
+
+            <button class="modal-add-btn" type="button" id="modal-submit-add-btn" onclick="UIComponents.confirmAddToCart('${product.id}')">
+              <span>Thêm Vào Giỏ Hàng</span>
+              <span id="modal-btn-total-price" class="modal-btn-price-badge">${UIComponents.formatVND(product.price)}</span>
+            </button>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      overlay.innerHTML = `
+        <div class="modal-card" style="padding: 2.5rem; text-align: center;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">⚠️</div>
+          <h3 style="margin-bottom: 0.5rem; color: #ef4444;">Không thể mở tùy chọn món</h3>
+          <p style="color: var(--text-muted); margin-bottom: 1.5rem;">${this.escapeHtml(err.message)}</p>
+          <button class="btn btn-primary" onclick="UIComponents.closeFoodModal()">Đóng</button>
+        </div>
+      `;
+    }
   },
 
   onToppingToggle(checkbox, itemId, productId) {
@@ -520,7 +545,7 @@ const UIComponents = {
   },
 
   updateModalCalculatedTotal(productId) {
-    const product = window.FASTFOOD_DATA.products.find(p => p.id === productId);
+    const product = this._currentModalProduct;
     if (!product) return;
 
     const input = document.getElementById('modal-qty-input');
@@ -538,15 +563,8 @@ const UIComponents = {
     }
   },
 
-  confirmAddToCart(productId) {
-    const user = window.StorageManager ? window.StorageManager.getUser() : null;
-    if (user && user.isLoggedIn && ['admin', 'staff'].includes(user.role)) {
-      this.showToast('Tài khoản Quản trị / Thành viên chỉ dùng để quản trị hệ thống, không thể mua hàng!', 'warning', 3500);
-      this.closeFoodModal();
-      return;
-    }
-
-    const product = window.FASTFOOD_DATA.products.find(p => p.id === productId);
+  async confirmAddToCart(productId) {
+    const product = this._currentModalProduct;
     if (!product) return;
 
     const qtyInput = document.getElementById('modal-qty-input');
@@ -561,7 +579,41 @@ const UIComponents = {
       });
     });
 
-    window.CartController.addItem(product, qty, selectedToppings);
+    const submitBtn = document.getElementById('modal-submit-add-btn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Đang thêm vào giỏ...</span>';
+    }
+
+    try {
+      const res = await fetch('/api/cart.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'add',
+          productId: product.id,
+          qty,
+          toppings: selectedToppings
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        const toppingText = selectedToppings.length ? ` (kèm ${selectedToppings.length} topping)` : '';
+        this.showToast(`Đã thêm ${qty} phần "${product.name}"${toppingText} vào giỏ hàng!`, 'success');
+        
+        const badge = document.getElementById('nav-cart-badge');
+        if (badge && result.data?.totalCount !== undefined) {
+          badge.textContent = result.data.totalCount;
+          badge.style.display = result.data.totalCount > 0 ? 'flex' : 'none';
+        }
+      } else {
+        this.showToast(result.message || 'Không thể thêm món vào giỏ.', 'error');
+      }
+    } catch (err) {
+      console.error(err);
+      this.showToast('Lỗi kết nối khi thêm món vào giỏ hàng.', 'error');
+    }
+
     this.closeFoodModal();
   },
 
@@ -588,3 +640,6 @@ if (document.readyState === 'loading') {
 }
 
 window.UIComponents = UIComponents;
+window.openFoodModal = function(id) {
+  return UIComponents.openFoodModal(id);
+};

@@ -45,9 +45,10 @@ $products = array_map(function($p) {
 }, $productsRaw);
 
 // 3. Orders
-$ordersRaw = $db->query("SELECT o.order_code, o.total_amount, o.order_status, o.created_at, o.recipient_name, o.recipient_phone, o.recipient_address,
+$ordersRaw = $db->query("SELECT o.order_code, o.total_amount, o.order_status, o.created_at, o.recipient_name, o.recipient_phone, o.delivery_address AS recipient_address,
                                 ro.order_data, ro.status AS rt_status,
-                                p.payment_method, p.status AS payment_status
+                                COALESCE(p.payment_method, o.payment_method) AS payment_method,
+                                COALESCE(p.status, o.payment_status) AS payment_status
                          FROM orders o
                          LEFT JOIN realtime_orders ro ON ro.order_code = o.order_code
                          LEFT JOIN realtime_payments p ON p.order_code = o.order_code

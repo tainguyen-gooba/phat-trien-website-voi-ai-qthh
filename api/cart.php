@@ -14,21 +14,50 @@ $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 // Tính toán tóm tắt giỏ hàng
 function getCartSummary() {
-    $items = array_values($_SESSION['cart']);
+    $rawCart = $_SESSION['cart'] ?? [];
+    $items = [];
     $totalCount = 0;
-    $totalAmount = 0;
+    $subtotal = 0;
 
-    foreach ($items as $item) {
-        $qty = (int)($item['qty'] ?? 1);
+    foreach ($rawCart as $key => $item) {
+        $qty = max(1, (int)($item['qty'] ?? 1));
         $price = (float)($item['price'] ?? 0);
+        $itemTotal = $qty * $price;
         $totalCount += $qty;
-        $totalAmount += $qty * $price;
+        $subtotal += $itemTotal;
+
+        $itemCopy = $item;
+        $itemCopy['cartKey'] = (string)$key;
+        $itemCopy['qty'] = $qty;
+        $itemCopy['itemTotal'] = $itemTotal;
+        $items[] = $itemCopy;
     }
 
+    $shippingFee = ($subtotal > 0 && $subtotal < 100000) ? 18000 : 0;
+
+    // Xử lý giảm giá từ Coupon / Voucher
+    $appliedCoupon = $_SESSION['applied_coupon'] ?? null;
+    $discount = 0;
+    if ($appliedCoupon && $subtotal > 0) {
+        if (($appliedCoupon['discount_type'] ?? '') === 'percentage') {
+            $discount = ($subtotal * (float)$appliedCoupon['discount_value']) / 100.0;
+            if (!empty($appliedCoupon['max_discount_amount']) && (float)$appliedCoupon['max_discount_amount'] > 0) {
+                $discount = min($discount, (float)$appliedCoupon['max_discount_amount']);
+            }
+        } else {
+            $discount = min($subtotal, (float)($appliedCoupon['discount_value'] ?? 0));
+        }
+    }
+    $total = max(0, $subtotal + $shippingFee - $discount);
+
     return [
-        'items'       => $items,
-        'totalCount'  => $totalCount,
-        'totalAmount' => $totalAmount,
+        'items'         => $items,
+        'totalCount'    => $totalCount,
+        'subtotal'      => $subtotal,
+        'shippingFee'   => $shippingFee,
+        'discount'      => $discount,
+        'total'         => $total,
+        'appliedCoupon' => $appliedCoupon,
     ];
 }
 
@@ -175,14 +204,12 @@ if ($method === 'POST') {
                 'min_order_value'     => (float)$cp['min_order_value'],
                 'max_discount_amount' => (float)$cp['max_discount_amount']
             ];
-            jsonSuccess('Áp dụng mã giảm giá ' . $cp['code'] . ' thành công!', [
-                'coupon' => $_SESSION['applied_coupon']
-            ]);
+            jsonSuccess('Áp dụng mã giảm giá ' . $cp['code'] . ' thành công!', getCartSummary());
             break;
 
         case 'remove_coupon':
             unset($_SESSION['applied_coupon']);
-            jsonSuccess('Đã hủy áp dụng mã giảm giá.');
+            jsonSuccess('Đã hủy áp dụng mã giảm giá.', getCartSummary());
             break;
 
         default:

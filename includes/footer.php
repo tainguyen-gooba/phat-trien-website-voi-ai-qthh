@@ -34,8 +34,8 @@
           <div class="footer-links">
             <a href="<?= getUrl('index.php') ?>" class="footer-link">Trang chủ FASTFOOD</a>
             <a href="<?= getUrl('foods.php') ?>" class="footer-link">Thực đơn hôm nay</a>
-            <a href="<?= getUrl('restaurants.php') ?>" class="footer-link">Quán ăn đối tác</a>
-            <a href="<?= getUrl('foods.php?filter=deals') ?>" class="footer-link">Khuyến mãi & Combo</a>
+            <a href="<?= getUrl('foods.php?sort=popular') ?>" class="footer-link">Món ăn bán chạy</a>
+            <a href="<?= getUrl('foods.php?sort=price-asc') ?>" class="footer-link">Khuyến mãi & Combo</a>
           </div>
         </div>
 

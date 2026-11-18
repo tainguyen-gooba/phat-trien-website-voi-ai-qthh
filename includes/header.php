@@ -61,7 +61,6 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
       <!-- Navigation Menu Links -->
       <nav class="nav-menu" id="main-nav-menu">
         <a href="<?= getUrl('index.php') ?>" class="nav-link <?= $activeNav === 'home' ? 'active' : '' ?>">Trang Chủ</a>
-        <a href="<?= getUrl('restaurants.php') ?>" class="nav-link <?= $activeNav === 'restaurants' ? 'active' : '' ?>">Nhà Hàng</a>
         <a href="<?= getUrl('foods.php') ?>" class="nav-link <?= $activeNav === 'foods' ? 'active' : '' ?>">Món Ăn</a>
         <a href="<?= getUrl('order-history.php') ?>" class="nav-link <?= $activeNav === 'orders' ? 'active' : '' ?>">Đơn Hàng</a>
       </nav>

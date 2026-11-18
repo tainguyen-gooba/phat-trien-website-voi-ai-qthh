@@ -179,7 +179,6 @@ const UIComponents = {
         <!-- Navigation Menu Links -->
         <nav class="nav-menu">
           <a href="./home.html" class="nav-link ${activePage === 'home' ? 'active' : ''}">Trang Chủ</a>
-          <a href="./restaurants.html" class="nav-link ${activePage === 'restaurants' ? 'active' : ''}">Nhà Hàng</a>
           <a href="./foods.html" class="nav-link ${activePage === 'foods' ? 'active' : ''}">Món Ăn</a>
           <a href="./order-history.html" class="nav-link ${activePage === 'orders' ? 'active' : ''}">Đơn Hàng</a>
         </nav>
@@ -368,7 +367,7 @@ const UIComponents = {
             <h4 class="footer-col-title">Khám Phá</h4>
             <div class="footer-links">
               <a href="./home.html" class="footer-link">Trang chủ FASTFOOD</a>
-              <a href="./restaurants.html" class="footer-link">Danh sách quán ăn</a>
+              <a href="./foods.html" class="footer-link">Thực đơn hôm nay</a>
               <a href="./home.html#best-sellers" class="footer-link">Món ăn bán chạy</a>
               <a href="./home.html#flash-deals" class="footer-link">Flash Deals giảm giá</a>
               <a href="./cart.html" class="footer-link">Giỏ hàng của bạn</a>

@@ -121,14 +121,14 @@ require_once ROOT_PATH . '/includes/header.php';
       <!-- Chi tiết thông tin -->
       <div>
         <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
-          <span class="badge badge-secondary"><?= escapeHtml($product['restaurant_name'] ?: 'FASTFOOD Partner') ?></span>
+          <span class="badge badge-primary">FASTFOOD Chính Hãng</span>
           <span style="color:var(--accent-gold); font-weight:700; font-size:0.9rem;">
             ★ <?= number_format((float)($product['rating_avg'] ?: 4.9), 1) ?> (<?= (int)($product['rating_count'] ?: 28) ?> đánh giá)
           </span>
           <span style="color:var(--text-muted); font-size:0.85rem;">• ⏱️ <?= (int)($product['prep_time_minutes'] ?: 15) ?> phút</span>
         </div>
         <p style="color:var(--text-muted); font-size:0.85rem; margin-bottom:0.65rem;">
-          📍 <?= escapeHtml($product['restaurant_address'] ?: 'Buôn Ma Thuột, Đắk Lắk') ?>
+          🛵 Giao hàng tận nơi siêu tốc trong 20 phút tại Buôn Ma Thuột
         </p>
 
         <h1 style="font-size:2rem; font-weight:800; color:var(--text-main); line-height:1.25;">

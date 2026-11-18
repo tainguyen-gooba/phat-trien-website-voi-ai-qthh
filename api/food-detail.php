@@ -90,7 +90,7 @@ jsonSuccess('Lấy thông tin món thành công', [
     'price'          => $price,
     'oldPrice'       => $oldPrice,
     'image'          => $rawImg,
-    'restaurantName' => $p['restaurant_name'] ?: 'FASTFOOD Partner',
+    'restaurantName' => 'FASTFOOD Buôn Ma Thuột',
     'categoryName'   => $p['category_name'] ?: 'Món ngon',
     'prepTime'       => $p['prep_time_minutes'] ? $p['prep_time_minutes'] . ' phút' : '15-20 phút',
     'toppings'       => $toppings,

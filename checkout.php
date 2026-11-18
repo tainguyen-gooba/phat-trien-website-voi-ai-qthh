@@ -248,9 +248,9 @@ require_once ROOT_PATH . '/includes/header.php';
         </div>
 
         <div class="form-group" style="margin-bottom:0;">
-          <label class="form-label" for="customer-notes">Ghi chú cho tài xế hoặc nhà hàng</label>
+          <label class="form-label" for="customer-notes">Ghi chú đơn hàng (cho tài xế/bếp làm món)</label>
           <input type="text" name="customer_notes" id="customer-notes" class="form-control" 
-                 value="<?= escapeHtml($_POST['customer_notes'] ?? '') ?>" placeholder="Ví dụ: Gọi trước khi giao 5 phút...">
+                 value="<?= escapeHtml($_POST['customer_notes'] ?? '') ?>" placeholder="Ví dụ: Gọi trước khi giao 5 phút, ít đá...">
         </div>
       </div>
 

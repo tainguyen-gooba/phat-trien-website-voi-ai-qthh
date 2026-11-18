@@ -28,14 +28,10 @@ $bestSellers = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS cate
                            WHERE p.is_available = 1 
                            ORDER BY p.is_featured DESC, p.id ASC LIMIT 8")->fetchAll();
 
-// 5. Lấy quán ăn nổi bật
-$featuredRestaurants = $db->query("SELECT * FROM restaurants WHERE is_active = 1 ORDER BY rating_avg DESC, id ASC LIMIT 4")->fetchAll();
-
-// 6. Lấy đánh giá khách hàng
-$reviews = $db->query("SELECT r.*, u.full_name, u.avatar_url, res.name AS restaurant_name 
+// 5. Lấy đánh giá khách hàng
+$reviews = $db->query("SELECT r.*, u.full_name, u.avatar_url 
                        FROM reviews r 
                        LEFT JOIN users u ON r.user_id = u.id 
-                       LEFT JOIN restaurants res ON r.restaurant_id = res.id 
                        ORDER BY r.id DESC LIMIT 3")->fetchAll();
 
 // 6. Kiểm tra quà tặng thành viên mới
@@ -206,41 +202,7 @@ require_once ROOT_PATH . '/includes/header.php';
     </div>
   </section>
 
-  <!-- 6. NHÀ HÀNG NỔI BẬT -->
-  <?php if (!empty($featuredRestaurants)): ?>
-  <section style="margin-bottom: 4rem;">
-    <div class="section-title-wrap">
-      <div>
-        <h2 class="section-title">Nhà Hàng & Quán Ăn Nổi Bật</h2>
-        <p class="section-subtitle">Đối tác chính hãng, đảm bảo vệ sinh ATTP và chế biến chuẩn vị</p>
-      </div>
-      <a href="<?= getUrl('restaurants.php') ?>" class="section-link">Xem tất cả quán ➔</a>
-    </div>
-
-    <div class="grid grid-cols-2" id="featured-restaurants-container">
-      <?php foreach ($featuredRestaurants as $r): 
-        $bannerUrl = escapeHtml($r['banner_url'] ?: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80');
-      ?>
-        <a href="<?= getUrl('foods.php?restaurant=' . $r['id']) ?>" class="restaurant-card">
-          <div class="restaurant-banner-wrap">
-            <img src="<?= $bannerUrl ?>" alt="<?= escapeHtml($r['name']) ?>" class="restaurant-banner" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&auto=format&fit=crop&q=80';">
-            <span class="restaurant-badge-promo">⚡ Giao 15-20p</span>
-          </div>
-          <div class="restaurant-body">
-            <h3 class="restaurant-name"><?= escapeHtml($r['name']) ?></h3>
-            <p class="restaurant-tags">📍 <?= escapeHtml($r['address']) ?></p>
-            <div class="restaurant-footer">
-              <span class="restaurant-rating-pill">⭐ <?= number_format((float)$r['rating_avg'], 1) ?> (<?= (int)$r['rating_count'] ?>+)</span>
-              <span style="color:var(--primary-color); font-weight:700;">Xem menu quán ➔</span>
-            </div>
-          </div>
-        </a>
-      <?php endforeach; ?>
-    </div>
-  </section>
-  <?php endif; ?>
-
-  <!-- 7. ĐÁNH GIÁ CỦA KHÁCH HÀNG -->
+  <!-- 6. ĐÁNH GIÁ CỦA KHÁCH HÀNG -->
   <?php if (!empty($reviews)): ?>
   <section style="margin-bottom: 4rem;">
     <div class="section-title-wrap">
@@ -260,7 +222,7 @@ require_once ROOT_PATH . '/includes/header.php';
             <img src="<?= escapeHtml($avatar) ?>" alt="<?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?>" class="review-avatar-img">
             <div>
               <h4 style="font-size:1rem; font-weight:700; margin:0 0 0.2rem;"><?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?></h4>
-              <span style="font-size:0.75rem; color:var(--text-muted);"><?= escapeHtml($rev['restaurant_name'] ?: 'FASTFOOD Partner') ?></span>
+              <span style="font-size:0.75rem; color:var(--primary-color); font-weight:600;">✓ Khách hàng đã đặt món</span>
             </div>
           </div>
           <div class="review-stars">

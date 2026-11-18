@@ -81,8 +81,8 @@ function renderProductCard($p) {
         <a href="<?= $detailUrl ?>" class="product-title" title="<?= escapeHtml($name) ?>">
           <?= escapeHtml($name) ?>
         </a>
-        <div class="product-restaurant-name" title="<?= escapeHtml($restaurant) ?>">
-          <span>🏪</span> <?= escapeHtml($restaurant) ?>
+        <div class="product-restaurant-name" style="color:var(--text-muted); font-size:0.8rem;">
+          <span>🛵</span> FASTFOOD • Giao nhanh 15-20p
         </div>
         <div class="product-bottom-row">
           <div class="product-price-box">

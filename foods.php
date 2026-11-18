@@ -17,7 +17,6 @@ $categories = $db->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY 
 $selectedCat = trim($_GET['category'] ?? 'all');
 $search      = trim($_GET['search'] ?? '');
 $sort        = trim($_GET['sort'] ?? 'default');
-$restaurantId = (int)($_GET['restaurant'] ?? 0);
 
 $where = ["p.is_available = 1"];
 $params = [];
@@ -32,11 +31,6 @@ if ($search) {
     $where[] = "(p.name LIKE ? OR p.description LIKE ?)";
     $params[] = "%$search%";
     $params[] = "%$search%";
-}
-
-if ($restaurantId > 0) {
-    $where[] = "p.restaurant_id = ?";
-    $params[] = $restaurantId;
 }
 
 $orderBy = "p.id DESC";

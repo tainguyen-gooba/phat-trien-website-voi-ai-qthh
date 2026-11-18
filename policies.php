@@ -25,14 +25,14 @@ require_once ROOT_PATH . '/includes/header.php';
 
   <section class="policy-section" id="cancellation" style="background:#fff; border-radius:14px; padding:1.75rem; margin-bottom:1.5rem; box-shadow:0 3px 14px rgba(0,0,0,0.03);">
     <h2 style="font-size:1.3rem; font-weight:800; color:var(--text-main); margin-top:0;">Quy định hủy đơn & Phí vận chuyển</h2>
-    <p>Để đảm bảo quyền lợi cho shipper và nhà hàng, khách hàng có thể hủy đơn khi đơn còn ở trạng thái <strong>Chờ xác nhận</strong> hoặc <strong>Chờ thanh toán</strong>.</p>
+    <p>Để đảm bảo quyền lợi cho shipper và bộ phận bếp chế biến, khách hàng có thể hủy đơn khi đơn còn ở trạng thái <strong>Chờ xác nhận</strong> hoặc <strong>Chờ thanh toán</strong>.</p>
     <p><strong>Lưu ý:</strong> Mỗi lần khách hàng hủy đơn, phí giao hàng cho các đơn tiếp theo sẽ tự động tăng thêm 3% để bù đắp chi phí vận hành.</p>
   </section>
 
   <section class="policy-section" id="terms" style="background:#fff; border-radius:14px; padding:1.75rem; margin-bottom:1.5rem; box-shadow:0 3px 14px rgba(0,0,0,0.03);">
     <h2 style="font-size:1.3rem; font-weight:800; color:var(--text-main); margin-top:0;">Điều khoản dịch vụ</h2>
-    <p>FASTFOOD hỗ trợ khách hàng tìm món, đặt món và theo dõi đơn hàng từ các quán đối tác. Khi đặt hàng, vui lòng cung cấp thông tin nhận hàng chính xác và kiểm tra món, địa chỉ, giá tiền trước khi xác nhận.</p>
-    <p>Đơn hàng được xử lý theo tình trạng hoạt động và xác nhận của quán. Nếu cần thay đổi hoặc hỗ trợ, hãy liên hệ hotline <strong>1900 8888</strong>.</p>
+    <p>FASTFOOD hỗ trợ khách hàng tìm món, đặt món và theo dõi đơn hàng tiện lợi. Khi đặt hàng, vui lòng cung cấp thông tin nhận hàng chính xác và kiểm tra món, địa chỉ, giá tiền trước khi xác nhận.</p>
+    <p>Đơn hàng được chuẩn bị nóng hổi ngay khi khách hàng xác nhận đặt đơn. Nếu cần thay đổi hoặc hỗ trợ, hãy liên hệ hotline <strong>1900 8888</strong>.</p>
   </section>
 
   <section class="policy-section" id="privacy" style="background:#fff; border-radius:14px; padding:1.75rem; margin-bottom:1.5rem; box-shadow:0 3px 14px rgba(0,0,0,0.03);">

@@ -3745,7 +3745,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <path d="m4.5 8.7 7.5 4.2 7.5-4.2M12 13v8" />
           </svg>Sản phẩm
         </button>
-        <button class="nav-item" type="button" data-section="restaurants">
+        <button class="nav-item" type="button" data-section="restaurants" style="display:none !important;">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M3 21h18M5 21V8l7-4 7 4v13M9 21v-6h6v6M8 10h.01M12 10h.01M16 10h.01" />
           </svg>Quán ăn

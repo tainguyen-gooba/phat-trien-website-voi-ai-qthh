@@ -1,0 +1,23 @@
+{
+  "name": "fastfood-platform",
+  "version": "1.0.0",
+  "description": "FASTFOOD - Food Delivery Platform (GrabFood-like)",
+  "scripts": {
+    "start": "npm --prefix backend start",
+    "dev": "npm --prefix backend run dev",
+    "db:test": "npm --prefix backend run db:test",
+    "db:init": "npm --prefix backend run db:init",
+    "db:migrate:customer-profile": "npm --prefix backend run db:migrate:customer-profile",
+    "backend:install": "npm --prefix backend install"
+  },
+  "keywords": [
+    "fastfood",
+    "ecommerce",
+    "food-delivery",
+    "nodejs",
+    "express",
+    "mysql"
+  ],
+  "author": "FASTFOOD Team",
+  "license": "ISC"
+}

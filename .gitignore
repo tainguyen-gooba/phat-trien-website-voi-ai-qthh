@@ -1,0 +1,17 @@
+# Dependencies
+node_modules/
+package-lock.json
+/frontend/assets/uploads/*
+
+# Environment variables
+.env
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db

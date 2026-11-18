@@ -34,5 +34,76 @@ class Roles {
     public static function getLabel(int $roleId): string {
         return self::ROLE_LABELS[$roleId] ?? 'Khách hàng';
     }
+
+    public static function getRoleIdByName(string $roleName): int {
+        $name = strtolower(trim($roleName));
+        $flipped = array_flip(self::ROLE_NAMES);
+        return $flipped[$name] ?? self::CUSTOMER;
+    }
+
+    public static function isValidRole(int $roleId): bool {
+        return isset(self::ROLE_NAMES[$roleId]);
+    }
+
+    public static function getPermissions(int $roleId): array {
+        switch ($roleId) {
+            case self::ADMIN:
+                return [
+                    'role'                => 'admin',
+                    'can_manage_users'    => true,
+                    'can_manage_products' => true,
+                    'can_manage_categories' => true,
+                    'can_manage_restaurants' => true,
+                    'can_manage_orders'   => true,
+                    'can_manage_reviews'  => true,
+                    'can_manage_coupons'  => true,
+                    'can_view_reports'    => true,
+                    'can_configure_ai'    => true,
+                    'can_chat_support'    => true,
+                    'scope'               => 'FULL_SYSTEM_ADMIN'
+                ];
+            case self::STAFF:
+                return [
+                    'role'                => 'staff',
+                    'can_manage_users'    => false,
+                    'can_manage_products' => true,
+                    'can_manage_categories' => true,
+                    'can_manage_restaurants' => true,
+                    'can_manage_orders'   => true,
+                    'can_manage_reviews'  => true,
+                    'can_manage_coupons'  => false,
+                    'can_view_reports'    => true,
+                    'can_configure_ai'    => false,
+                    'can_chat_support'    => true,
+                    'scope'               => 'STAFF_OPERATIONS'
+                ];
+            case self::CUSTOMER:
+            default:
+                return [
+                    'role'                => 'customer',
+                    'can_view_menu'       => true,
+                    'can_order'           => true,
+                    'can_apply_coupons'   => true,
+                    'can_receive_vouchers'=> true,
+                    'can_review'          => true,
+                    'can_chat'            => true,
+                    'can_track_orders'    => true,
+                    'scope'               => 'CUSTOMER_CLIENT'
+                ];
+        }
+    }
+
+    public static function getAllRoles(): array {
+        $result = [];
+        foreach (self::ROLE_NAMES as $id => $name) {
+            $result[] = [
+                'id' => $id,
+                'name' => $name,
+                'label' => self::ROLE_LABELS[$id] ?? $name,
+                'permissions' => self::getPermissions($id)
+            ];
+        }
+        return $result;
+    }
 }
 

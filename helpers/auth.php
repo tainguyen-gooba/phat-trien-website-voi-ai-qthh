@@ -28,6 +28,10 @@ function isStaff() {
     return isLoggedIn() && (int)($_SESSION['user_role_id'] ?? 0) === 5;
 }
 
+function isCustomer() {
+    return isLoggedIn() && (int)($_SESSION['user_role_id'] ?? 0) === 2;
+}
+
 function isAdminOrStaff() {
     return isAdmin() || isStaff();
 }

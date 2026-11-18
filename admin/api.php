@@ -76,6 +76,7 @@ switch ($action) {
         $basePrice   = (float)($body['basePrice'] ?? $body['price'] ?? 0);
         $discountPrice = (float)($body['discountPrice'] ?? 0);
         $categoryId  = (int)($body['categoryId'] ?? 1);
+        $restaurantId = !empty($body['restaurantId']) ? (int)$body['restaurantId'] : 1;
         $imageUrl    = trim($body['imageUrl'] ?? $body['image'] ?? '');
         $isAvailable = isset($body['isAvailable']) ? (int)$body['isAvailable'] : 1;
 
@@ -83,13 +84,16 @@ switch ($action) {
             jsonError('Vui lòng nhập tên món và giá tiền hợp lệ.');
         }
 
+        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
+        if (!$slug) $slug = 'mon-' . time();
+
         if ($id > 0) {
             $stmt = $db->prepare("UPDATE products SET name = ?, base_price = ?, discount_price = ?, category_id = ?, image_url = ?, is_available = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([$name, $basePrice, $discountPrice, $categoryId, $imageUrl, $isAvailable, $id]);
             jsonSuccess('Cập nhật món ăn thành công!');
         } else {
-            $stmt = $db->prepare("INSERT INTO products (name, base_price, discount_price, category_id, image_url, is_available, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$name, $basePrice, $discountPrice, $categoryId, $imageUrl, $isAvailable]);
+            $stmt = $db->prepare("INSERT INTO products (name, slug, restaurant_id, category_id, base_price, discount_price, image_url, is_available, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$name, $slug, $restaurantId, $categoryId, $basePrice, $discountPrice, $imageUrl, $isAvailable]);
             jsonSuccess('Thêm món ăn mới thành công!');
         }
         break;
@@ -108,13 +112,16 @@ switch ($action) {
         $icon = trim($body['icon'] ?? '🍔');
         if (!$name) jsonError('Tên danh mục không được để trống.');
 
+        $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
+        if (!$slug) $slug = 'cat-' . time();
+
         if ($id > 0) {
             $stmt = $db->prepare("UPDATE categories SET name = ?, icon_url = ?, updated_at = NOW() WHERE id = ?");
             $stmt->execute([$name, $icon, $id]);
             jsonSuccess('Cập nhật danh mục thành công!');
         } else {
-            $stmt = $db->prepare("INSERT INTO categories (name, icon_url, is_active, created_at) VALUES (?, ?, 1, NOW())");
-            $stmt->execute([$name, $icon]);
+            $stmt = $db->prepare("INSERT INTO categories (name, slug, icon_url, is_active, created_at) VALUES (?, ?, ?, 1, NOW())");
+            $stmt->execute([$name, $slug, $icon]);
             jsonSuccess('Thêm danh mục mới thành công!');
         }
         break;

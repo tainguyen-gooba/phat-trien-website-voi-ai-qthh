@@ -164,7 +164,7 @@ if ($method === 'POST') {
             break;
 
         case 'apply_coupon':
-            $couponCode = strtoupper(trim($input['code'] ?? $_POST['code'] ?? ''));
+            $couponCode = strtoupper(trim($input['code'] ?? $input['couponCode'] ?? $_POST['code'] ?? $_POST['couponCode'] ?? ''));
             if (!$couponCode) {
                 jsonError('Vui lòng nhập mã giảm giá.');
             }
@@ -185,15 +185,19 @@ if ($method === 'POST') {
             if ($cp['usage_limit'] > 0 && $cp['usage_count'] >= $cp['usage_limit']) {
                 jsonError('Mã giảm giá đã hết lượt sử dụng.');
             }
-            if ($couponCode === 'NEW50') {
-                $cUser = currentUser();
+            $cUser = currentUser();
+            if ($couponCode === 'NEW50' || $couponCode === 'NEW50K' || strpos($couponCode, 'NEW50K-') === 0) {
                 if ($cUser) {
                     $ordCheck = $db->prepare("SELECT COUNT(*) FROM orders WHERE customer_id = ? AND order_status != 'cancelled'");
                     $ordCheck->execute([$cUser['id']]);
                     if ((int)$ordCheck->fetchColumn() > 0) {
-                        jsonError('Mã NEW50 chỉ áp dụng cho đơn hàng đầu tiên của khách hàng mới.');
+                        jsonError('Voucher chào mừng ' . $couponCode . ' chỉ áp dụng cho đơn hàng đầu tiên của khách hàng mới.');
                     }
                 }
+            }
+
+            if (!empty($cp['user_id']) && $cUser && (int)$cp['user_id'] !== (int)$cUser['id']) {
+                jsonError('Mã giảm giá này chỉ dành riêng cho chủ sở hữu tài khoản được cấp.');
             }
             $_SESSION['applied_coupon'] = [
                 'id'                  => (int)$cp['id'],

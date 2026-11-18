@@ -53,21 +53,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insertStmt->execute([$fullName, $email, $phone, $hash]);
                 $newUserId = $db->lastInsertId();
 
-                // 3. Tự động áp dụng Voucher NEW50 (Giảm 50% cho khách hàng mới)
-                $cpStmt = $db->prepare("SELECT * FROM coupons WHERE code = 'NEW50' AND is_active = 1 LIMIT 1");
-                $cpStmt->execute();
-                $newCoupon = $cpStmt->fetch();
-                if ($newCoupon) {
+                // 3. Tự động cấp Voucher giảm 50.000đ cho khách hàng mới
+                $userVoucherCode = 'NEW50K-' . strtoupper(substr(md5($newUserId . uniqid((string)mt_rand(), true)), 0, 6));
+                $startDate = date('Y-m-d H:i:s');
+                $endDate = date('Y-m-d H:i:s', strtotime('+30 days'));
+
+                try {
+                    // Đảm bảo coupon mẫu NEW50K chung tồn tại
+                    $checkGlobal = $db->prepare("SELECT id FROM coupons WHERE code = 'NEW50K' LIMIT 1");
+                    $checkGlobal->execute();
+                    if (!$checkGlobal->fetch()) {
+                        $db->prepare("INSERT INTO coupons (code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
+                                      VALUES ('NEW50K', 'Voucher bạn mới - Giảm ngay 50.000đ', 'fixed', 50000.00, 0.00, 50000.00, 10000, 0, '2026-01-01 00:00:00', '2027-12-31 23:59:59', 1, NOW())")->execute();
+                    }
+
+                    // Tạo mã voucher riêng cho user
+                    $cpInsert = $db->prepare("INSERT INTO coupons (user_id, code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
+                                              VALUES (?, ?, 'Voucher chào mừng bạn mới - Giảm 50.000đ', 'fixed', 50000.00, 0.00, 50000.00, 1, 0, ?, ?, 1, NOW())");
+                    $cpInsert->execute([$newUserId, $userVoucherCode, $startDate, $endDate]);
+                    $couponId = (int)$db->lastInsertId();
+
                     $_SESSION['applied_coupon'] = [
-                        'id'                  => (int)$newCoupon['id'],
-                        'code'                => $newCoupon['code'],
-                        'title'               => $newCoupon['title'],
-                        'discount_type'       => $newCoupon['discount_type'],
-                        'discount_value'      => (float)$newCoupon['discount_value'],
-                        'min_order_value'     => (float)$newCoupon['min_order_value'],
-                        'max_discount_amount' => (float)$newCoupon['max_discount_amount']
+                        'id'                  => $couponId,
+                        'code'                => $userVoucherCode,
+                        'title'               => 'Voucher chào mừng bạn mới - Giảm 50.000đ',
+                        'discount_type'       => 'fixed',
+                        'discount_value'      => 50000.00,
+                        'min_order_value'     => 0.00,
+                        'max_discount_amount' => 50000.00
                     ];
-                }
+                } catch (Exception $e) {}
 
                 // 4. Tạo thông báo quà tặng thành viên mới
                 try {
@@ -75,8 +90,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                                 VALUES (?, ?, ?, 'promotion', 0, NOW())");
                     $notifStmt->execute([
                         $newUserId,
-                        '🎉 Tặng bạn mới Voucher giảm 50%!',
-                        'Chào mừng bạn đến với FASTFOOD! Bạn đã được tặng Voucher NEW50 giảm 50% giá trị món ăn cho đơn hàng đầu tiên.'
+                        '🎉 Tặng bạn mới Voucher giảm 50.000đ!',
+                        'Chào mừng ' . $fullName . ' đến với FASTFOOD! Bạn đã được tặng Voucher giảm trực tiếp 50.000đ (Mã: ' . $userVoucherCode . ' hoặc NEW50K) cho đơn hàng đầu tiên.'
                     ]);
                 } catch (Exception $e) {}
 
@@ -116,15 +131,15 @@ require_once ROOT_PATH . '/includes/header.php';
       </p>
     </div>
 
-    <!-- Banner Khuyến Mãi Bạn Mới 50% -->
+    <!-- Banner Khuyến Mãi Bạn Mới 50k -->
     <div style="background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border: 1.5px dashed #f97316; border-radius: 12px; padding: 1rem 1.15rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.85rem;">
       <div style="font-size: 2rem; flex-shrink: 0;">🎁</div>
       <div>
         <strong style="color: #ea580c; font-size: 0.95rem; display: block; margin-bottom: 2px;">
-          Tặng Ngay Voucher Giảm 50% Món Ăn
+          Tặng Ngay Voucher Giảm 50.000đ Cho Khách Hàng Mới
         </strong>
         <p style="font-size: 0.82rem; color: #7c2d12; margin: 0; line-height: 1.35;">
-          Đăng ký thành viên mới hôm nay nhận ngay mã <strong>NEW50</strong> (Giảm 50% giá trị sản phẩm) tự động áp dụng cho đơn hàng đầu tiên của bạn!
+          Đăng ký tài khoản thành viên hôm nay nhận ngay Voucher giảm trực tiếp <strong>50.000 đ</strong> (Mã <strong>NEW50K</strong>) tự động áp dụng ngay cho đơn hàng đầu tiên của bạn!
         </p>
       </div>
     </div>

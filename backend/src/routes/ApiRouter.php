@@ -59,6 +59,12 @@ class ApiRouter {
         if ($path === '/auth/profile' && in_array($method, ['POST', 'PUT', 'PATCH'])) {
             $auth->updateProfile();
         }
+        if ($path === '/auth/roles' && $method === 'GET') {
+            $auth->roles();
+        }
+        if ($path === '/auth/logout' && in_array($method, ['POST', 'GET'])) {
+            $auth->logout();
+        }
 
         // 3. Realtime Content & Orders
         if ($path === '/realtime/content' && $method === 'GET') {

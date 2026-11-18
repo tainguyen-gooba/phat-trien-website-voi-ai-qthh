@@ -3,12 +3,9 @@
   "version": "1.0.0",
   "description": "FASTFOOD - Food Delivery Platform (GrabFood-like)",
   "scripts": {
-    "start": "npm --prefix backend start",
-    "dev": "npm --prefix backend run dev",
-    "db:test": "npm --prefix backend run db:test",
-    "db:init": "npm --prefix backend run db:init",
-    "db:migrate:customer-profile": "npm --prefix backend run db:migrate:customer-profile",
-    "backend:install": "npm --prefix backend install"
+    "start": "php -S 127.0.0.1:5000 router.php",
+    "dev": "php -S 127.0.0.1:5000 router.php",
+    "db:test": "php backend/scripts/test-db.php"
   },
   "keywords": [
     "fastfood",

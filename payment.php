@@ -156,6 +156,34 @@ require_once ROOT_PATH . '/includes/header.php';
 const orderCode = '<?= escapeHtml($orderCode) ?>';
 let totalSeconds = 15 * 60;
 
+// Báo sang Tab Admin qua BroadcastChannel nếu vừa đặt xong
+<?php if (!empty($_GET['just_ordered'])): ?>
+try {
+  const channel = new BroadcastChannel('fastfood_realtime');
+  channel.postMessage({
+    type: 'order:new',
+    data: {
+      order: {
+        id: '<?= escapeHtml($order['order_code']) ?>',
+        orderNo: '#<?= escapeHtml($order['order_code']) ?>',
+        orderCode: '<?= escapeHtml($order['order_code']) ?>',
+        customer: '<?= escapeHtml($order['recipient_name']) ?>',
+        recipient: {
+          name: '<?= escapeHtml($order['recipient_name']) ?>',
+          phone: '<?= escapeHtml($order['recipient_phone']) ?>',
+          address: '<?= escapeHtml($order['delivery_address']) ?>'
+        },
+        total: <?= (float)$order['total_amount'] ?>,
+        paymentMethod: '<?= escapeHtml($order['payment_method']) ?>',
+        paymentStatus: 'pending',
+        status: '<?= escapeHtml($order['order_status']) ?>',
+        createdAt: '<?= date('c') ?>'
+      }
+    }
+  });
+} catch (e) {}
+<?php endif; ?>
+
 // Countdown Timer
 const timerInterval = setInterval(() => {
   totalSeconds--;

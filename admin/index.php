@@ -44,6 +44,18 @@ $products = array_map(function($p) {
     ];
 }, $productsRaw);
 
+// Cấu hình Best Seller & Giờ Vàng
+$bsRaw = $db->query("SELECT content FROM website_content WHERE collection_name = 'bestseller' LIMIT 1")->fetchColumn();
+$bsConfig = $bsRaw ? json_decode($bsRaw, true) : [
+    'title'         => 'Món Ăn Bán Chạy Nhất (Best Sellers)',
+    'subtitle'      => 'Được khách hàng đặt nhiều nhất trong tuần qua - Ưu đãi giờ vàng giới hạn!',
+    'badge'         => '🔥 GIỜ VÀNG BEST SELLER',
+    'timer_enabled' => 1,
+    'end_time'      => date('Y-m-d H:i:s', strtotime('+2 days 23:59:59')),
+    'discount_text' => 'Ưu đãi có hạn',
+    'product_ids'   => [1, 2, 3, 5]
+];
+
 // 3. Orders
 $ordersRaw = $db->query("SELECT o.order_code, o.total_amount, o.order_status, o.created_at, o.recipient_name, o.recipient_phone, o.delivery_address AS recipient_address,
                                 ro.order_data, ro.status AS rt_status,
@@ -3789,6 +3801,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           </svg><span>Đánh giá khách hàng</span>
           <span class="nav-badge" id="reviews-nav-badge" <?= $totalReviewsCount > 0 ? '' : 'hidden' ?>><?= $totalReviewsCount > 99 ? '99+' : $totalReviewsCount ?></span>
         </button>
+        <button class="nav-item" type="button" data-section="bestseller">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg><span>Best Seller & Giờ Vàng</span>
+          <span class="nav-badge" style="background:#ea580c; color:#fff; font-weight:800; font-size:10px; padding:2px 6px;">HOT</span>
+        </button>
       </nav>
       <div class="sidebar-bottom">
         <a class="sidebar-link" href="<?= getUrl('index.php') ?>">
@@ -4155,6 +4173,132 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <p class="reviews-empty">Đang tải đánh giá...</p>
           </div>
         </section>
+
+        <!-- BEST SELLER & FLASH DEAL CONFIGURATION SECTION -->
+        <section class="bestseller-section" id="bestseller-section" hidden style="background:#fff; border-radius:16px; padding:24px; box-shadow:var(--shadow); border:1px solid #f1f5f9;">
+          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:16px; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+            <div>
+              <h2 style="font-size:18px; font-weight:800; color:#0f172a; margin:0 0 4px; display:flex; align-items:center; gap:8px;">
+                <span>🔥</span> Cài Đặt Mục Best Seller & Giờ Vàng Đếm Ngược
+              </h2>
+              <p style="font-size:13px; color:#64748b; margin:0;">Tùy chỉnh tiêu đề, đồng hồ đếm ngược Flash Deal và chọn danh sách món ăn bán chạy nhất hiển thị trên Trang Chủ.</p>
+            </div>
+            <button type="button" class="primary-button" id="btn-save-bestseller" style="background:#ea580c; border-color:#ea580c; padding:10px 22px; font-size:14px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+              <span>💾</span> Lưu Cài Đặt Best Seller
+            </button>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1.1fr 0.9fr; gap:20px; margin-bottom:24px;">
+            <!-- Cột trái: Thông tin tiêu đề & Đồng hồ -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px;">
+              <h3 style="font-size:15px; font-weight:700; margin:0 0 14px; color:#1e293b;">1. Cấu hình tiêu đề & Thời gian</h3>
+
+              <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Tiêu đề mục (Title):</label>
+                <input type="text" id="bs-cfg-title" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= escapeHtml($bsConfig['title'] ?? 'Món Ăn Bán Chạy Nhất (Best Sellers)') ?>">
+              </div>
+
+              <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Mô tả phụ (Subtitle):</label>
+                <input type="text" id="bs-cfg-subtitle" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= escapeHtml($bsConfig['subtitle'] ?? 'Được khách hàng đặt nhiều nhất trong tuần qua - Ưu đãi giờ vàng giới hạn!') ?>">
+              </div>
+
+              <div style="margin-bottom:14px;">
+                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Nhãn huy hiệu (Badge Tag):</label>
+                <input type="text" id="bs-cfg-badge" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= escapeHtml($bsConfig['badge'] ?? '🔥 GIỜ VÀNG BEST SELLER') ?>" placeholder="Ví dụ: 🔥 GIỜ VÀNG BEST SELLER">
+              </div>
+
+              <div style="margin-bottom:14px;">
+                <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#0f172a; cursor:pointer;">
+                  <input type="checkbox" id="bs-cfg-timer-enabled" <?= !empty($bsConfig['timer_enabled']) ? 'checked' : '' ?> style="width:18px; height:18px; accent-color:#ea580c;">
+                  Bật đồng hồ đếm ngược Giờ Vàng (Flash Countdown Timer)
+                </label>
+              </div>
+
+              <div style="margin-bottom:14px;" id="bs-endtime-group">
+                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Thời điểm kết thúc đếm ngược:</label>
+                <?php 
+                  $rawEnd = !empty($bsConfig['end_time']) ? date('Y-m-d\TH:i', strtotime($bsConfig['end_time'])) : date('Y-m-d\TH:i', strtotime('+2 days 23:59:59'));
+                ?>
+                <input type="datetime-local" id="bs-cfg-endtime" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= $rawEnd ?>">
+
+                <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
+                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="6" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+6 Tiếng</button>
+                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="12" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+12 Tiếng</button>
+                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="24" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+24 Tiếng</button>
+                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="72" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+3 Ngày</button>
+                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="168" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+7 Ngày</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Cột phải: Xem trước giao diện (Live Preview) -->
+            <div style="background:#fff7ed; border:1.5px dashed #fed7aa; border-radius:12px; padding:18px;">
+              <h3 style="font-size:15px; font-weight:700; margin:0 0 14px; color:#c2410c;">2. Xem trước hiển thị trên Trang Chủ</h3>
+              
+              <div style="background:#fff; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                  <div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+                      <strong id="preview-bs-title" style="font-size:15px; color:#0f172a;"><?= escapeHtml($bsConfig['title'] ?? 'Món Ăn Bán Chạy Nhất (Best Sellers)') ?></strong>
+                      <span id="preview-bs-badge" style="background:#ea580c; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:10px; text-transform:uppercase;">
+                        <?= escapeHtml($bsConfig['badge'] ?? '🔥 GIỜ VÀNG BEST SELLER') ?>
+                      </span>
+                    </div>
+                    <small id="preview-bs-subtitle" style="color:#64748b; font-size:12px; display:block;"><?= escapeHtml($bsConfig['subtitle'] ?? 'Được khách hàng đặt nhiều nhất trong tuần qua') ?></small>
+                  </div>
+
+                  <div id="preview-bs-timer" style="display:flex; align-items:center; gap:4px; background:#fff7ed; border:1px solid #fed7aa; padding:4px 8px; border-radius:8px; font-size:12px; font-weight:800; color:#ea580c;">
+                    <span>⏳ Kết thúc:</span>
+                    <span style="background:#ea580c; color:#fff; padding:1px 5px; border-radius:4px;">04</span> :
+                    <span style="background:#ea580c; color:#fff; padding:1px 5px; border-radius:4px;">25</span> :
+                    <span style="background:#ea580c; color:#fff; padding:1px 5px; border-radius:4px;">18</span>
+                  </div>
+                </div>
+
+                <div style="margin-top:14px; font-size:12px; color:#64748b; border-top:1px solid #f1f5f9; padding-top:10px;">
+                  <span>Đã chọn: <b id="preview-selected-count" style="color:#ea580c; font-size:14px;"><?= count($bsConfig['product_ids'] ?? [1,2,3,5]) ?></b> món ăn bán chạy</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PHẦN 3: BẢNG CHỌN MÓN ĂN LÀM BEST SELLER -->
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+              <div>
+                <h3 style="font-size:15px; font-weight:700; margin:0 0 2px; color:#1e293b;">3. Chọn danh sách món ăn Best Seller</h3>
+                <p style="font-size:12px; color:#64748b; margin:0;">Tick chọn các món muốn hiển thị tại vị trí Best Sellers trên Trang Chủ (khuyên dùng 4 hoặc 8 món).</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:8px;">
+                <input type="text" id="bs-search-product" placeholder="Tìm tên món ăn..." style="padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; width:220px;">
+                <button type="button" class="btn btn-outline btn-sm" id="btn-select-top4" style="font-size:12px; padding:6px 12px; cursor:pointer;">Chọn nhanh 4 món đầu</button>
+              </div>
+            </div>
+
+            <div style="max-height:420px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:12px; padding:12px; background:#fff;">
+              <div id="bs-product-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+                <?php 
+                  $selectedIds = array_map('intval', $bsConfig['product_ids'] ?? [1, 2, 3, 5]);
+                  foreach ($productsRaw as $p): 
+                    $pId = (int)$p['id'];
+                    $pImg = $p['image'] ?? ($p['image_url'] ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80');
+                    if (strpos($pImg, 'http') !== 0) $pImg = getAssetUrl($pImg);
+                    $isChecked = in_array($pId, $selectedIds);
+                ?>
+                  <label class="bs-prod-card" data-name="<?= escapeHtml(mb_strtolower($p['name'])) ?>" style="display:flex; align-items:center; gap:10px; padding:8px 12px; border:1.5px solid <?= $isChecked ? '#ea580c' : '#e2e8f0' ?>; background:<?= $isChecked ? '#fff7ed' : '#fff' ?>; border-radius:10px; cursor:pointer; transition:all .2s;">
+                    <input type="checkbox" class="bs-prod-checkbox" value="<?= $pId ?>" <?= $isChecked ? 'checked' : '' ?> style="width:18px; height:18px; accent-color:#ea580c; flex-shrink:0;">
+                    <img src="<?= escapeHtml($pImg) ?>" alt="<?= escapeHtml($p['name']) ?>" style="width:48px; height:48px; border-radius:8px; object-fit:cover; flex-shrink:0; border:1px solid #eee;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';">
+                    <div style="min-width:0; flex:1;">
+                      <strong style="display:block; font-size:13px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= escapeHtml($p['name']) ?>"><?= escapeHtml($p['name']) ?></strong>
+                      <span style="font-size:12px; font-weight:700; color:#ea580c;"><?= formatVND($p['price']) ?></span>
+                    </div>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -4388,7 +4532,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         for (const key of ['fastfood_user', 'fastfood_cart', 'fastfood_orders', 'fastfood_active_order', 'fastfood_applied_coupon', 'fastfood_available_coupons']) {
           sessionStorage.removeItem(key);
         }
-        window.location.href = '<?= getUrl('logout.php') ?>';
+        window.location.href = '<?= BASE_URL ?>/admin/logout.php';
       });
 
       const sections = {
@@ -4584,6 +4728,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       const aiBotSection = document.getElementById('ai-bot-section');
       const tablePanel = document.getElementById('table-title').closest('.table-panel');
       const reviewsSection = document.getElementById('reviews-section');
+      const bestsellerSection = document.getElementById('bestseller-section');
       const reviewsList = document.getElementById('reviews-list');
       const reviewsCount = document.getElementById('reviews-count');
       reviewsUiReady = true;
@@ -5653,10 +5798,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       function renderSection() {
         const section = sections[activeSection];
         const addButton = document.getElementById('add-button');
-        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot') {
+        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller') {
           const isMessages = activeSection === 'messages';
           const isReviews = activeSection === 'reviews';
           const isAiBot = activeSection === 'ai-bot';
+          const isBestseller = activeSection === 'bestseller';
           let sectionTitle = 'Tin nhắn khách hàng';
           let sectionDesc = 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.';
           if (isReviews) {
@@ -5665,6 +5811,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           } else if (isAiBot) {
             sectionTitle = 'Trợ lý AI Chatbot Quản Trị';
             sectionDesc = 'Trợ lý ảo thông minh giải đáp nghiệp vụ, tư vấn doanh thu & hỗ trợ vận hành FASTFOOD.';
+          } else if (isBestseller) {
+            sectionTitle = 'Cài Đặt Best Seller & Giờ Vàng';
+            sectionDesc = 'Tùy chỉnh thời gian đếm ngược Flash Deal và chọn danh sách món ăn bán chạy nhất.';
           }
           document.getElementById('breadcrumb').textContent = isAiBot ? 'Trợ lý AI Chatbot' : sectionTitle;
           document.getElementById('page-title').textContent = sectionTitle;
@@ -5678,6 +5827,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           chatInbox.hidden = !isMessages;
           reviewsSection.hidden = !isReviews;
           if (aiBotSection) aiBotSection.hidden = !isAiBot;
+          if (bestsellerSection) bestsellerSection.hidden = !isBestseller;
           window.adminChatInbox?.setActive(isMessages);
           if (isReviews) {
             clearReviewsBadge();
@@ -5689,6 +5839,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         chatInbox.hidden = true;
         reviewsSection.hidden = true;
         if (aiBotSection) aiBotSection.hidden = true;
+        if (bestsellerSection) bestsellerSection.hidden = true;
         tablePanel.hidden = false;
         window.adminChatInbox?.setActive(false);
         const collection = section.collection;
@@ -5890,7 +6041,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (activeSection === 'messages' || activeSection === 'ai-bot') return;
+        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller') return;
         if (activeSection === 'reviews') {
           reviewSearchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
           renderOrderReviews(renderedReviews);
@@ -5906,7 +6057,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           renderOrderReviews(renderedReviews);
           return;
         }
-        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot') {
+        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot' && activeSection !== 'bestseller') {
           searchTerm = '';
           currentPage = 1;
           renderTable();
@@ -6069,7 +6220,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       const urlParams = new URLSearchParams(window.location.search);
       const initialSection = urlParams.get('section') || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
-      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot')) {
+      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller')) {
         const targetBtn = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
         if (targetBtn) {
           activeSection = initialSection;
@@ -6257,6 +6408,157 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         } finally {
           if (aiBotSendBtn) aiBotSendBtn.disabled = false;
           aiBotInput?.focus();
+        }
+      });
+
+      // === Best Seller & Flash Deal Management Logic ===
+      const bsTitleInput = document.getElementById('bs-cfg-title');
+      const bsSubtitleInput = document.getElementById('bs-cfg-subtitle');
+      const bsBadgeInput = document.getElementById('bs-cfg-badge');
+      const bsTimerEnabled = document.getElementById('bs-cfg-timer-enabled');
+      const bsEndTimeInput = document.getElementById('bs-cfg-endtime');
+      const bsEndTimeGroup = document.getElementById('bs-endtime-group');
+
+      const prevTitle = document.getElementById('preview-bs-title');
+      const prevSubtitle = document.getElementById('preview-bs-subtitle');
+      const prevBadge = document.getElementById('preview-bs-badge');
+      const prevTimer = document.getElementById('preview-bs-timer');
+      const prevCount = document.getElementById('preview-selected-count');
+
+      // Bind input to live preview
+      bsTitleInput?.addEventListener('input', () => {
+        if (prevTitle) prevTitle.textContent = bsTitleInput.value.trim() || 'Món Ăn Bán Chạy Nhất';
+      });
+      bsSubtitleInput?.addEventListener('input', () => {
+        if (prevSubtitle) prevSubtitle.textContent = bsSubtitleInput.value.trim() || '';
+      });
+      bsBadgeInput?.addEventListener('input', () => {
+        if (prevBadge) prevBadge.textContent = bsBadgeInput.value.trim() || '';
+      });
+      bsTimerEnabled?.addEventListener('change', () => {
+        const isEnabled = bsTimerEnabled.checked;
+        if (bsEndTimeGroup) bsEndTimeGroup.style.display = isEnabled ? 'block' : 'none';
+        if (prevTimer) prevTimer.style.display = isEnabled ? 'flex' : 'none';
+      });
+
+      // Preset buttons (+6h, +12h, etc.)
+      document.querySelectorAll('.bs-preset-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const hours = parseInt(btn.dataset.hours || '24');
+          const target = new Date(Date.now() + hours * 3600 * 1000);
+          const yyyy = target.getFullYear();
+          const mm = String(target.getMonth() + 1).padStart(2, '0');
+          const dd = String(target.getDate()).padStart(2, '0');
+          const hh = String(target.getHours()).padStart(2, '0');
+          const mi = String(target.getMinutes()).padStart(2, '0');
+          if (bsEndTimeInput) {
+            bsEndTimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+          }
+          showToast(`Đã chỉnh thời gian kết thúc: +${hours} tiếng`, false);
+        });
+      });
+
+      // Product selection checkboxes
+      function updateBsSelectedCount() {
+        const checked = document.querySelectorAll('.bs-prod-checkbox:checked');
+        if (prevCount) prevCount.textContent = checked.length;
+      }
+
+      document.querySelectorAll('.bs-prod-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => {
+          const card = cb.closest('.bs-prod-card');
+          if (card) {
+            card.style.borderColor = cb.checked ? '#ea580c' : '#e2e8f0';
+            card.style.background = cb.checked ? '#fff7ed' : '#fff';
+          }
+          updateBsSelectedCount();
+        });
+      });
+
+      // "Chọn nhanh 4 món đầu"
+      document.getElementById('btn-select-top4')?.addEventListener('click', () => {
+        const allBoxes = Array.from(document.querySelectorAll('.bs-prod-checkbox'));
+        allBoxes.forEach((cb, idx) => {
+          cb.checked = (idx < 4);
+          const card = cb.closest('.bs-prod-card');
+          if (card) {
+            card.style.borderColor = cb.checked ? '#ea580c' : '#e2e8f0';
+            card.style.background = cb.checked ? '#fff7ed' : '#fff';
+          }
+        });
+        updateBsSelectedCount();
+        showToast('Đã chọn nhanh 4 món đầu tiên làm Best Seller!');
+      });
+
+      // Search in product selection grid
+      document.getElementById('bs-search-product')?.addEventListener('input', (e) => {
+        const term = e.target.value.trim().toLowerCase();
+        document.querySelectorAll('.bs-prod-card').forEach(card => {
+          const name = card.dataset.name || '';
+          card.style.display = (!term || name.includes(term)) ? 'flex' : 'none';
+        });
+      });
+
+      // Save Best Seller configuration
+      document.getElementById('btn-save-bestseller')?.addEventListener('click', async () => {
+        const saveBtn = document.getElementById('btn-save-bestseller');
+        const title = bsTitleInput?.value.trim() || 'Món Ăn Bán Chạy Nhất (Best Sellers)';
+        const subtitle = bsSubtitleInput?.value.trim() || '';
+        const badge = bsBadgeInput?.value.trim() || '';
+        const timerEnabled = bsTimerEnabled?.checked ? 1 : 0;
+        const rawEnd = bsEndTimeInput?.value || '';
+        const endTime = rawEnd ? rawEnd.replace('T', ' ') + ':00' : '';
+
+        const selectedIds = Array.from(document.querySelectorAll('.bs-prod-checkbox:checked'))
+          .map(cb => parseInt(cb.value))
+          .filter(id => id > 0);
+
+        if (selectedIds.length === 0) {
+          showToast('Vui lòng chọn ít nhất 1 món ăn làm Best Seller.', true);
+          return;
+        }
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳</span> Đang lưu...';
+
+        try {
+          const payload = {
+            records: {
+              title,
+              subtitle,
+              badge,
+              timer_enabled: timerEnabled,
+              end_time: endTime,
+              product_ids: selectedIds
+            }
+          };
+
+          const res = await fetch('/api/v1/realtime/content/bestseller', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + (sessionStorage.getItem('fastfood_auth_token') || serverToken)
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await res.json();
+          if (!res.ok || !result.success) {
+            throw new Error(result.message || 'Không thể lưu cấu hình.');
+          }
+
+          showToast('✅ Đã lưu cài đặt Best Seller & Giờ vàng thành công!');
+
+          // Phát sự kiện realtime đồng bộ sang trang chủ các tab khác
+          try {
+            const channel = new BroadcastChannel('fastfood_realtime');
+            channel.postMessage({ type: 'content:updated', collection: 'bestseller' });
+          } catch(e) {}
+        } catch (err) {
+          showToast('Lỗi: ' + err.message, true);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾</span> Lưu Cài Đặt Best Seller';
         }
       });
 

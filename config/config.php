@@ -2,8 +2,52 @@
 /**
  * FASTFOOD - Cấu hình hệ thống chung
  */
+
+// ====================================================================
+// MULTI-TAB SESSION ISOLATION ENGINE
+// Phân lập hoàn toàn phiên làm việc giữa Tab Quản Trị (/admin) và Tab Khách Hàng (/)
+// Giúp mở song song nhiều tab Google Chrome mà KHÔNG BAO GIỜ bị đè tài khoản của nhau
+// ====================================================================
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$referer    = $_SERVER['HTTP_REFERER'] ?? '';
+$reqRole    = $_SERVER['HTTP_X_REQUESTED_ROLE'] ?? '';
+
+// Tự động nhận diện ngữ cảnh Admin:
+$isAdminContext = (
+    preg_match('#^/admin(?:/|$|\?)#i', $requestUri) !== 0 ||
+    strpos($requestUri, 'admin/index.php') !== false ||
+    strpos($requestUri, 'admin/login.php') !== false ||
+    strpos($requestUri, 'admin/logout.php') !== false ||
+    (!empty($_GET['role']) && $_GET['role'] === 'admin') ||
+    (!empty($_POST['role']) && $_POST['role'] === 'admin') ||
+    (!empty($_GET['for']) && $_GET['for'] === 'admin') ||
+    (strcasecmp($reqRole, 'admin') === 0) ||
+    // API gọi từ trang Admin
+    (preg_match('#^/api/#', $requestUri) && strpos($referer, '/admin') !== false)
+);
+
+if ($isAdminContext) {
+    session_name('FF_SESS_ADMIN');
+} else {
+    session_name('FASTFOOD_SESSID');
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
+}
+
+// Dọn dẹp phiên Khách Hàng: Nếu FASTFOOD_SESSID còn lưu tài khoản Admin/Staff từ phiên cũ,
+// tự động dọn dẹp để tab Khách Hàng luôn là tài khoản khách hàng hoặc khách vãng lai độc lập
+if (session_name() === 'FASTFOOD_SESSID' && !empty($_SESSION['user_role_id']) && ((int)$_SESSION['user_role_id'] === 1 || (int)$_SESSION['user_role_id'] === 5)) {
+    unset(
+        $_SESSION['user_id'],
+        $_SESSION['user_name'],
+        $_SESSION['user_email'],
+        $_SESSION['user_phone'],
+        $_SESSION['user_role_id'],
+        $_SESSION['user_role'],
+        $_SESSION['user_avatar']
+    );
 }
 
 define('ROOT_PATH', dirname(__DIR__));

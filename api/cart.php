@@ -30,6 +30,27 @@ function getCartSummary() {
         $itemCopy['cartKey'] = (string)$key;
         $itemCopy['qty'] = $qty;
         $itemCopy['itemTotal'] = $itemTotal;
+
+        // Chuẩn hóa và tự động phục hồi ảnh món ăn nếu session chưa có
+        if (empty($itemCopy['image'])) {
+            $numId = (int)preg_replace('/\D/', '', $itemCopy['productId'] ?? $key);
+            if ($numId > 0) {
+                try {
+                    $imgDb = getDB()->query("SELECT image_url FROM products WHERE id = $numId LIMIT 1")->fetchColumn();
+                    if ($imgDb) {
+                        $itemCopy['image'] = $imgDb;
+                        $_SESSION['cart'][$key]['image'] = $imgDb;
+                    }
+                } catch (\Exception $e) {}
+            }
+        }
+        if (!empty($itemCopy['image']) && strpos($itemCopy['image'], 'http') !== 0) {
+            $itemCopy['image'] = getAssetUrl($itemCopy['image']);
+        }
+        if (empty($itemCopy['image'])) {
+            $itemCopy['image'] = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
+        }
+
         $items[] = $itemCopy;
     }
 
@@ -122,8 +143,23 @@ if ($method === 'POST') {
             $toppingSignature = !empty($cleanToppings) ? '_' . substr(md5(json_encode($cleanToppings)), 0, 8) : '';
             $cartKey = $idKey . $toppingSignature;
 
+            $itemImg = !empty($product['image_url']) ? $product['image_url'] : '';
+            if (!$itemImg) {
+                try {
+                    $itemImg = $db->query("SELECT image_url FROM product_images WHERE product_id = " . (int)$product['id'] . " ORDER BY is_primary DESC LIMIT 1")->fetchColumn() ?: '';
+                } catch (\Exception $e) {}
+            }
+            if (!$itemImg) {
+                $itemImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+            } elseif (strpos($itemImg, 'http') !== 0) {
+                $itemImg = getAssetUrl($itemImg);
+            }
+
             if (isset($_SESSION['cart'][$cartKey])) {
                 $_SESSION['cart'][$cartKey]['qty'] += $qty;
+                if (empty($_SESSION['cart'][$cartKey]['image'])) {
+                    $_SESSION['cart'][$cartKey]['image'] = $itemImg;
+                }
             } else {
                 $_SESSION['cart'][$cartKey] = [
                     'id'            => $cartKey,
@@ -133,7 +169,7 @@ if ($method === 'POST') {
                     'toppings'      => $cleanToppings,
                     'toppingsExtra' => $toppingsExtra,
                     'price'         => $unitPrice,
-                    'image'         => $product['image_url'] ?? '',
+                    'image'         => $itemImg,
                     'qty'           => $qty,
                 ];
             }

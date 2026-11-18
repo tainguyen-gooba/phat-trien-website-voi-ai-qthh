@@ -96,6 +96,21 @@ class ApiRouter {
         if ($path === '/chat/history' && $method === 'GET') {
             $chat->getHistory();
         }
+        if (($path === '/chat/admin/conversations' || $path === '/admin/conversations') && $method === 'GET') {
+            $chat->getAdminConversations();
+        }
+        if (preg_match('#^/(?:chat/)?admin/sessions/([^/]+)/messages$#', $path, $m) && $method === 'GET') {
+            $chat->getSessionMessages($m[1]);
+        }
+        if (preg_match('#^/(?:chat/)?admin/sessions/([^/]+)/reply$#', $path, $m) && $method === 'POST') {
+            $chat->sendAdminReply($m[1]);
+        }
+        if (($path === '/chat/admin/status' || $path === '/admin/status') && in_array($method, ['PATCH', 'POST', 'GET'])) {
+            $chat->updateAdminStatus();
+        }
+        if (preg_match('#^/(?:chat/)?admin/sessions/([^/]+)/automation$#', $path, $m) && in_array($method, ['PATCH', 'POST'])) {
+            $chat->updateSessionAutomation($m[1]);
+        }
 
         // 5. Payment routes
         if ($path === '/payment/sepay/webhook' && in_array($method, ['POST', 'GET'])) {

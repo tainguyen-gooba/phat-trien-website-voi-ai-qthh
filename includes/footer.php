@@ -74,6 +74,7 @@
   <!-- Scripts dùng chung -->
   <script src="<?= getAssetUrl('js/storage.js') ?>"></script>
   <script src="<?= getAssetUrl('js/components.js') ?>"></script>
+  <script src="<?= getAssetUrl('js/realtime.js') ?>"></script>
   <script src="<?= getAssetUrl('js/chatbot.js') ?>"></script>
   <?php if (!empty($extraJs)): ?>
     <?php foreach ((array)$extraJs as $js): ?>

@@ -502,3 +502,24 @@
   padding-top: 0.75rem;
   border-top: 1px solid var(--border-color);
 }
+
+/* --- BẢNG CAM GIỜ VÀNG BEST SELLERS --- */
+.bestseller-orange-board {
+  position: relative;
+  overflow: hidden;
+}
+
+.bestseller-orange-board .product-card {
+  background: #FFFFFF;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.3s;
+}
+
+.bestseller-orange-board .product-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, 0.22);
+}
+

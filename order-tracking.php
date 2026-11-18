@@ -140,11 +140,26 @@ require_once ROOT_PATH . '/includes/header.php';
     </h3>
 
     <div>
-      <?php foreach ($items as $it): ?>
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px dashed #f1f5f9;">
-          <div>
-            <strong style="font-size:0.95rem;"><?= escapeHtml($it['product_name']) ?></strong>
-            <span style="color:#64748b; font-size:0.9rem;"> × <?= $it['quantity'] ?></span>
+      <?php foreach ($items as $it): 
+        $itImg = '';
+        if (!empty($it['product_id'])) {
+            try {
+                $itImg = $db->query("SELECT image_url FROM products WHERE id = " . (int)$it['product_id'] . " LIMIT 1")->fetchColumn() ?: '';
+            } catch (Exception $e) {}
+        }
+        if (!$itImg) {
+            $itImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
+        } elseif (strpos($itImg, 'http') !== 0) {
+            $itImg = getAssetUrl($itImg);
+        }
+      ?>
+        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px dashed #f1f5f9; gap:0.75rem;">
+          <div style="display:flex; align-items:center; gap:0.75rem;">
+            <img src="<?= escapeHtml($itImg) ?>" alt="<?= escapeHtml($it['product_name']) ?>" style="width:48px; height:48px; border-radius:8px; object-fit:cover; border:1px solid #f1f5f9; box-shadow:0 1px 3px rgba(0,0,0,0.06);" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';">
+            <div>
+              <strong style="font-size:0.95rem; display:block;"><?= escapeHtml($it['product_name']) ?></strong>
+              <span style="color:#64748b; font-size:0.85rem;">Số lượng: <?= $it['quantity'] ?></span>
+            </div>
           </div>
           <strong style="color:#0f172a;"><?= formatVND($it['subtotal']) ?></strong>
         </div>
@@ -174,6 +189,112 @@ require_once ROOT_PATH . '/includes/header.php';
     <?php endif; ?>
   </div>
 </main>
+
+<script>
+  window.TRACKED_ORDER_CODE = '<?= escapeHtml($orderCode) ?>';
+
+  (function() {
+    const channel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('fastfood_realtime') : null;
+
+    // 1. Nếu vừa đặt hàng xong (chuyển hướng từ checkout), lập tức báo sang Tab Admin
+    <?php if (!empty($_GET['just_ordered'])): ?>
+    if (channel) {
+      const orderPayload = {
+        order: {
+          id: '<?= escapeHtml($order['order_code']) ?>',
+          orderNo: '#<?= escapeHtml($order['order_code']) ?>',
+          orderCode: '<?= escapeHtml($order['order_code']) ?>',
+          customer: '<?= escapeHtml($order['recipient_name']) ?>',
+          recipient: {
+            name: '<?= escapeHtml($order['recipient_name']) ?>',
+            phone: '<?= escapeHtml($order['recipient_phone']) ?>',
+            address: '<?= escapeHtml($order['delivery_address']) ?>'
+          },
+          total: <?= (float)$order['total_amount'] ?>,
+          paymentMethod: '<?= escapeHtml($order['payment_method']) ?>',
+          paymentStatus: '<?= escapeHtml($order['payment_status']) ?>',
+          status: '<?= escapeHtml($order['order_status']) ?>',
+          createdAt: '<?= date('c') ?>'
+        }
+      };
+      channel.postMessage({ type: 'order:new', data: orderPayload });
+    }
+    <?php endif; ?>
+
+    // 2. Hàm cập nhật trực quan tiến độ bước nhảy Realtime
+    const stepMap = {
+      'pending': 1,
+      'awaiting_payment': 1,
+      'preparing': 2,
+      'delivering': 3,
+      'delivered': 4,
+      'cancelled': 0
+    };
+
+    let currentStepVal = <?= (int)$currentStep ?>;
+
+    function applyTrackingUpdate(newStatus) {
+      if (!newStatus) return;
+      const clean = String(newStatus).toLowerCase();
+      if (clean === 'cancelled') {
+        window.location.reload();
+        return;
+      }
+      const targetStep = stepMap[clean] || 1;
+      if (targetStep === currentStepVal) return;
+      currentStepVal = targetStep;
+
+      const steps = document.querySelectorAll('.tracking-step');
+      steps.forEach((el, idx) => {
+        const stepNum = idx + 1;
+        const dot = el.querySelector('.tracking-dot');
+        el.classList.remove('active', 'done');
+        if (targetStep > stepNum) {
+          el.classList.add('done');
+          if (dot) dot.textContent = '✓';
+        } else if (targetStep === stepNum) {
+          el.classList.add('active');
+          if (dot) dot.textContent = String(stepNum);
+        } else {
+          if (dot) dot.textContent = String(stepNum);
+        }
+      });
+
+      if (window.UIComponents?.showToast) {
+        const statusLabels = {
+          'preparing': '🍳 Bếp bắt đầu nấu món ăn của bạn!',
+          'delivering': '🛵 Shipper đang trên đường giao hàng đến bạn!',
+          'delivered': '🎉 Đơn hàng đã được giao thành công! Chúc bạn ngon miệng!'
+        };
+        window.UIComponents.showToast(statusLabels[clean] || 'Trạng thái đơn hàng vừa được cập nhật!', 'info');
+      }
+    }
+
+    // 3. Lắng nghe qua BroadcastChannel & CustomEvent
+    if (channel) {
+      channel.onmessage = function(e) {
+        if (!e.data) return;
+        if (e.data.type === 'order:updated') {
+          const d = e.data.data || e.data;
+          const code = String(d.id || d.orderCode || d.orderNo || '').replace(/^#/, '');
+          if (code === window.TRACKED_ORDER_CODE) {
+            applyTrackingUpdate(d.status || d.order_status);
+          }
+        }
+      };
+    }
+
+    window.addEventListener('fastfood:order-updated', function(e) {
+      const d = e.detail;
+      if (!d) return;
+      const code = String(d.id || d.orderCode || d.orderNo || '').replace(/^#/, '');
+      if (code === window.TRACKED_ORDER_CODE) {
+        applyTrackingUpdate(d.status || d.order_status);
+      }
+    });
+
+  })();
+</script>
 
 <?php require_once ROOT_PATH . '/includes/footer.php'; ?>
 

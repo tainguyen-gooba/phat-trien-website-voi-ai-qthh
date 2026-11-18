@@ -20,13 +20,42 @@ $flashDeals = $db->query("SELECT p.*, r.name AS restaurant_name
                           WHERE p.is_available = 1 AND p.discount_price > 0 AND p.discount_price < p.base_price 
                           ORDER BY p.id DESC LIMIT 4")->fetchAll();
 
-// 3. Lấy món Bán chạy nhất
-$bestSellers = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS category_name 
-                           FROM products p 
-                           LEFT JOIN restaurants r ON p.restaurant_id = r.id 
-                           LEFT JOIN categories c ON p.category_id = c.id 
-                           WHERE p.is_available = 1 
-                           ORDER BY p.is_featured DESC, p.id ASC LIMIT 8")->fetchAll();
+// 3. Lấy cấu hình Best Seller & danh sách món
+$bsContent = $db->query("SELECT content FROM website_content WHERE collection_name = 'bestseller' LIMIT 1")->fetchColumn();
+$bsConfig = $bsContent ? json_decode($bsContent, true) : null;
+if (!$bsConfig) {
+    $bsConfig = [
+        'title'         => 'Món Ăn Bán Chạy Nhất (Best Sellers)',
+        'subtitle'      => 'Được khách hàng đặt nhiều nhất trong tuần qua - Ưu đãi giờ vàng giới hạn!',
+        'badge'         => '🔥 GIỜ VÀNG BEST SELLER',
+        'timer_enabled' => 1,
+        'end_time'      => date('Y-m-d H:i:s', strtotime('+2 days 23:59:59')),
+        'discount_text' => 'Ưu đãi có hạn',
+        'product_ids'   => [1, 2, 3, 5]
+    ];
+}
+
+$bestSellers = [];
+if (!empty($bsConfig['product_ids']) && is_array($bsConfig['product_ids'])) {
+    $ids = array_filter(array_map('intval', $bsConfig['product_ids']), function($id) { return $id > 0; });
+    if (!empty($ids)) {
+        $inClause = implode(',', $ids);
+        $bestSellers = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS category_name 
+                                   FROM products p 
+                                   LEFT JOIN restaurants r ON p.restaurant_id = r.id 
+                                   LEFT JOIN categories c ON p.category_id = c.id 
+                                   WHERE p.id IN ($inClause) AND p.is_available = 1 
+                                   ORDER BY FIELD(p.id, $inClause)")->fetchAll();
+    }
+}
+if (empty($bestSellers)) {
+    $bestSellers = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS category_name 
+                               FROM products p 
+                               LEFT JOIN restaurants r ON p.restaurant_id = r.id 
+                               LEFT JOIN categories c ON p.category_id = c.id 
+                               WHERE p.is_available = 1 
+                               ORDER BY p.is_featured DESC, p.id ASC LIMIT 4")->fetchAll();
+}
 
 // 5. Lấy đánh giá khách hàng
 $reviews = $db->query("SELECT r.*, u.full_name, u.avatar_url 
@@ -185,22 +214,93 @@ require_once ROOT_PATH . '/includes/header.php';
   </section>
   <?php endif; ?>
 
-  <!-- 4. MÓN ĂN BÁN CHẠY NHẤT -->
-  <section id="best-sellers" style="margin-bottom: 4rem;">
-    <div class="section-title-wrap">
+  <!-- 4. MÓN ĂN BÁN CHẠY NHẤT (BẢNG CAM GIỜ VÀNG BEST SELLERS) -->
+  <section id="best-sellers" class="bestseller-orange-board" style="
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+      background-image: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(255,255,255,0.18) 0%, transparent 45%), linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+      border-radius: 24px;
+      padding: 2.2rem 2rem 2.5rem;
+      margin-bottom: 4rem;
+      box-shadow: 0 16px 40px rgba(234, 88, 12, 0.28);
+      position: relative;
+      color: #ffffff;
+  ">
+    <div class="section-title-wrap" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem; margin-bottom:1.75rem;">
       <div>
-        <h2 class="section-title">Món Ăn Bán Chạy Nhất (Best Sellers)</h2>
-        <p class="section-subtitle">Được khách hàng đặt nhiều nhất trong tuần qua</p>
+        <div style="display:flex; align-items:center; gap:0.65rem; margin-bottom:0.4rem; flex-wrap:wrap;">
+          <h2 class="section-title" id="bs-display-title" style="margin:0; color:#ffffff; font-size:1.85rem; font-weight:900; text-shadow:0 2px 8px rgba(0,0,0,0.15);">
+            <?= escapeHtml($bsConfig['title']) ?>
+          </h2>
+          <?php if (!empty($bsConfig['badge'])): ?>
+            <span id="bs-display-badge" style="background:rgba(255,255,255,0.25); border:1.5px solid rgba(255,255,255,0.45); color:#ffffff; font-size:0.75rem; font-weight:800; padding:0.35rem 0.75rem; border-radius:9999px; text-transform:uppercase; letter-spacing:0.5px; backdrop-filter:blur(6px); display:inline-flex; align-items:center; gap:4px; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+              <?= escapeHtml($bsConfig['badge']) ?>
+            </span>
+          <?php endif; ?>
+        </div>
+        <p class="section-subtitle" id="bs-display-subtitle" style="margin:0; color:rgba(255,255,255,0.92); font-size:0.92rem; font-weight:500;">
+          <?= escapeHtml($bsConfig['subtitle']) ?>
+        </p>
       </div>
-      <a href="<?= getUrl('foods.php?sort=popular') ?>" class="section-link">Xem thực đơn ➔</a>
+
+      <div style="display:flex; align-items:center; gap:0.85rem; flex-wrap:wrap;">
+        <?php if (!empty($bsConfig['timer_enabled'])): ?>
+          <!-- Đồng hồ đếm ngược Giờ Vàng Best Seller trên bảng cam -->
+          <div class="bestseller-timer-box" style="display:flex; align-items:center; gap:0.65rem; background:rgba(0,0,0,0.22); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.3); padding:0.55rem 1.15rem; border-radius:14px; box-shadow:0 4px 15px rgba(0,0,0,0.12);">
+            <span style="font-size:0.88rem; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:5px;">
+              <span>⏳</span> Ưu đãi kết thúc:
+            </span>
+            <div class="bestseller-countdown" data-end="<?= escapeHtml($bsConfig['end_time'] ?? '') ?>" style="display:flex; align-items:center; gap:5px; font-weight:900; color:#fff; font-size:0.95rem;">
+              <span class="bs-timer-unit bs-hours" style="background:#ffffff; color:#ea580c; font-weight:900; padding:3px 8px; border-radius:7px; min-width:30px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">00</span> :
+              <span class="bs-timer-unit bs-minutes" style="background:#ffffff; color:#ea580c; font-weight:900; padding:3px 8px; border-radius:7px; min-width:30px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">00</span> :
+              <span class="bs-timer-unit bs-seconds" style="background:#ffffff; color:#ea580c; font-weight:900; padding:3px 8px; border-radius:7px; min-width:30px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">00</span>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <a href="<?= getUrl('foods.php?sort=popular') ?>" class="section-link" style="background:#ffffff; color:#ea580c; font-weight:800; font-size:0.88rem; padding:0.6rem 1.35rem; border-radius:9999px; text-decoration:none; display:inline-flex; align-items:center; gap:6px; box-shadow:0 4px 15px rgba(0,0,0,0.15); transition:all .2s;" onmouseover="this.style.background='#fff7ed'; this.style.transform='translateY(-2px)'" onmouseout="this.style.background='#ffffff'; this.style.transform='none'">
+          Xem thực đơn ➔
+        </a>
+      </div>
     </div>
 
-    <div class="grid grid-cols-4" id="best-sellers-container">
+    <div class="grid grid-cols-4" id="best-sellers-container" style="gap:1.15rem;">
       <?php foreach ($bestSellers as $p): ?>
         <?= renderProductCard($p) ?>
       <?php endforeach; ?>
     </div>
   </section>
+
+  <script>
+    // Xử lý bộ đếm ngược Giờ Vàng Best Seller Realtime
+    (function() {
+      const countdownEl = document.querySelector('.bestseller-countdown');
+      if (!countdownEl) return;
+      const endStr = countdownEl.dataset.end;
+      if (!endStr) return;
+
+      function updateTimer() {
+        const end = new Date(endStr.replace(/-/g, '/')).getTime();
+        const now = Date.now();
+        let diff = Math.max(0, Math.floor((end - now) / 1000));
+
+        const hours = Math.floor(diff / 3600);
+        diff %= 3600;
+        const minutes = Math.floor(diff / 60);
+        const seconds = diff % 60;
+
+        const elH = countdownEl.querySelector('.bs-hours');
+        const elM = countdownEl.querySelector('.bs-minutes');
+        const elS = countdownEl.querySelector('.bs-seconds');
+
+        if (elH) elH.textContent = String(hours).padStart(2, '0');
+        if (elM) elM.textContent = String(minutes).padStart(2, '0');
+        if (elS) elS.textContent = String(seconds).padStart(2, '0');
+      }
+
+      updateTimer();
+      setInterval(updateTimer, 1000);
+    })();
+  </script>
 
   <!-- 6. ĐÁNH GIÁ CỦA KHÁCH HÀNG -->
   <?php if (!empty($reviews)): ?>

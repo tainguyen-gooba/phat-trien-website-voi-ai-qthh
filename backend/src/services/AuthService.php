@@ -52,19 +52,29 @@ class AuthService {
 
         $token = JwtConfig::encode($tokenPayload);
 
-        // Đồng bộ PHP Session nếu đang chạy trong môi trường web
-        if (session_status() === PHP_SESSION_NONE) {
-            @session_start();
-        }
+        // Đồng bộ PHP Session phân lập theo vai trò (Role Isolation)
         if (session_status() === PHP_SESSION_ACTIVE) {
-            $_SESSION['user_id']      = $user['id'];
-            $_SESSION['user_name']    = $user['full_name'];
-            $_SESSION['user_email']   = $user['email'];
-            $_SESSION['user_phone']   = $user['phone'] ?? '';
-            $_SESSION['user_role_id'] = $roleId;
-            $_SESSION['user_role']    = $roleName;
-            $_SESSION['user_avatar']  = $user['avatar_url'] ?? '';
+            session_write_close();
         }
+        if ($roleId === Roles::ADMIN || $roleId === Roles::STAFF) {
+            session_name('FF_SESS_ADMIN');
+        } else {
+            $tabParam = !empty($_POST['tab']) ? trim($_POST['tab']) : (!empty($_GET['tab']) ? trim($_GET['tab']) : '');
+            if ($tabParam && $tabParam !== 'admin') {
+                $cleanTab = preg_replace('/[^a-zA-Z0-9_-]/', '', $tabParam);
+                session_name('FF_SESS_' . strtoupper($cleanTab));
+            } else {
+                session_name('FASTFOOD_SESSID');
+            }
+        }
+        @session_start();
+        $_SESSION['user_id']      = $user['id'];
+        $_SESSION['user_name']    = $user['full_name'];
+        $_SESSION['user_email']   = $user['email'];
+        $_SESSION['user_phone']   = $user['phone'] ?? '';
+        $_SESSION['user_role_id'] = $roleId;
+        $_SESSION['user_role']    = $roleName;
+        $_SESSION['user_avatar']  = $user['avatar_url'] ?? '';
 
         $redirectUrl = ($roleId === Roles::ADMIN || $roleId === Roles::STAFF) ? '/admin/index.php' : '/index.php';
 

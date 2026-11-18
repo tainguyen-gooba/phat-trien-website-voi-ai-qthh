@@ -180,9 +180,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Điều hướng
             if ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo') {
-                header('Location: ' . getUrl("payment.php?orderCode=" . urlencode($orderCode)));
+                header('Location: ' . getUrl("payment.php?orderCode=" . urlencode($orderCode) . "&just_ordered=1"));
             } else {
-                header('Location: ' . getUrl("order-tracking.php?id=" . urlencode($orderCode)));
+                header('Location: ' . getUrl("order-tracking.php?id=" . urlencode($orderCode) . "&just_ordered=1"));
             }
             exit;
 
@@ -293,18 +293,36 @@ require_once ROOT_PATH . '/includes/header.php';
 
         <!-- Danh sách tóm tắt món -->
         <div style="max-height:240px; overflow-y:auto; margin-bottom:1rem; border-bottom:1px solid var(--border-color); padding-bottom:0.75rem;">
-          <?php foreach ($cart as $item): ?>
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:0.75rem; font-size:0.9rem;">
-              <div>
-                <strong><?= escapeHtml($item['name']) ?></strong>
-                <span style="color:var(--text-muted);"> × <?= $item['qty'] ?></span>
-                <?php if (!empty($item['toppings']) && is_array($item['toppings'])): ?>
-                  <div style="font-size:0.75rem; color:#ea580c; font-weight:600; margin-top:2px;">
-                    ✨ <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']); }, $item['toppings'])) ?>
-                  </div>
-                <?php endif; ?>
+          <?php foreach ($cart as $cKey => $item): 
+            $cImg = !empty($item['image']) ? $item['image'] : '';
+            if (!$cImg) {
+                $pId = (int)preg_replace('/\D/', '', $item['productId'] ?? $cKey);
+                if ($pId > 0) {
+                    try {
+                        $cImg = $db->query("SELECT image_url FROM products WHERE id = $pId LIMIT 1")->fetchColumn() ?: '';
+                    } catch (Exception $e) {}
+                }
+            }
+            if (!$cImg) {
+                $cImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
+            } elseif (strpos($cImg, 'http') !== 0) {
+                $cImg = getAssetUrl($cImg);
+            }
+          ?>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; font-size:0.9rem; gap:0.75rem;">
+              <div style="display:flex; align-items:center; gap:0.75rem;">
+                <img src="<?= escapeHtml($cImg) ?>" alt="<?= escapeHtml($item['name']) ?>" style="width:44px; height:44px; border-radius:8px; object-fit:cover; border:1px solid #f1f5f9; box-shadow:0 1px 3px rgba(0,0,0,0.06);" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';">
+                <div>
+                  <strong><?= escapeHtml($item['name']) ?></strong>
+                  <span style="color:var(--text-muted);"> × <?= $item['qty'] ?></span>
+                  <?php if (!empty($item['toppings']) && is_array($item['toppings'])): ?>
+                    <div style="font-size:0.75rem; color:#ea580c; font-weight:600; margin-top:2px;">
+                      ✨ <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']); }, $item['toppings'])) ?>
+                    </div>
+                  <?php endif; ?>
+                </div>
               </div>
-              <span style="font-weight:700;"><?= formatVND((float)$item['price'] * (int)$item['qty']) ?></span>
+              <span style="font-weight:700; white-space:nowrap;"><?= formatVND((float)$item['price'] * (int)$item['qty']) ?></span>
             </div>
           <?php endforeach; ?>
         </div>

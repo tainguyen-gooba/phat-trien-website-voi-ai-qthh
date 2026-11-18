@@ -68,11 +68,33 @@ require_once ROOT_PATH . '/includes/header.php';
         <div id="cart-items-container">
           <?php foreach ($cart as $id => $item): 
             $itemTotal = (float)$item['price'] * (int)$item['qty'];
+
+            // Xử lý và chuẩn hóa ảnh món ăn
+            $itemImg = !empty($item['image']) ? $item['image'] : '';
+            if (!$itemImg) {
+                $prodId = (int)preg_replace('/\D/', '', $item['productId'] ?? $id);
+                if ($prodId > 0) {
+                    try {
+                        $dbImg = getDB()->query("SELECT image_url FROM products WHERE id = $prodId LIMIT 1")->fetchColumn();
+                        if ($dbImg) {
+                            $itemImg = $dbImg;
+                            $_SESSION['cart'][$id]['image'] = $dbImg;
+                        }
+                    } catch (Exception $e) {}
+                }
+            }
+            if (!$itemImg) {
+                $itemImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
+            } elseif (strpos($itemImg, 'http') !== 0) {
+                $itemImg = getAssetUrl($itemImg);
+            }
           ?>
             <div class="cart-item-row" id="cart-item-row-<?= $id ?>" style="display:flex; align-items:center; justify-content:space-between; padding:1rem 0; border-bottom:1px solid var(--border-color); gap:1rem;">
               <div style="display:flex; align-items:center; gap:1rem; flex:1;">
-                <img src="<?= escapeHtml($item['image'] ?: getAssetUrl('assets/images/logo.svg')) ?>" 
-                     alt="<?= escapeHtml($item['name']) ?>" style="width:72px; height:72px; border-radius:8px; object-fit:cover;">
+                <img src="<?= escapeHtml($itemImg) ?>" 
+                     alt="<?= escapeHtml($item['name']) ?>" 
+                     style="width:76px; height:76px; border-radius:10px; object-fit:cover; border:1px solid #f1f5f9; box-shadow:0 2px 8px rgba(0,0,0,0.06);"
+                     onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';">
                 <div>
                   <h4 style="font-size:1rem; font-weight:700; margin:0 0 0.35rem;"><?= escapeHtml($item['name']) ?></h4>
                   <?php if (!empty($item['toppings']) && is_array($item['toppings'])): ?>

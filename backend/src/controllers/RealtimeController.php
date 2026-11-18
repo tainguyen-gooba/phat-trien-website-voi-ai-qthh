@@ -20,10 +20,14 @@ class RealtimeController extends BaseController {
                                 ORDER BY p.id DESC")->fetchAll();
         $restaurants = $db->query("SELECT id, name, address, phone, rating_avg, is_active FROM restaurants ORDER BY id ASC")->fetchAll();
 
+        $bsRaw = $db->query("SELECT content FROM website_content WHERE collection_name = 'bestseller' LIMIT 1")->fetchColumn();
+        $bestseller = $bsRaw ? json_decode($bsRaw, true) : null;
+
         $this->sendSuccess('Lấy nội dung website thành công!', [
             'categories' => $categories,
             'products' => $products,
-            'restaurants' => $restaurants
+            'restaurants' => $restaurants,
+            'bestseller' => $bestseller
         ]);
     }
 
@@ -136,6 +140,19 @@ class RealtimeController extends BaseController {
                         $isAvailable,
                         $numId
                     ]);
+                }
+            }
+        }
+
+        // 3. Nếu là bestseller, đồng bộ is_featured vào bảng products
+        if ($collection === 'bestseller' && is_array($records)) {
+            $productIds = !empty($records['product_ids']) && is_array($records['product_ids']) ? $records['product_ids'] : [];
+            $db->exec("UPDATE products SET is_featured = 0");
+            if (!empty($productIds)) {
+                $cleanIds = array_filter(array_map('intval', $productIds), function($id) { return $id > 0; });
+                if (!empty($cleanIds)) {
+                    $inList = implode(',', $cleanIds);
+                    $db->exec("UPDATE products SET is_featured = 1 WHERE id IN ($inList)");
                 }
             }
         }

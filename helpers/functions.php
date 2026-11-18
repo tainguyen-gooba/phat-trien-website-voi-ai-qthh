@@ -18,7 +18,15 @@ function getAssetUrl($path) {
 
 function getUrl($path = '') {
     $cleanPath = ltrim($path, '/');
-    return BASE_URL . ($cleanPath ? '/' . $cleanPath : '');
+    $url = BASE_URL . ($cleanPath ? '/' . $cleanPath : '');
+
+    // Tự động duy trì tham số tab để phân lập phiên giữa các tab
+    if (!empty($_GET['tab'])) {
+        $sep = (strpos($url, '?') !== false) ? '&' : '?';
+        $url .= $sep . 'tab=' . urlencode($_GET['tab']);
+    }
+
+    return $url;
 }
 
 /**

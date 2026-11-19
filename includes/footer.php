@@ -71,6 +71,69 @@
   <!-- Tích hợp Khung Chat Nhân Viên Hỗ Trợ AI -->
   <?php require_once __DIR__ . '/chatbot.php'; ?>
 
+  <?php
+  // ===================================================================
+  // MODAL SỔ RA THÔNG BÁO CHO NGƯỜI MỚI ĐĂNG KÝ / ĐĂNG NHẬP VOUCHER 50%
+  // ===================================================================
+  $welcomePopupData = $_SESSION['welcome_popup_data'] ?? null;
+  $showWelcomeModal = !empty($_SESSION['show_welcome_popup']);
+  if ($showWelcomeModal) {
+      unset($_SESSION['show_welcome_popup']);
+  }
+  ?>
+  <?php if ($showWelcomeModal && $welcomePopupData): ?>
+    <link rel="stylesheet" href="<?= getAssetUrl('css/auth.css') ?>">
+    <div class="welcome-modal-overlay" id="welcome-voucher-modal">
+      <div class="welcome-modal-card">
+        <canvas id="welcome-confetti-canvas"></canvas>
+        <button type="button" class="welcome-close-btn js-close-welcome-modal" aria-label="Đóng thông báo">✕</button>
+
+        <div class="welcome-gift-wrap">
+          <div class="welcome-glow-ring"></div>
+          <div class="welcome-gift-circle">🎁</div>
+        </div>
+
+        <h2 class="welcome-title">Chào Mừng Bạn Mới!</h2>
+        <p class="welcome-subtitle">
+          Chúc mừng <span class="welcome-user-highlight"><?= escapeHtml($welcomePopupData['user_name'] ?? 'Bạn') ?></span> đã đăng ký tài khoản thành công! FASTFOOD thân tặng bạn phần quà đặc biệt:
+        </p>
+
+        <div class="welcome-ticket">
+          <div class="welcome-ticket-val">
+            <span class="welcome-percent-badge">GIẢM 50%</span>
+            <span class="welcome-ticket-title">Voucher Bạn Mới</span>
+          </div>
+          <p class="welcome-ticket-desc">
+            Giảm trực tiếp <strong>50%</strong> giá trị món ăn cho đơn hàng đầu tiên của bạn!
+          </p>
+
+          <div class="welcome-code-box">
+            <span class="welcome-code-text" id="welcome-voucher-display"><?= escapeHtml($welcomePopupData['voucher_code'] ?? 'NEW50') ?></span>
+            <button type="button" class="welcome-copy-btn" id="welcome-copy-code-btn" data-code="<?= escapeHtml($welcomePopupData['voucher_code'] ?? 'NEW50') ?>">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              Sao Chép Mã
+            </button>
+          </div>
+
+          <div class="welcome-applied-status">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8"><polyline points="20 6 9 17 4 12"></polyline></svg>
+            <span>Đã tự động kích hoạt vào giỏ hàng của bạn!</span>
+          </div>
+        </div>
+
+        <a href="<?= getUrl('foods.php') ?>" class="welcome-cta-btn">
+          <span>Khám Phá Món Ăn & Dùng Mã Ngay</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+        </a>
+
+        <button type="button" class="welcome-later-btn js-close-welcome-modal">
+          Để sau, tôi muốn xem trang chủ trước
+        </button>
+      </div>
+    </div>
+    <script src="<?= getAssetUrl('js/auth.js') ?>"></script>
+  <?php endif; ?>
+
   <!-- Scripts dùng chung -->
   <script src="<?= getAssetUrl('js/storage.js') ?>"></script>
   <script src="<?= getAssetUrl('js/components.js') ?>"></script>

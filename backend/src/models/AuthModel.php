@@ -46,31 +46,31 @@ class AuthModel extends BaseModel {
     }
 
     /**
-     * Tạo mã voucher 50.000đ chào mừng khách hàng mới
+     * Tạo mã voucher 50% chào mừng khách hàng mới
      */
     public function createWelcomeVoucher(int $userId, string $fullName = 'Khách Hàng'): array {
-        $userCode = 'NEW50K-' . strtoupper(substr(md5($userId . uniqid((string)mt_rand(), true)), 0, 6));
+        $userCode = 'NEW50-' . strtoupper(substr(md5($userId . uniqid((string)mt_rand(), true)), 0, 6));
         $startDate = date('Y-m-d H:i:s');
         $endDate = date('Y-m-d H:i:s', strtotime('+30 days'));
 
-        // 1. Đảm bảo coupon mẫu NEW50K chung tồn tại
+        // 1. Đảm bảo coupon mẫu NEW50 chung tồn tại
         try {
-            $checkGlobal = $this->db->prepare("SELECT id FROM coupons WHERE code = 'NEW50K' LIMIT 1");
+            $checkGlobal = $this->db->prepare("SELECT id FROM coupons WHERE code = 'NEW50' LIMIT 1");
             $checkGlobal->execute();
             if (!$checkGlobal->fetch()) {
                 $insGlobal = $this->db->prepare("INSERT INTO coupons (code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
-                                                 VALUES ('NEW50K', 'Voucher bạn mới - Giảm ngay 50.000đ', 'fixed', 50000.00, 0.00, 50000.00, 10000, 0, '2026-01-01 00:00:00', '2027-12-31 23:59:59', 1, NOW())");
+                                                 VALUES ('NEW50', 'Voucher bạn mới - Giảm ngay 50%', 'percentage', 50.00, 0.00, 50000.00, 10000, 0, '2026-01-01 00:00:00', '2027-12-31 23:59:59', 1, NOW())");
                 $insGlobal->execute();
             }
         } catch (\Exception $e) {}
 
-        // 2. Tạo mã Voucher riêng cho khách hàng này
+        // 2. Tạo mã Voucher riêng cho khách hàng này (Giảm 50%)
         $stmt = $this->db->prepare("INSERT INTO coupons (user_id, code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
-                                    VALUES (?, ?, ?, 'fixed', 50000.00, 0.00, 50000.00, 1, 0, ?, ?, 1, NOW())");
+                                    VALUES (?, ?, ?, 'percentage', 50.00, 0.00, 50000.00, 1, 0, ?, ?, 1, NOW())");
         $stmt->execute([
             $userId,
             $userCode,
-            'Voucher chào mừng bạn mới - Giảm 50.000đ',
+            'Voucher chào mừng bạn mới - Giảm 50%',
             $startDate,
             $endDate
         ]);
@@ -82,23 +82,23 @@ class AuthModel extends BaseModel {
                                          VALUES (?, ?, ?, 'promotion', 0, NOW())");
             $notif->execute([
                 $userId,
-                '🎉 Tặng bạn mới Voucher 50.000đ!',
-                'Chào mừng ' . $fullName . ' gia nhập FASTFOOD! Bạn đã được tặng Voucher giảm trực tiếp 50.000đ (Mã: ' . $userCode . ' hoặc NEW50K) cho đơn hàng đầu tiên.'
+                '🎉 Tặng bạn mới Voucher Giảm 50%!',
+                'Chào mừng ' . $fullName . ' gia nhập FASTFOOD! Bạn đã được tặng Voucher giảm trực tiếp 50% (Mã: ' . $userCode . ' hoặc NEW50) cho đơn hàng đầu tiên.'
             ]);
         } catch (\Exception $e) {}
 
         return [
             'id'                  => $couponId,
             'code'                => $userCode,
-            'aliasCode'           => 'NEW50K',
-            'title'               => 'Voucher chào mừng bạn mới - Giảm 50.000đ',
-            'discount_type'       => 'fixed',
-            'discount_value'      => 50000.00,
-            'formatted_discount'  => '50.000 đ',
+            'aliasCode'           => 'NEW50',
+            'title'               => 'Voucher chào mừng bạn mới - Giảm 50%',
+            'discount_type'       => 'percentage',
+            'discount_value'      => 50.00,
+            'formatted_discount'  => '50%',
             'min_order_value'     => 0.00,
             'max_discount_amount' => 50000.00,
             'expires_at'          => $endDate,
-            'message'             => 'Bạn đã được tặng Voucher giảm 50.000đ cho đơn hàng đầu tiên!'
+            'message'             => 'Bạn đã được tặng Voucher giảm 50% cho đơn hàng đầu tiên!'
         ];
     }
 

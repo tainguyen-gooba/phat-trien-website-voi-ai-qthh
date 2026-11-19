@@ -40,6 +40,12 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
 </head>
 <body>
 
+  <?php
+  $currentScript = basename($_SERVER['SCRIPT_NAME'] ?? '');
+  $isAuthScreen = in_array($currentScript, ['login.php', 'register.php']) || !empty($hideHeader);
+  ?>
+
+  <?php if (!$isAuthScreen): ?>
   <!-- Universal Header -->
   <header class="site-header" id="site-header">
     <div class="container navbar">
@@ -178,6 +184,7 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
       </div>
     </div>
   </header>
+  <?php endif; ?>
   <script>
     function toggleUserDropdown(e) {
       if (e) {

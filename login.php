@@ -1,6 +1,7 @@
 <?php
 /**
  * FASTFOOD - Đăng nhập tài khoản (Login)
+ * Giao diện hiện đại, chuẩn UI/UX Food Delivery
  */
 require_once __DIR__ . '/config/config.php';
 
@@ -62,6 +63,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 session_start();
                 setUserSession($user);
 
+                // Kiểm tra nếu là khách hàng mới (chưa có đơn hàng nào)
+                // thì tự động sổ ra thông báo chào mừng tặng Voucher 50%
+                try {
+                    $chkOrders = $db->prepare("SELECT (
+                        (SELECT COUNT(*) FROM orders WHERE customer_id = ?) + 
+                        (SELECT COUNT(*) FROM realtime_orders WHERE user_id = ?)
+                    )");
+                    $chkOrders->execute([(int)$user['id'], (int)$user['id']]);
+                    $orderCount = (int)$chkOrders->fetchColumn();
+
+                    if ($orderCount === 0) {
+                        // Tìm xem đã có voucher bạn mới chưa
+                        $chkCp = $db->prepare("SELECT * FROM coupons WHERE user_id = ? AND is_active = 1 LIMIT 1");
+                        $chkCp->execute([(int)$user['id']]);
+                        $existingCoupon = $chkCp->fetch();
+
+                        $activeCode = 'NEW50';
+                        $couponId = 0;
+                        if ($existingCoupon) {
+                            $activeCode = $existingCoupon['code'];
+                            $couponId = (int)$existingCoupon['id'];
+                        } else {
+                            // Tạo voucher mới cho user nếu chưa có
+                            $userVoucherCode = 'NEW50-' . strtoupper(substr(md5($user['id'] . uniqid((string)mt_rand(), true)), 0, 6));
+                            $startDate = date('Y-m-d H:i:s');
+                            $endDate = date('Y-m-d H:i:s', strtotime('+30 days'));
+
+                            $cpInsert = $db->prepare("INSERT INTO coupons (user_id, code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
+                                                      VALUES (?, ?, 'Voucher chào mừng bạn mới - Giảm 50%', 'percentage', 50.00, 0.00, 50000.00, 1, 0, ?, ?, 1, NOW())");
+                            $cpInsert->execute([(int)$user['id'], $userVoucherCode, $startDate, $endDate]);
+                            $couponId = (int)$db->lastInsertId();
+                            $activeCode = $userVoucherCode;
+                        }
+
+                        // Tự động áp dụng vào giỏ hàng
+                        $_SESSION['applied_coupon'] = [
+                            'id'                  => $couponId,
+                            'code'                => $activeCode,
+                            'alias'               => 'NEW50',
+                            'title'               => 'Voucher chào mừng bạn mới - Giảm 50%',
+                            'discount_type'       => 'percentage',
+                            'discount_value'      => 50.00,
+                            'min_order_value'     => 0.00,
+                            'max_discount_amount' => 50000.00
+                        ];
+
+                        // Kích hoạt Popup Sổ Ra Thông Báo Cho Người Mới Đăng Nhập
+                        $_SESSION['welcome_discount_applied'] = true;
+                        $_SESSION['show_welcome_popup'] = true;
+                        $_SESSION['welcome_popup_data'] = [
+                            'user_name'      => $user['full_name'],
+                            'voucher_code'   => 'NEW50',
+                            'user_code'      => $activeCode,
+                            'discount_label' => '50%',
+                            'title'          => 'Voucher Chào Mừng Bạn Mới'
+                        ];
+                    }
+                } catch (\Throwable $e) {}
+
                 if ($redirect && strpos($redirect, 'admin') === false) {
                     header('Location: ' . $redirect);
                 } else {
@@ -77,27 +137,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = 'Đăng Nhập - FASTFOOD';
 $activeNav = '';
-$extraCss  = ['css/pages.css'];
+$extraCss  = ['css/pages.css', 'css/auth.css'];
+$extraJs   = ['js/auth.js'];
 
 require_once ROOT_PATH . '/includes/header.php';
 ?>
 
-<main class="auth-page-wrap" style="padding: 3.5rem 1rem;">
-  <div class="auth-form-card" style="max-width: 460px; margin: 0 auto; background: #fff; border-radius: 18px; padding: 2.2rem; box-shadow: 0 10px 35px rgba(0,0,0,0.06); border: 1px solid #f1f5f9;">
-    
-    <div style="text-align: center; margin-bottom: 1.5rem;">
-      <span style="display:inline-block; font-size:2rem; margin-bottom:0.25rem;">🍔</span>
-      <h1 style="font-size: 1.8rem; font-weight: 900; color: var(--text-main); margin-bottom: 0.35rem;">
-        Đăng Nhập Tài Khoản
-      </h1>
-      <p style="font-size: 0.88rem; color: var(--text-secondary);">
-        Đăng nhập tài khoản để khám phá thực đơn và ưu đãi độc quyền
+<main class="auth-page-wrap">
+  <div class="auth-brand-top">
+    <a href="<?= getUrl('index.php') ?>" title="Quay về Trang Chủ FASTFOOD">
+      <img src="<?= getAssetUrl('assets/images/logo.svg') ?>" alt="FASTFOOD" class="auth-brand-top-img">
+    </a>
+  </div>
+
+  <div class="auth-card-box">
+    <!-- Tab chuyển đổi giữa Đăng Nhập & Đăng Ký -->
+    <div class="auth-tab-switch">
+      <a href="<?= getUrl('login.php') ?>" class="auth-tab-btn active">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+        Đăng Nhập
+      </a>
+      <a href="<?= getUrl('register.php') ?>" class="auth-tab-btn">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
+        Đăng Ký
+      </a>
+    </div>
+
+    <!-- Header Form -->
+    <div class="auth-head">
+      <h1 class="auth-head-title">Đăng Nhập Tài Khoản</h1>
+      <p class="auth-head-desc">
+        Chào mừng bạn trở lại! Đăng nhập để khám phá hàng trăm món ăn hấp dẫn cùng ưu đãi độc quyền.
       </p>
     </div>
 
     <?php if ($error): ?>
-      <div style="background: #fef2f2; border: 1px solid #fecaca; color: #dc2626; padding: 0.75rem 1rem; border-radius: 10px; margin-bottom: 1.25rem; font-size: 0.9rem; font-weight: 600;">
-        ⚠️ <?= escapeHtml($error) ?>
+      <div class="auth-error-alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+        <span><?= escapeHtml($error) ?></span>
       </div>
     <?php endif; ?>
 
@@ -106,29 +183,75 @@ require_once ROOT_PATH . '/includes/header.php';
         <input type="hidden" name="redirect" value="<?= escapeHtml($redirect) ?>">
       <?php endif; ?>
 
-      <div class="form-group" style="margin-bottom: 1.25rem;">
-        <label class="form-label" for="login-email" style="font-weight: 700;">Địa chỉ Email</label>
-        <input type="email" name="email" id="login-email" class="form-control" 
-               placeholder="Nhập email tài khoản" value="<?= escapeHtml($_POST['email'] ?? '') ?>" required>
+      <!-- Email -->
+      <div class="auth-field-group">
+        <label class="auth-label" for="login-email">
+          Địa chỉ Email <span class="auth-label-req">*</span>
+        </label>
+        <div class="auth-input-wrapper">
+          <input type="email" name="email" id="login-email" class="auth-input" 
+                 placeholder="Nhập email tài khoản" value="<?= escapeHtml($_POST['email'] ?? '') ?>" required autocomplete="email">
+          <svg class="auth-input-icon" viewBox="0 0 24 24">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+            <polyline points="22,6 12,13 2,6"></polyline>
+          </svg>
+        </div>
       </div>
 
-      <div class="form-group" style="margin-bottom: 1.25rem;">
-        <label class="form-label" for="login-password" style="font-weight: 700;">Mật khẩu</label>
-        <input type="password" name="password" id="login-password" class="form-control" placeholder="••••••••" required>
+      <!-- Password -->
+      <div class="auth-field-group">
+        <label class="auth-label" for="login-password">
+          Mật Khẩu <span class="auth-label-req">*</span>
+        </label>
+        <div class="auth-input-wrapper">
+          <input type="password" name="password" id="login-password" class="auth-input" 
+                 placeholder="••••••••" required autocomplete="current-password">
+          <svg class="auth-input-icon" viewBox="0 0 24 24">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+          <button type="button" class="auth-toggle-pass" data-target="login-password" title="Hiện mật khẩu">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+          </button>
+        </div>
       </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem; font-size: 0.85rem;">
-        <span style="color: var(--text-secondary);">Mật khẩu mặc định: <b>123456</b></span>
-        <a href="#" style="color: var(--primary-color); font-weight: 600;">Quên mật khẩu?</a>
+      <!-- Remember & Forgot -->
+      <div class="auth-extra-row">
+        <label class="auth-remember-lbl">
+          <input type="checkbox" name="remember" value="1" checked>
+          <span>Ghi nhớ đăng nhập</span>
+        </label>
+        <a href="<?= getUrl('profile.php') ?>" class="auth-forgot-link">Quên mật khẩu?</a>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; font-size: 1.05rem; border-radius: 10px;">
-        Đăng Nhập Ngay
+      <!-- Submit button -->
+      <button type="submit" class="auth-submit-btn">
+        <span>Đăng Nhập Ngay</span>
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
       </button>
     </form>
 
-    <div style="margin-top: 1.5rem; text-align: center; font-size: 0.9rem; color: var(--text-secondary);">
-      Chưa có tài khoản? <a href="<?= getUrl('register.php') ?>" style="color: var(--primary-color); font-weight: 700;">Đăng ký nhận Voucher 50K</a>
+    <!-- Chuyển sang Đăng Ký (Không còn chữ tặng voucher) -->
+    <div class="auth-foot-text">
+      Chưa có tài khoản? 
+      <a href="<?= getUrl('register.php') ?>" class="auth-foot-link">Đăng ký ngay</a>
+    </div>
+
+    <!-- Cam kết tin cậy -->
+    <div class="auth-trust-row">
+      <div class="auth-trust-item">
+        <span>🔒</span>
+        <span>Bảo mật 100%</span>
+      </div>
+      <div class="auth-trust-item">
+        <span>⚡</span>
+        <span>Giao trong 20 phút</span>
+      </div>
+      <div class="auth-trust-item">
+        <span>🍔</span>
+        <span>Món ngon chuẩn vị</span>
+      </div>
     </div>
   </div>
 </main>

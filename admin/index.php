@@ -24,12 +24,13 @@ $categories = array_map(function($c) {
 }, $categoriesRaw);
 
 // 2. Products
-$productsRaw = $db->query("SELECT p.id, p.name, p.slug, p.base_price AS price, p.discount_price, p.is_available, p.image_url AS image, p.category_id, p.restaurant_id, c.name AS category, r.name AS restaurant, r.address 
+$productsRaw = $db->query("SELECT p.id, p.name, p.slug, p.base_price AS price, p.discount_price, p.is_available, p.image_url AS image, p.category_id, p.restaurant_id, p.options, c.name AS category, r.name AS restaurant, r.address 
                         FROM products p 
                         LEFT JOIN categories c ON p.category_id = c.id 
                         LEFT JOIN restaurants r ON p.restaurant_id = r.id 
                         ORDER BY p.id DESC")->fetchAll();
 $products = array_map(function($p) {
+    $opts = !empty($p['options']) ? (is_array($p['options']) ? $p['options'] : json_decode($p['options'], true)) : [];
     return [
         'id' => (string)$p['id'],
         'name' => $p['name'],
@@ -40,7 +41,10 @@ $products = array_map(function($p) {
         'image' => $p['image'] ?: '',
         'price' => (int)$p['price'],
         'status' => $p['is_available'] ? 'Đang bán' : 'Tạm hết',
-        'toppings' => []
+        'options' => $opts,
+        'sizes' => $opts['sizes'] ?? [],
+        'toppings' => $opts['toppings'] ?? [],
+        'attributes' => $opts['attributes'] ?? []
     ];
 }, $productsRaw);
 
@@ -5242,15 +5246,19 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             return {
               id: p.id,
               name: p.name,
-              category: catMap[p.category] || 'Ăn vặt & Tráng miệng',
-              restaurant: p.restaurantName,
+              category: catMap[p.category] || p.category || 'Ăn vặt & Tráng miệng',
+              categoryId: p.categoryId,
+              restaurant: p.restaurant || p.restaurantName,
               address: address,
               image: p.image,
               url: '',
               restaurantUrl: '',
               price: p.price,
-              status: 'Đang bán',
-              toppings: Array.isArray(p.toppings) ? p.toppings : [],
+              status: p.status || 'Đang bán',
+              options: p.options || {},
+              sizes: Array.isArray(p.sizes) ? p.sizes : (p.options?.sizes || []),
+              toppings: Array.isArray(p.toppings) ? p.toppings : (p.options?.toppings || []),
+              attributes: Array.isArray(p.attributes) ? p.attributes : (p.options?.attributes || []),
             };
           })
           : [
@@ -5944,6 +5952,37 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       async function persist(collection) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+          
+          // Lưu trực tiếp vào MySQL qua api.php khi chỉnh sửa sản phẩm
+          if (collection === 'products') {
+            const currentRecord = data.products.find((p) => p.id === editingId) || data.products[0];
+            if (currentRecord) {
+              const numId = parseInt(currentRecord.id) || 0;
+              try {
+                const apiRes = await fetch('api.php', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    action: 'save_product',
+                    id: numId,
+                    name: currentRecord.name,
+                    price: currentRecord.price,
+                    categoryId: currentRecord.categoryId || 1,
+                    image: currentRecord.image,
+                    isAvailable: currentRecord.status === 'Đang bán' ? 1 : 0,
+                    options: currentRecord.options || { sizes: currentRecord.sizes || [], toppings: currentRecord.toppings || [], attributes: currentRecord.attributes || [] }
+                  })
+                });
+                const apiData = await apiRes.json();
+                if (!apiData.success) {
+                  console.warn('[Admin API] Lưu product:', apiData.message);
+                }
+              } catch (apiErr) {
+                console.warn('[Admin API] Lỗi mạng:', apiErr.message);
+              }
+            }
+          }
+
           const apiUrl = window.location.port === '5000'
             ? `${window.location.origin}/api/v1`
             : 'http://localhost:5000/api/v1';
@@ -6336,8 +6375,15 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               if (column.key === 'status') return `<td><span class="status-badge ${statusClass(value)}">${escapeHtml(value)}</span></td>`;
               if (column.key === 'date' && record.createdAt) return `<td>${escapeHtml(formatVietnamDateTime(record.createdAt))}</td>`;
               if (column.key === 'toppings') {
-                const list = Array.isArray(value) ? value : [];
-                return `<td><span class="status-badge" style="background:#FFF7ED; color:#EA580C; font-weight:700;">${list.length} topping</span></td>`;
+                const sList = Array.isArray(record.sizes) ? record.sizes : (record.options?.sizes || []);
+                const tList = Array.isArray(record.toppings) ? record.toppings : (record.options?.toppings || []);
+                const aList = Array.isArray(record.attributes) ? record.attributes : (record.options?.attributes || []);
+                const parts = [];
+                if (sList.length) parts.push(`📏 ${sList.length} size`);
+                if (tList.length) parts.push(`✨ ${tList.length} topping`);
+                if (aList.length) parts.push(`🌶️ ${aList.length} vị`);
+                const label = parts.length ? parts.join(' • ') : '0 tùy chọn';
+                return `<td><span class="status-badge" style="background:#FFF7ED; color:#EA580C; font-weight:700; font-size:11px;">${escapeHtml(label)}</span></td>`;
               }
               if (column.key === 'price' || column.key === 'total') return `<td>${escapeHtml(money(value))}</td>`;
               if (column.key === 'image' && value) {
@@ -6502,49 +6548,131 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         }).join('');
 
         if (collection === 'products') {
-          const toppings = Array.isArray(record?.toppings) ? record.toppings : [];
-          const toppingsHtml = `
-            <div class="toppings-editor-box">
-              <div class="toppings-editor-header">
-                <strong>✨ Danh Sách Topping (Tùy chọn thêm)</strong>
-                <button type="button" class="btn-add-topping" id="btn-add-topping-row">+ Thêm Topping</button>
-              </div>
-              <p class="toppings-editor-sub">Khách hàng có thể chọn thêm các topping này khi xem và đặt món.</p>
-              <div class="toppings-rows-list" id="toppings-rows-container">
-                ${toppings.map((t) => `
-                  <div class="topping-form-row">
-                    <input type="text" class="topping-name-input" placeholder="Tên topping (vd: Thêm phô mai)" value="${escapeHtml(t.name)}" required>
-                    <div class="topping-price-wrap">
-                      <input type="number" class="topping-price-input" placeholder="Giá" value="${Number(t.price) || 0}" min="0" step="1000" required>
-                      <span>đ</span>
+          const sizes = Array.isArray(record?.sizes) ? record.sizes : (record?.options?.sizes || []);
+          const toppings = Array.isArray(record?.toppings) ? record.toppings : (record?.options?.toppings || []);
+          const attributes = Array.isArray(record?.attributes) ? record.attributes : (record?.options?.attributes || []);
+
+          const optionsHtml = `
+            <div class="options-master-box" style="margin-top:14px; display:grid; gap:12px;">
+              <!-- 1. Quản lý Size -->
+              <div class="toppings-editor-box" style="border-color:#bfdbfe; background:#eff6ff;">
+                <div class="toppings-editor-header">
+                  <strong style="color:#1d4ed8;">📏 1. Kích Cỡ / Khẩu Phần (Biến thể Size)</strong>
+                  <button type="button" class="btn-add-topping" id="btn-add-size-row" style="border-color:#2563eb; color:#2563eb;">+ Thêm Size</button>
+                </div>
+                <p class="toppings-editor-sub">Khách sẽ chọn 1 size khi đặt món (giá cộng thêm sẽ tính vào đơn giá).</p>
+                <div class="toppings-rows-list" id="sizes-rows-container">
+                  ${sizes.map((s, idx) => `
+                    <div class="size-form-row" style="display:grid; grid-template-columns:1fr 110px 32px; gap:6px; align-items:center;">
+                      <input type="text" class="size-name-input" placeholder="Tên kích cỡ (vd: Size L (700ml))" value="${escapeHtml(s.name || '')}" required>
+                      <div class="topping-price-wrap">
+                        <input type="number" class="size-price-input" placeholder="Giá thêm" value="${Number(s.price) || 0}" min="0" step="1000" required>
+                        <span>đ</span>
+                      </div>
+                      <button type="button" class="topping-del-btn" title="Xóa kích cỡ" onclick="this.closest('.size-form-row').remove()">✕</button>
                     </div>
-                    <button type="button" class="topping-del-btn" title="Xóa topping" onclick="this.closest('.topping-form-row').remove()">✕</button>
-                  </div>
-                `).join('')}
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- 2. Quản lý Topping -->
+              <div class="toppings-editor-box">
+                <div class="toppings-editor-header">
+                  <strong>✨ 2. Món Ăn Kèm / Topping (Tùy chọn)</strong>
+                  <button type="button" class="btn-add-topping" id="btn-add-topping-row">+ Thêm Topping</button>
+                </div>
+                <p class="toppings-editor-sub">Khách hàng có thể chọn nhiều món ăn kèm hoặc topping này.</p>
+                <div class="toppings-rows-list" id="toppings-rows-container">
+                  ${toppings.map((t) => `
+                    <div class="topping-form-row" style="display:grid; grid-template-columns:1fr 110px 32px; gap:6px; align-items:center;">
+                      <input type="text" class="topping-name-input" placeholder="Tên topping (vd: Thêm phô mai)" value="${escapeHtml(t.name || '')}" required>
+                      <div class="topping-price-wrap">
+                        <input type="number" class="topping-price-input" placeholder="Giá" value="${Number(t.price) || 0}" min="0" step="1000" required>
+                        <span>đ</span>
+                      </div>
+                      <button type="button" class="topping-del-btn" title="Xóa topping" onclick="this.closest('.topping-form-row').remove()">✕</button>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- 3. Quản lý Khẩu vị / Thuộc tính -->
+              <div class="toppings-editor-box" style="border-color:#bbf7d0; background:#f0fdf4;">
+                <div class="toppings-editor-header">
+                  <strong style="color:#15803d;">🌶️ 3. Khẩu Vị / Thuộc Tính Tùy Chọn</strong>
+                  <button type="button" class="btn-add-topping" id="btn-add-attr-row" style="border-color:#16a34a; color:#16a34a;">+ Thêm Khẩu Vị</button>
+                </div>
+                <p class="toppings-editor-sub">Ví dụ: Mức độ cay, Lượng đường, Đá, Đế bánh... Các lựa chọn cách nhau bằng dấu phẩy.</p>
+                <div class="toppings-rows-list" id="attrs-rows-container">
+                  ${attributes.map((a) => {
+                    const optStr = Array.isArray(a.options) ? a.options.join(', ') : (a.options || '');
+                    return `
+                      <div class="attr-form-row" style="display:grid; grid-template-columns:130px 1fr 32px; gap:6px; align-items:center;">
+                        <input type="text" class="attr-name-input" placeholder="Tên nhóm (vd: Độ cay)" value="${escapeHtml(a.name || '')}" required>
+                        <input type="text" class="attr-opts-input" placeholder="Các lựa chọn (vd: Không cay, Cay vừa)" value="${escapeHtml(optStr)}" required>
+                        <button type="button" class="topping-del-btn" title="Xóa khẩu vị" onclick="this.closest('.attr-form-row').remove()">✕</button>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
               </div>
             </div>
           `;
-          document.getElementById('form-fields').insertAdjacentHTML('beforeend', toppingsHtml);
+          document.getElementById('form-fields').insertAdjacentHTML('beforeend', optionsHtml);
 
-          const addBtn = document.getElementById('btn-add-topping-row');
-          if (addBtn) {
-            addBtn.addEventListener('click', () => {
-              const container = document.getElementById('toppings-rows-container');
-              if (!container) return;
-              const newRow = document.createElement('div');
-              newRow.className = 'topping-form-row';
-              newRow.innerHTML = `
-                <input type="text" class="topping-name-input" placeholder="Tên topping (vd: Trân châu, Phô mai...)" value="" required>
-                <div class="topping-price-wrap">
-                  <input type="number" class="topping-price-input" placeholder="Giá" value="10000" min="0" step="1000" required>
-                  <span>đ</span>
-                </div>
-                <button type="button" class="topping-del-btn" title="Xóa topping" onclick="this.closest('.topping-form-row').remove()">✕</button>
-              `;
-              container.appendChild(newRow);
-              newRow.querySelector('.topping-name-input')?.focus();
-            });
-          }
+          // Sự kiện thêm Size
+          document.getElementById('btn-add-size-row')?.addEventListener('click', () => {
+            const container = document.getElementById('sizes-rows-container');
+            if (!container) return;
+            const newRow = document.createElement('div');
+            newRow.className = 'size-form-row';
+            newRow.style = 'display:grid; grid-template-columns:1fr 110px 32px; gap:6px; align-items:center;';
+            newRow.innerHTML = `
+              <input type="text" class="size-name-input" placeholder="Tên size (vd: Size Lớn)" value="" required>
+              <div class="topping-price-wrap">
+                <input type="number" class="size-price-input" placeholder="Giá thêm" value="10000" min="0" step="1000" required>
+                <span>đ</span>
+              </div>
+              <button type="button" class="topping-del-btn" title="Xóa" onclick="this.closest('.size-form-row').remove()">✕</button>
+            `;
+            container.appendChild(newRow);
+            newRow.querySelector('.size-name-input')?.focus();
+          });
+
+          // Sự kiện thêm Topping
+          document.getElementById('btn-add-topping-row')?.addEventListener('click', () => {
+            const container = document.getElementById('toppings-rows-container');
+            if (!container) return;
+            const newRow = document.createElement('div');
+            newRow.className = 'topping-form-row';
+            newRow.style = 'display:grid; grid-template-columns:1fr 110px 32px; gap:6px; align-items:center;';
+            newRow.innerHTML = `
+              <input type="text" class="topping-name-input" placeholder="Tên topping (vd: Trân châu...)" value="" required>
+              <div class="topping-price-wrap">
+                <input type="number" class="topping-price-input" placeholder="Giá" value="10000" min="0" step="1000" required>
+                <span>đ</span>
+              </div>
+              <button type="button" class="topping-del-btn" title="Xóa" onclick="this.closest('.topping-form-row').remove()">✕</button>
+            `;
+            container.appendChild(newRow);
+            newRow.querySelector('.topping-name-input')?.focus();
+          });
+
+          // Sự kiện thêm Khẩu vị
+          document.getElementById('btn-add-attr-row')?.addEventListener('click', () => {
+            const container = document.getElementById('attrs-rows-container');
+            if (!container) return;
+            const newRow = document.createElement('div');
+            newRow.className = 'attr-form-row';
+            newRow.style = 'display:grid; grid-template-columns:130px 1fr 32px; gap:6px; align-items:center;';
+            newRow.innerHTML = `
+              <input type="text" class="attr-name-input" placeholder="Tên nhóm (vd: Độ cay)" value="" required>
+              <input type="text" class="attr-opts-input" placeholder="Các lựa chọn (vd: Không cay, Cay vừa)" value="" required>
+              <button type="button" class="topping-del-btn" title="Xóa" onclick="this.closest('.attr-form-row').remove()">✕</button>
+            `;
+            container.appendChild(newRow);
+            newRow.querySelector('.attr-name-input')?.focus();
+          });
         }
 
         dialog.showModal();
@@ -6749,6 +6877,16 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
           const values = Object.fromEntries(new FormData(form).entries());
           if (collection === 'products') {
+            // 1. Thu thập Sizes
+            const sizeRows = dialog.querySelectorAll('.size-form-row');
+            const sizes = [];
+            sizeRows.forEach((row, sIdx) => {
+              const name = row.querySelector('.size-name-input')?.value.trim();
+              const price = Number(row.querySelector('.size-price-input')?.value) || 0;
+              if (name) sizes.push({ name, price, is_default: sIdx === 0 });
+            });
+
+            // 2. Thu thập Toppings
             const toppingRows = dialog.querySelectorAll('.topping-form-row');
             const toppings = [];
             toppingRows.forEach((row) => {
@@ -6756,11 +6894,26 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               const priceInput = row.querySelector('.topping-price-input');
               const name = nameInput ? nameInput.value.trim() : '';
               const price = priceInput ? Number(priceInput.value) || 0 : 0;
-              if (name) {
-                toppings.push({ name, price });
+              if (name) toppings.push({ name, price });
+            });
+
+            // 3. Thu thập Attributes / Khẩu vị
+            const attrRows = dialog.querySelectorAll('.attr-form-row');
+            const attributes = [];
+            attrRows.forEach((row) => {
+              const name = row.querySelector('.attr-name-input')?.value.trim();
+              const rawOpts = row.querySelector('.attr-opts-input')?.value.trim() || '';
+              if (name && rawOpts) {
+                const optList = rawOpts.split(',').map(s => s.trim()).filter(Boolean);
+                if (optList.length) attributes.push({ name, options: optList });
               }
             });
+
+            const options = { sizes, toppings, attributes };
+            values.options = options;
+            values.sizes = sizes;
             values.toppings = toppings;
+            values.attributes = attributes;
           }
           const imageUrl = String(values.image || '').trim();
           if (collection === 'products' && imageUrl

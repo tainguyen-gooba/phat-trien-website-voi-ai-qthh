@@ -1521,6 +1521,18 @@
       })[char]);
     }
 
+    // Global background poll for unread messages count so sidebar badge is always accurate across all tabs
+    const backgroundUnreadPoll = async () => {
+      try {
+        const data = await chatRequest('/admin/conversations');
+        if (typeof data?.totalUnread === 'number' && typeof window.updateMessagesNavBadge === 'function') {
+          window.updateMessagesNavBadge(data.totalUnread);
+        }
+      } catch (_) {}
+    };
+    backgroundUnreadPoll();
+    setInterval(backgroundUnreadPoll, 5000);
+
     return {
       setActive(isActive) {
         if (active === isActive) return;

@@ -2651,6 +2651,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       gap: 12px;
       flex-wrap: wrap;
       flex-shrink: 0;
+      position: relative;
     }
 
     .chat-customer-profile {
@@ -2658,7 +2659,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       align-items: center;
       gap: 12px;
       min-width: 0;
-      flex: 1 1 220px;
+      flex: 1 1 auto;
     }
 
     .chat-customer-avatar {
@@ -2678,7 +2679,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .chat-customer-info {
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 3px;
       min-width: 0;
     }
 
@@ -2691,28 +2692,32 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
     .chat-customer-name-row h2 {
       margin: 0;
-      font-size: 16px;
+      font-size: 15px;
       font-weight: 800;
       color: #0f172a;
       letter-spacing: -0.2px;
-      white-space: nowrap;
+      white-space: normal;
+      word-break: break-word;
     }
 
     .chat-customer-type-badge {
       font-size: 10px;
       font-weight: 700;
       padding: 2px 8px;
-      border-radius: 6px;
+      border-radius: 999px;
       background: #f1f5f9;
       color: #475569;
       white-space: nowrap;
-      display: inline-block;
+      display: inline-flex;
+      align-items: center;
     }
 
     .chat-customer-info p {
       margin: 0;
       font-size: 11.5px;
       color: #64748b;
+      word-break: break-all;
+      line-height: 1.4;
     }
 
     .chat-date-separator {
@@ -2746,23 +2751,24 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       border-radius: 20px;
       letter-spacing: 0.3px;
     }
-    }
 
     .chat-thread-actions {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
+      flex-wrap: wrap;
       flex-shrink: 0;
     }
 
     .chat-assistant-status-pill {
       font-size: 11px;
       font-weight: 700;
-      padding: 4px 10px;
+      padding: 5px 12px;
       border-radius: 20px;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
+      gap: 5px;
+      white-space: nowrap;
     }
 
     .chat-assistant-status-pill.auto {
@@ -2781,6 +2787,23 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       background: #fffbeb;
       color: #b45309;
       border: 1px solid #fde68a;
+    }
+
+    @media (max-width: 900px) {
+      .chat-thread-heading {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .chat-customer-profile {
+        width: 100%;
+      }
+      .chat-thread-actions {
+        width: 100%;
+        justify-content: flex-start;
+        padding-top: 8px;
+        border-top: 1px dashed #f1f5f9;
+      }
     }
 
     /* Message List */
@@ -3701,7 +3724,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
     /* Message Image Bubble in Admin Chat */
     .admin-msg-image-bubble {
-      max-width: 280px;
+      max-width: 320px;
+      width: 100%;
       border-radius: 12px;
       overflow: hidden;
       margin-top: 6px;
@@ -3720,8 +3744,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .admin-chat-image-thumb {
       display: block;
       width: 100%;
-      max-height: 220px;
-      object-fit: cover;
+      max-height: 280px;
+      height: auto;
+      object-fit: contain;
+      background: #f1f5f9;
     }
 
     /* Admin Lightbox Modal */

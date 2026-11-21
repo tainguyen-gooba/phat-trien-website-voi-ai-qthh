@@ -249,15 +249,17 @@ class ChatController extends BaseController {
         );
 
         $this->sendSuccess('Phản hồi thành công!', [
-            'autoReplied'   => true,
-            'reply'         => $replyText,
-            'products'      => $products,
-            'order'         => $order,
-            'suggestions'   => $suggestions,
-            'messageId'     => $botMsgId ?: time(),
-            'adminBusy'     => ($settings['mode'] ?? 'auto') === 'auto',
-            'adminOnline'   => true,
-            'supportStatus' => $settings
+            'autoReplied'        => true,
+            'reply'              => $replyText,
+            'products'           => $products,
+            'order'              => $order,
+            'suggestions'        => $suggestions,
+            'userMessageId'      => $userMsgId,
+            'assistantMessageId' => $botMsgId ?: time(),
+            'messageId'          => $botMsgId ?: time(),
+            'adminBusy'          => ($settings['mode'] ?? 'auto') === 'auto',
+            'adminOnline'        => true,
+            'supportStatus'      => $settings
         ]);
     }
 

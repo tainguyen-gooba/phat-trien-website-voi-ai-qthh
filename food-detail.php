@@ -1,6 +1,7 @@
 <?php
 /**
  * FASTFOOD - Chi tiết món ăn (Food Detail)
+ * Hỗ trợ đầy đủ biến thể: Kích cỡ (Size), Toppings, Khẩu vị & Ghi chú
  */
 require_once __DIR__ . '/config/config.php';
 
@@ -40,48 +41,74 @@ $activeNav = 'foods';
 $extraCss  = ['css/pages.css'];
 
 $hasDiscount = !empty($product['discount_price']) && (float)$product['discount_price'] > 0 && (float)$product['discount_price'] < (float)$product['base_price'];
-$currentPrice = $hasDiscount ? $product['discount_price'] : $product['base_price'];
+$currentPrice = $hasDiscount ? (float)$product['discount_price'] : (float)$product['base_price'];
 
-// Lấy danh sách Toppings từ website_content
-$toppings = [];
-$wcRow = $db->query("SELECT content FROM website_content WHERE collection_name = 'products'")->fetch();
-if ($wcRow && !empty($wcRow['content'])) {
-    $wcProds = json_decode($wcRow['content'], true);
-    if (is_array($wcProds)) {
-        foreach ($wcProds as $item) {
-            $itemNum = (int)preg_replace('/\D/', '', $item['id'] ?? '');
-            if ($itemNum === (int)$product['id'] || (!empty($item['name']) && trim($item['name']) === trim($product['name']))) {
-                if (!empty($item['toppings']) && is_array($item['toppings'])) {
-                    $toppings = $item['toppings'];
-                }
-                break;
-            }
-        }
-    }
+// 1. Phân tích biến thể & tùy chọn (Options: sizes, toppings, attributes)
+$productOptions = [];
+if (!empty($product['options'])) {
+    $productOptions = is_array($product['options']) ? $product['options'] : json_decode($product['options'], true);
 }
-if (empty($toppings)) {
-    $catName = strtolower($product['category_name'] ?? '');
-    if (strpos($catName, 'burger') !== false || strpos($catName, 'gà rán') !== false) {
-        $toppings = [
-            ['name' => 'Thêm phô mai lát Cheddar', 'price' => 10000],
-            ['name' => 'Thịt ba chỉ xông khói (Bacon)', 'price' => 15000],
-            ['name' => 'Trứng ốp la lòng đào', 'price' => 8000],
+
+// Fallback thông minh nếu sản phẩm chưa có options
+if (empty($productOptions) || !is_array($productOptions)) {
+    $catName = mb_strtolower($product['category_name'] ?? '', 'UTF-8');
+    if (strpos($catName, 'trà sữa') !== false || strpos($catName, 'uống') !== false) {
+        $productOptions = [
+            'sizes' => [
+                ['name' => 'Size M (500ml)', 'price' => 0, 'is_default' => true],
+                ['name' => 'Size L (700ml)', 'price' => 8000, 'is_default' => false]
+            ],
+            'toppings' => [
+                ['name' => 'Trân châu đường đen dẻo', 'price' => 6000],
+                ['name' => 'Kem cheese mặn béo ngậy', 'price' => 10000],
+                ['name' => 'Thạch nha đam thanh mát', 'price' => 5000],
+                ['name' => 'Pudding trứng mịn màng', 'price' => 7000]
+            ],
+            'attributes' => [
+                ['name' => 'Lượng đường', 'options' => ['100% đường (Chuẩn)', '70% đường', '50% đường', '30% đường', 'Không đường']],
+                ['name' => 'Lượng đá', 'options' => ['100% đá (Chuẩn)', '50% đá (Ít đá)', 'Không đá']]
+            ]
         ];
-    } elseif (strpos($catName, 'trà sữa') !== false || strpos($catName, 'uống') !== false) {
-        $toppings = [
-            ['name' => 'Trân châu đường đen dẻo', 'price' => 6000],
-            ['name' => 'Thạch nha đam thanh mát', 'price' => 5000],
-            ['name' => 'Kem cheese béo mặn thơm ngậy', 'price' => 10000],
-            ['name' => 'Pudding trứng béo mịn', 'price' => 7000],
+    } elseif (strpos($catName, 'burger') !== false || strpos($catName, 'gà') !== false) {
+        $productOptions = [
+            'sizes' => [
+                ['name' => 'Cỡ Vừa (Regular)', 'price' => 0, 'is_default' => true],
+                ['name' => 'Cỡ Lớn (Up-size)', 'price' => 15000, 'is_default' => false],
+                ['name' => 'Double Nhân Đôi (Siêu To)', 'price' => 25000, 'is_default' => false]
+            ],
+            'toppings' => [
+                ['name' => 'Thêm phô mai lát Cheddar', 'price' => 10000],
+                ['name' => 'Thịt ba chỉ xông khói Bacon', 'price' => 15000],
+                ['name' => 'Khoai tây chiên nhỏ đi kèm', 'price' => 15000]
+            ],
+            'attributes' => [
+                ['name' => 'Hương vị', 'options' => ['Giòn truyền thống', 'Sốt cay Hàn Quốc', 'Lắc phô mai (+0đ)']]
+            ]
         ];
     } else {
-        $toppings = [
-            ['name' => 'Thêm trứng ốp la lòng đào', 'price' => 8000],
-            ['name' => 'Thêm chả lụa / chả trứng', 'price' => 10000],
-            ['name' => 'Canh rong biển súp ấm', 'price' => 12000],
+        $productOptions = [
+            'sizes' => [
+                ['name' => 'Hộp Tiêu Chuẩn', 'price' => 0, 'is_default' => true],
+                ['name' => 'Suất Lớn (+ Cơm & Thịt)', 'price' => 10000, 'is_default' => false],
+                ['name' => 'Suất Đặc Biệt Siêu No', 'price' => 20000, 'is_default' => false]
+            ],
+            'toppings' => [
+                ['name' => 'Trứng ốp la lòng đào', 'price' => 8000],
+                ['name' => 'Chả trứng / Chả lụa thơm', 'price' => 10000],
+                ['name' => 'Canh rong biển súp ấm', 'price' => 12000],
+                ['name' => 'Thêm cơm trắng dẻo thơm', 'price' => 5000]
+            ],
+            'attributes' => [
+                ['name' => 'Mức độ cay', 'options' => ['Không cay', 'Cay vừa', 'Cay nhiều']],
+                ['name' => 'Ghi chú chế biến', 'options' => ['Đầy đủ mỡ hành', 'Ít mỡ hành', 'Không hành lá']]
+            ]
         ];
     }
 }
+
+$sizes = $productOptions['sizes'] ?? [];
+$toppings = $productOptions['toppings'] ?? [];
+$attributes = $productOptions['attributes'] ?? [];
 
 // Món ăn liên quan
 $relatedStmt = $db->prepare("SELECT p.*, r.name AS restaurant_name 
@@ -96,6 +123,209 @@ $isManager = isAdmin();
 
 require_once ROOT_PATH . '/includes/header.php';
 ?>
+
+<!-- Scoped Styles for Food Variants -->
+<style>
+.fd-variant-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.15rem 1.25rem;
+  margin-bottom: 1.25rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+}
+.fd-variant-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.85rem;
+}
+.fd-variant-title {
+  font-size: 0.96rem;
+  font-weight: 800;
+  color: #1e293b;
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.fd-variant-badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #64748b;
+}
+.fd-variant-badge.required {
+  background: #fee2e2;
+  color: #ef4444;
+}
+.fd-variant-badge.optional {
+  background: #ecfdf5;
+  color: #059669;
+}
+.fd-size-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 0.65rem;
+}
+.fd-size-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 0.9rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+.fd-size-item:hover {
+  border-color: #fdba74;
+  background: #fffaf5;
+}
+.fd-size-item.selected {
+  border-color: #ea580c;
+  background: #fff7ed;
+  box-shadow: 0 0 0 2px rgba(234, 88, 12, 0.12);
+}
+.fd-size-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.fd-size-radio {
+  width: 17px;
+  height: 17px;
+  accent-color: #ea580c;
+  cursor: pointer;
+}
+.fd-size-name {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.fd-size-price {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ea580c;
+}
+
+.fd-toppings-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 0.65rem;
+}
+.fd-topping-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 0.85rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  user-select: none;
+}
+.fd-topping-item:hover {
+  border-color: #fdba74;
+  background: #fffaf5;
+}
+.fd-topping-item.selected {
+  border-color: #ea580c;
+  background: #fff7ed;
+}
+.fd-topping-left {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+.fd-topping-cb {
+  width: 17px;
+  height: 17px;
+  accent-color: #ea580c;
+  cursor: pointer;
+}
+.fd-topping-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #334155;
+}
+.fd-topping-price {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ea580c;
+}
+
+.fd-attr-group {
+  margin-bottom: 0.85rem;
+}
+.fd-attr-group:last-child {
+  margin-bottom: 0;
+}
+.fd-attr-name {
+  font-size: 0.85rem;
+  font-weight: 750;
+  color: #475569;
+  margin-bottom: 0.45rem;
+}
+.fd-attr-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+.fd-chip-btn {
+  padding: 0.4rem 0.8rem;
+  border-radius: 999px;
+  border: 1.5px solid #e2e8f0;
+  background: #fff;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.fd-chip-btn:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+.fd-chip-btn.active {
+  border-color: #ea580c;
+  background: #ea580c;
+  color: #ffffff;
+}
+.fd-note-input {
+  width: 100%;
+  padding: 0.65rem 0.85rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  color: #334155;
+  outline: none;
+  font-family: inherit;
+  transition: border-color 0.16s ease;
+}
+.fd-note-input:focus {
+  border-color: #ea580c;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.1);
+}
+.fd-summary-strip {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.86rem;
+  color: #475569;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+</style>
 
 <!-- Page Header Bar -->
 <div class="page-header-bar">
@@ -118,7 +348,7 @@ require_once ROOT_PATH . '/includes/header.php';
              alt="<?= escapeHtml($product['name']) ?>" class="food-gallery-img">
       </div>
 
-      <!-- Chi tiết thông tin -->
+      <!-- Chi tiết thông tin & Biến thể tùy chọn -->
       <div>
         <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.5rem; flex-wrap:wrap;">
           <span class="badge badge-primary">FASTFOOD Chính Hãng</span>
@@ -131,11 +361,11 @@ require_once ROOT_PATH . '/includes/header.php';
           🛵 Giao hàng tận nơi siêu tốc trong 20 phút tại Buôn Ma Thuột
         </p>
 
-        <h1 style="font-size:2rem; font-weight:800; color:var(--text-main); line-height:1.25;">
+        <h1 style="font-size:2rem; font-weight:800; color:var(--text-main); line-height:1.25; margin-bottom:0.5rem;">
           <?= escapeHtml($product['name']) ?>
         </h1>
         
-        <div class="detail-price-box">
+        <div class="detail-price-box" style="margin-bottom:0.85rem;">
           <span id="detail-total-price" class="detail-current-price"><?= formatVND($currentPrice) ?></span>
           <?php if ($hasDiscount): ?>
             <span class="detail-old-price"><?= formatVND($product['base_price']) ?></span>
@@ -146,28 +376,109 @@ require_once ROOT_PATH . '/includes/header.php';
           <?= nl2br(escapeHtml($product['description'] ?: 'Món ăn thơm ngon, nóng hổi, chuẩn vị chế biến từ nguyên liệu tươi sạch hàng ngày.')) ?>
         </p>
 
-        <!-- Toppings Selection Area -->
-        <?php if (!empty($toppings)): ?>
-          <div class="modal-toppings-card" style="margin-bottom:1.5rem; background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:1rem 1.25rem;">
-            <div class="modal-toppings-title" style="font-weight:750; font-size:0.95rem; color:#1e293b; margin-bottom:0.75rem; display:flex; justify-content:space-between; align-items:center;">
-              <span>✨ Tùy chọn thêm (Toppings):</span>
-              <small style="color:#64748b; font-size:0.8rem;"><?= count($toppings) ?> tùy chọn</small>
+        <!-- ========================================== -->
+        <!-- 1. BIẾN THỂ KÍCH CỠ / SIZE (Chọn 1)       -->
+        <!-- ========================================== -->
+        <?php if (!empty($sizes)): ?>
+          <div class="fd-variant-card">
+            <div class="fd-variant-head">
+              <span class="fd-variant-title">📏 1. Chọn kích cỡ / Khẩu phần:</span>
+              <span class="fd-variant-badge required">Bắt buộc</span>
             </div>
-            <div class="modal-toppings-list">
-              <?php foreach ($toppings as $idx => $t): ?>
-                <label class="modal-topping-item" id="detail-topping-item-<?= $idx ?>" style="display:flex; justify-content:space-between; align-items:center; padding:0.6rem 0.85rem; margin-bottom:0.5rem; border-radius:8px; background:#fff; border:1px solid #e2e8f0; cursor:pointer;">
-                  <span class="modal-topping-left" style="display:flex; align-items:center; gap:0.65rem; font-size:0.9rem; font-weight:600; color:#334155;">
-                    <input type="checkbox" class="detail-topping-cb" data-name="<?= escapeHtml($t['name']) ?>" data-price="<?= (float)$t['price'] ?>" onchange="onDetailToppingToggle(this, 'detail-topping-item-<?= $idx ?>')">
-                    <span><?= escapeHtml($t['name']) ?></span>
+            <div class="fd-size-grid">
+              <?php foreach ($sizes as $idx => $s): 
+                $isDef = !empty($s['is_default']) || $idx === 0;
+                $sPrice = (float)($s['price'] ?? 0);
+              ?>
+                <label class="fd-size-item <?= $isDef ? 'selected' : '' ?>" id="fd-size-item-<?= $idx ?>" 
+                       onclick="selectSize(<?= $idx ?>, '<?= escapeHtml($s['name']) ?>', <?= $sPrice ?>)">
+                  <div class="fd-size-info">
+                    <input type="radio" name="product_size" class="fd-size-radio" value="<?= escapeHtml($s['name']) ?>" 
+                           <?= $isDef ? 'checked' : '' ?> data-price="<?= $sPrice ?>" data-name="<?= escapeHtml($s['name']) ?>">
+                    <span class="fd-size-name"><?= escapeHtml($s['name']) ?></span>
+                  </div>
+                  <span class="fd-size-price">
+                    <?= $sPrice > 0 ? '+' . formatVND($sPrice) : 'Gốc' ?>
                   </span>
-                  <span class="modal-topping-price" style="font-weight:750; color:#ea580c; font-size:0.9rem;">+<?= formatVND($t['price']) ?></span>
                 </label>
               <?php endforeach; ?>
             </div>
           </div>
         <?php endif; ?>
 
-        <!-- Thao tác mua hàng -->
+        <!-- ========================================== -->
+        <!-- 2. TÙY CHỌN TOPPING & MÓN KÈM (Chọn nhiều) -->
+        <!-- ========================================== -->
+        <?php if (!empty($toppings)): ?>
+          <div class="fd-variant-card">
+            <div class="fd-variant-head">
+              <span class="fd-variant-title">✨ 2. Món ăn kèm / Toppings:</span>
+              <span class="fd-variant-badge optional">Tùy chọn (<?= count($toppings) ?> món)</span>
+            </div>
+            <div class="fd-toppings-list">
+              <?php foreach ($toppings as $tIdx => $t): 
+                $tPrice = (float)($t['price'] ?? 0);
+              ?>
+                <label class="fd-topping-item" id="fd-topping-item-<?= $tIdx ?>">
+                  <span class="fd-topping-left">
+                    <input type="checkbox" class="fd-topping-cb" data-name="<?= escapeHtml($t['name']) ?>" 
+                           data-price="<?= $tPrice ?>" onchange="toggleTopping(this, 'fd-topping-item-<?= $tIdx ?>')">
+                    <span class="fd-topping-name"><?= escapeHtml($t['name']) ?></span>
+                  </span>
+                  <span class="fd-topping-price">+<?= formatVND($tPrice) ?></span>
+                </label>
+              <?php endforeach; ?>
+            </div>
+          </div>
+        <?php endif; ?>
+
+        <!-- ========================================== -->
+        <!-- 3. TÙY CHỌN KHẨU VỊ / THUỘC TÍNH (Chọn 1) -->
+        <!-- ========================================== -->
+        <?php if (!empty($attributes)): ?>
+          <div class="fd-variant-card">
+            <div class="fd-variant-head">
+              <span class="fd-variant-title">🌶️ 3. Khẩu vị & Cách chế biến:</span>
+              <span class="fd-variant-badge optional">Tùy chọn</span>
+            </div>
+            <?php foreach ($attributes as $aIdx => $attr): 
+              $attrName = $attr['name'] ?? 'Tùy chọn';
+              $attrOpts = $attr['options'] ?? [];
+            ?>
+              <div class="fd-attr-group">
+                <div class="fd-attr-name"><?= escapeHtml($attrName) ?>:</div>
+                <div class="fd-attr-chips" data-attr-name="<?= escapeHtml($attrName) ?>">
+                  <?php foreach ($attrOpts as $oIdx => $optVal): ?>
+                    <button type="button" class="fd-chip-btn <?= $oIdx === 0 ? 'active' : '' ?>" 
+                            data-attr="<?= escapeHtml($attrName) ?>" data-val="<?= escapeHtml($optVal) ?>"
+                            onclick="selectAttributeChip(this)">
+                      <?= escapeHtml($optVal) ?>
+                    </button>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            <?php endforeach; ?>
+          </div>
+        <?php endif; ?>
+
+        <!-- ========================================== -->
+        <!-- 4. GHI CHÚ CHO BẾP                         -->
+        <!-- ========================================== -->
+        <div class="fd-variant-card">
+          <div class="fd-variant-head">
+            <span class="fd-variant-title">📝 Ghi chú cho quán (nếu có):</span>
+          </div>
+          <input type="text" id="fd-order-note" class="fd-note-input" 
+                 placeholder="Ví dụ: Để riêng sốt, không hành, làm cay ít...">
+        </div>
+
+        <!-- Tóm tắt chi tiết giá lựa chọn -->
+        <div class="fd-summary-strip" id="fd-summary-strip">
+          <span>Đơn giá phần ăn: <b id="fd-unit-calc"><?= formatVND($currentPrice) ?></b></span>
+          <span>Số lượng: <b id="fd-qty-calc">1</b></span>
+        </div>
+
+        <!-- Thao tác mua hàng & Số lượng -->
         <div style="display:flex; align-items:center; gap:1.25rem; margin-top:1.5rem; flex-wrap:wrap;">
           <?php if ($isManager): ?>
             <div style="flex:1; padding:1rem 1.25rem; background:#fff7ed; color:#c2410c; border:1px solid #fed7aa; border-radius:var(--radius-md); font-weight:700; font-size:0.95rem;">
@@ -180,11 +491,11 @@ require_once ROOT_PATH . '/includes/header.php';
               <button type="button" class="qty-btn" id="btn-qty-plus" onclick="updateQty(1)">+</button>
             </div>
 
-            <button type="button" class="btn btn-outline btn-lg" onclick="handleAddToCart(false)">
+            <button type="button" class="btn btn-outline btn-lg" id="btn-add-to-cart" onclick="handleAddToCart(false)">
               🛒 Thêm Vào Giỏ Hàng
             </button>
 
-            <button type="button" class="btn btn-primary btn-lg" onclick="handleAddToCart(true)">
+            <button type="button" class="btn btn-primary btn-lg" id="btn-buy-now" onclick="handleAddToCart(true)">
               ⚡ Mua Ngay
             </button>
           <?php endif; ?>
@@ -213,13 +524,49 @@ let qty = 1;
 const basePrice = <?= (float)$currentPrice ?>;
 const productId = <?= (int)$product['id'] ?>;
 
-function onDetailToppingToggle(checkbox, itemId) {
+// Trạng thái biến thể đã chọn
+let selectedSize = null;
+<?php if (!empty($sizes)): ?>
+  // Khởi tạo size mặc định
+  <?php 
+    $defSize = $sizes[0];
+    foreach ($sizes as $s) {
+      if (!empty($s['is_default'])) { $defSize = $s; break; }
+    }
+  ?>
+  selectedSize = {
+    name: <?= json_encode($defSize['name']) ?>,
+    price: <?= (float)($defSize['price'] ?? 0) ?>
+  };
+<?php endif; ?>
+
+function selectSize(idx, name, price) {
+  selectedSize = { name, price: parseFloat(price) || 0 };
+  
+  // Update UI classes
+  document.querySelectorAll('.fd-size-item').forEach((el, i) => {
+    el.classList.toggle('selected', i === idx);
+    const radio = el.querySelector('.fd-size-radio');
+    if (radio) radio.checked = (i === idx);
+  });
+
+  calculateDetailTotal();
+}
+
+function toggleTopping(checkbox, itemId) {
   const itemEl = document.getElementById(itemId);
   if (itemEl) {
-    itemEl.style.borderColor = checkbox.checked ? '#f97316' : '#e2e8f0';
-    itemEl.style.background = checkbox.checked ? '#fff7ed' : '#fff';
+    itemEl.classList.toggle('selected', checkbox.checked);
   }
   calculateDetailTotal();
+}
+
+function selectAttributeChip(btn) {
+  const container = btn.closest('.fd-attr-chips');
+  if (container) {
+    container.querySelectorAll('.fd-chip-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
 }
 
 function updateQty(delta) {
@@ -229,43 +576,95 @@ function updateQty(delta) {
 }
 
 function calculateDetailTotal() {
+  const sizeExtra = selectedSize ? (selectedSize.price || 0) : 0;
+  
   let toppingsTotal = 0;
-  document.querySelectorAll('.detail-topping-cb:checked').forEach(cb => {
+  document.querySelectorAll('.fd-topping-cb:checked').forEach(cb => {
     toppingsTotal += (parseFloat(cb.dataset.price) || 0);
   });
-  const total = (basePrice + toppingsTotal) * qty;
+
+  const unitPrice = basePrice + sizeExtra + toppingsTotal;
+  const grandTotal = unitPrice * qty;
+
   const display = document.getElementById('detail-total-price');
   if (display) {
-    display.textContent = total.toLocaleString('vi-VN') + ' đ';
+    display.textContent = grandTotal.toLocaleString('vi-VN') + ' đ';
+  }
+
+  const unitCalc = document.getElementById('fd-unit-calc');
+  if (unitCalc) {
+    let breakdown = unitPrice.toLocaleString('vi-VN') + ' đ';
+    if (sizeExtra > 0 || toppingsTotal > 0) {
+      breakdown += ` (${basePrice.toLocaleString('vi-VN')}đ`;
+      if (sizeExtra > 0) breakdown += ` + Cỡ ${sizeExtra.toLocaleString('vi-VN')}đ`;
+      if (toppingsTotal > 0) breakdown += ` + Topping ${toppingsTotal.toLocaleString('vi-VN')}đ`;
+      breakdown += ')';
+    }
+    unitCalc.textContent = breakdown;
+  }
+
+  const qtyCalc = document.getElementById('fd-qty-calc');
+  if (qtyCalc) {
+    qtyCalc.textContent = qty;
   }
 }
 
 async function handleAddToCart(isBuyNow = false) {
   try {
+    // 1. Toppings
     const selectedToppings = [];
-    document.querySelectorAll('.detail-topping-cb:checked').forEach(cb => {
+    document.querySelectorAll('.fd-topping-cb:checked').forEach(cb => {
       selectedToppings.push({
         name: cb.dataset.name,
         price: parseFloat(cb.dataset.price) || 0
       });
     });
 
+    // 2. Attributes (Khẩu vị, đường, đá, v.v.)
+    const selectedAttributes = [];
+    document.querySelectorAll('.fd-attr-chips').forEach(group => {
+      const activeBtn = group.querySelector('.fd-chip-btn.active');
+      if (activeBtn) {
+        selectedAttributes.push({
+          name: activeBtn.dataset.attr,
+          value: activeBtn.dataset.val
+        });
+      }
+    });
+
+    // 3. Ghi chú
+    const note = document.getElementById('fd-order-note')?.value.trim() || '';
+
+    const payload = {
+      action: 'add',
+      productId: productId,
+      qty: qty,
+      size: selectedSize,
+      toppings: selectedToppings,
+      attributes: selectedAttributes,
+      note: note
+    };
+
     const res = await fetch('<?= getUrl('api/cart.php') ?>', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'add', productId, qty, toppings: selectedToppings })
+      body: JSON.stringify(payload)
     });
     const result = await res.json();
     if (result.success) {
       if (isBuyNow) {
         window.location.href = '<?= getUrl('cart.php') ?>';
       } else {
-        const topText = selectedToppings.length ? ` (kèm ${selectedToppings.length} topping)` : '';
+        let topText = '';
+        if (selectedSize && selectedSize.price > 0) topText += ` (Cỡ ${selectedSize.name})`;
+        if (selectedToppings.length) topText += ` + ${selectedToppings.length} topping`;
+
         if (window.UIComponents?.showToast) {
-          window.UIComponents.showToast(`Đã thêm ${qty} phần món ăn${topText} vào giỏ hàng!`, 'success');
+          window.UIComponents.showToast(`Đã thêm ${qty} phần ${topText} vào giỏ hàng!`, 'success');
         } else {
-          alert(`Đã thêm ${qty} phần món ăn vào giỏ hàng!`);
+          alert(`Đã thêm ${qty} phần ${topText} vào giỏ hàng!`);
         }
+
         const badge = document.getElementById('nav-cart-badge');
         if (badge) {
           badge.textContent = result.data.totalCount;
@@ -273,27 +672,16 @@ async function handleAddToCart(isBuyNow = false) {
         }
       }
     } else {
-      alert(result.message || 'Không thể thêm vào giỏ.');
+      alert(result.message || 'Không thể thêm vào giỏ hàng.');
     }
   } catch (err) {
     console.error(err);
+    alert('Có lỗi xảy ra khi thêm vào giỏ hàng.');
   }
 }
-    } else {
-      alert(result.message || 'Không thể thêm vào giỏ.');
-    }
-  } catch (err) {
-    console.error(err);
-  }
-}
-function toggleFavorite(productId, btn) {
-  const isLiked = btn.classList.toggle('is-liked');
-  btn.textContent = isLiked ? '♥' : '♡';
-  if (window.UIComponents?.showToast) {
-    window.UIComponents.showToast(isLiked ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích.', 'info');
-  }
-}
+
+// Khởi chạy tính giá lần đầu
+calculateDetailTotal();
 </script>
 
 <?php require_once ROOT_PATH . '/includes/footer.php'; ?>
-

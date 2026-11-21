@@ -16,12 +16,19 @@ $action = $body['action'] ?? $_POST['action'] ?? $_GET['action'] ?? '';
 switch ($action) {
     case 'get_all_data':
         $categories = $db->query("SELECT id, name, slug, icon_url, display_order, is_active FROM categories ORDER BY display_order ASC, id ASC")->fetchAll();
-        $products = $db->query("SELECT p.id, p.name, p.slug, p.base_price, p.discount_price, p.is_available, p.image_url, p.category_id, p.restaurant_id, c.name AS category_name, r.name AS restaurant_name 
+        $products = $db->query("SELECT p.id, p.name, p.slug, p.base_price, p.discount_price, p.is_available, p.image_url, p.category_id, p.restaurant_id, p.options, c.name AS category_name, r.name AS restaurant_name 
                                 FROM products p 
                                 LEFT JOIN categories c ON p.category_id = c.id 
                                 LEFT JOIN restaurants r ON p.restaurant_id = r.id 
                                 ORDER BY p.id DESC")->fetchAll();
         
+        foreach ($products as &$prod) {
+            if (!empty($prod['options']) && is_string($prod['options'])) {
+                $prod['options'] = json_decode($prod['options'], true);
+            }
+        }
+        unset($prod);
+
         $ordersRaw = $db->query("SELECT * FROM realtime_orders ORDER BY id DESC LIMIT 200")->fetchAll();
         $orders = [];
         foreach ($ordersRaw as $row) {
@@ -84,17 +91,33 @@ switch ($action) {
             jsonError('Vui lòng nhập tên món và giá tiền hợp lệ.');
         }
 
+        // Xử lý biến thể & tùy chọn (Options: sizes, toppings, attributes)
+        $optionsRaw = $body['options'] ?? null;
+        $optionsJson = null;
+        if (!empty($optionsRaw)) {
+            if (is_string($optionsRaw)) {
+                $optionsJson = $optionsRaw;
+            } elseif (is_array($optionsRaw)) {
+                $optionsJson = json_encode($optionsRaw, JSON_UNESCAPED_UNICODE);
+            }
+        }
+
         $slug = strtolower(trim(preg_replace('/[^A-Za-z0-9-]+/', '-', $name), '-'));
         if (!$slug) $slug = 'mon-' . time();
 
         if ($id > 0) {
-            $stmt = $db->prepare("UPDATE products SET name = ?, base_price = ?, discount_price = ?, category_id = ?, image_url = ?, is_available = ?, updated_at = NOW() WHERE id = ?");
-            $stmt->execute([$name, $basePrice, $discountPrice, $categoryId, $imageUrl, $isAvailable, $id]);
-            jsonSuccess('Cập nhật món ăn thành công!');
+            if ($optionsJson !== null) {
+                $stmt = $db->prepare("UPDATE products SET name = ?, base_price = ?, discount_price = ?, category_id = ?, image_url = ?, is_available = ?, options = ?, updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$name, $basePrice, $discountPrice, $categoryId, $imageUrl, $isAvailable, $optionsJson, $id]);
+            } else {
+                $stmt = $db->prepare("UPDATE products SET name = ?, base_price = ?, discount_price = ?, category_id = ?, image_url = ?, is_available = ?, updated_at = NOW() WHERE id = ?");
+                $stmt->execute([$name, $basePrice, $discountPrice, $categoryId, $imageUrl, $isAvailable, $id]);
+            }
+            jsonSuccess('Cập nhật món ăn và biến thể tùy chọn thành công!');
         } else {
-            $stmt = $db->prepare("INSERT INTO products (name, slug, restaurant_id, category_id, base_price, discount_price, image_url, is_available, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())");
-            $stmt->execute([$name, $slug, $restaurantId, $categoryId, $basePrice, $discountPrice, $imageUrl, $isAvailable]);
-            jsonSuccess('Thêm món ăn mới thành công!');
+            $stmt = $db->prepare("INSERT INTO products (name, slug, restaurant_id, category_id, base_price, discount_price, image_url, is_available, options, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            $stmt->execute([$name, $slug, $restaurantId, $categoryId, $basePrice, $discountPrice, $imageUrl, $isAvailable, $optionsJson]);
+            jsonSuccess('Thêm món ăn mới kèm biến thể thành công!');
         }
         break;
 

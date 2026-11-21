@@ -14,6 +14,8 @@ $reqRole    = $_SERVER['HTTP_X_REQUESTED_ROLE'] ?? '';
 
 // Tự động nhận diện ngữ cảnh Admin:
 $isAdminContext = (
+    strpos($requestUri, '/admin') !== false ||
+    strpos($requestUri, 'admin/api.php') !== false ||
     preg_match('#^/admin(?:/|$|\?)#i', $requestUri) !== 0 ||
     strpos($requestUri, 'admin/index.php') !== false ||
     strpos($requestUri, 'admin/login.php') !== false ||

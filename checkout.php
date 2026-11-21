@@ -315,9 +315,19 @@ require_once ROOT_PATH . '/includes/header.php';
                 <div>
                   <strong><?= escapeHtml($item['name']) ?></strong>
                   <span style="color:var(--text-muted);"> × <?= $item['qty'] ?></span>
+                  <?php if (!empty($item['size']['name'])): ?>
+                    <div style="font-size:0.75rem; color:#2563eb; font-weight:700; margin-top:2px;">
+                      📏 Cỡ: <?= escapeHtml($item['size']['name']) ?><?= !empty($item['size']['price']) ? ' (+' . formatVND($item['size']['price']) . ')' : '' ?>
+                    </div>
+                  <?php endif; ?>
                   <?php if (!empty($item['toppings']) && is_array($item['toppings'])): ?>
                     <div style="font-size:0.75rem; color:#ea580c; font-weight:600; margin-top:2px;">
-                      ✨ <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']); }, $item['toppings'])) ?>
+                      ✨ Topping: <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']); }, $item['toppings'])) ?>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (!empty($item['attributes']) && is_array($item['attributes'])): ?>
+                    <div style="font-size:0.72rem; color:#64748b; font-weight:500; margin-top:1px;">
+                      🏷️ <?= implode(' • ', array_map(function($a) { return escapeHtml($a['name'] . ': ' . $a['value']); }, $item['attributes'])) ?>
                     </div>
                   <?php endif; ?>
                 </div>

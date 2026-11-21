@@ -1,6 +1,7 @@
 <?php
 /**
  * FASTFOOD - API Quản lý giỏ hàng (Cart Session)
+ * Hỗ trợ lưu trữ biến thể: Size, Toppings, Khẩu vị & Ghi chú
  */
 require_once dirname(__DIR__) . '/config/config.php';
 require_once ROOT_PATH . '/helpers/response.php';
@@ -125,7 +126,12 @@ if ($method === 'POST') {
                 ? (float)$product['discount_price']
                 : (float)$product['base_price'];
 
-            // Xử lý toppings đính kèm
+            // 1. Xử lý Size / Kích cỡ
+            $size = !empty($input['size']) && is_array($input['size']) ? $input['size'] : null;
+            $sizePrice = $size ? (float)($size['price'] ?? 0) : 0;
+            $sizeName  = $size ? trim($size['name'] ?? '') : '';
+
+            // 2. Xử lý toppings đính kèm
             $toppings = !empty($input['toppings']) && is_array($input['toppings']) ? $input['toppings'] : [];
             $toppingsExtra = 0;
             $cleanToppings = [];
@@ -137,11 +143,32 @@ if ($method === 'POST') {
                     $cleanToppings[] = ['name' => $tName, 'price' => $tPrice];
                 }
             }
-            $unitPrice = $basePrice + $toppingsExtra;
 
-            // Khóa giỏ hàng phân biệt theo món + danh sách topping đã chọn
-            $toppingSignature = !empty($cleanToppings) ? '_' . substr(md5(json_encode($cleanToppings)), 0, 8) : '';
-            $cartKey = $idKey . $toppingSignature;
+            // 3. Xử lý Khẩu vị / Thuộc tính (Attributes)
+            $attributes = !empty($input['attributes']) && is_array($input['attributes']) ? $input['attributes'] : [];
+            $cleanAttributes = [];
+            foreach ($attributes as $a) {
+                $aName = trim($a['name'] ?? '');
+                $aVal  = trim($a['value'] ?? '');
+                if ($aName && $aVal) {
+                    $cleanAttributes[] = ['name' => $aName, 'value' => $aVal];
+                }
+            }
+            $note = trim($input['note'] ?? '');
+
+            // Đơn giá cuối cùng cho 1 phần ăn
+            $unitPrice = $basePrice + $sizePrice + $toppingsExtra;
+
+            // Khóa giỏ hàng phân biệt theo món + size + topping + attributes + note
+            $variantPayload = [
+                'size'     => $sizeName,
+                'toppings' => $cleanToppings,
+                'attrs'    => $cleanAttributes,
+                'note'     => $note
+            ];
+            $hasVariants = (!empty($sizeName) || !empty($cleanToppings) || !empty($cleanAttributes) || !empty($note));
+            $variantSignature = $hasVariants ? '_' . substr(md5(json_encode($variantPayload)), 0, 8) : '';
+            $cartKey = $idKey . $variantSignature;
 
             $itemImg = !empty($product['image_url']) ? $product['image_url'] : '';
             if (!$itemImg) {
@@ -166,8 +193,11 @@ if ($method === 'POST') {
                     'productId'     => $idKey,
                     'name'          => $product['name'],
                     'basePrice'     => $basePrice,
+                    'size'          => $sizeName ? ['name' => $sizeName, 'price' => $sizePrice] : null,
                     'toppings'      => $cleanToppings,
                     'toppingsExtra' => $toppingsExtra,
+                    'attributes'    => $cleanAttributes,
+                    'note'          => $note,
                     'price'         => $unitPrice,
                     'image'         => $itemImg,
                     'qty'           => $qty,
@@ -256,4 +286,3 @@ if ($method === 'POST') {
             jsonError('Hành động không hợp lệ.');
     }
 }
-

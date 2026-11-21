@@ -97,9 +97,24 @@ require_once ROOT_PATH . '/includes/header.php';
                      onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';">
                 <div>
                   <h4 style="font-size:1rem; font-weight:700; margin:0 0 0.35rem;"><?= escapeHtml($item['name']) ?></h4>
+                  <?php if (!empty($item['size']['name'])): ?>
+                    <div style="font-size:0.8rem; color:#2563eb; margin-bottom:0.25rem; font-weight:700;">
+                      📏 Cỡ: <?= escapeHtml($item['size']['name']) ?><?= !empty($item['size']['price']) ? ' (+' . formatVND($item['size']['price']) . ')' : '' ?>
+                    </div>
+                  <?php endif; ?>
                   <?php if (!empty($item['toppings']) && is_array($item['toppings'])): ?>
-                    <div style="font-size:0.8rem; color:#ea580c; margin-bottom:0.35rem; font-weight:600;">
-                      ✨ <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']) . ' (+' . formatVND($t['price']) . ')'; }, $item['toppings'])) ?>
+                    <div style="font-size:0.8rem; color:#ea580c; margin-bottom:0.25rem; font-weight:600;">
+                      ✨ Topping: <?= implode(', ', array_map(function($t) { return escapeHtml($t['name']) . ' (+' . formatVND($t['price']) . ')'; }, $item['toppings'])) ?>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (!empty($item['attributes']) && is_array($item['attributes'])): ?>
+                    <div style="font-size:0.78rem; color:#475569; margin-bottom:0.25rem; font-weight:500;">
+                      🏷️ <?= implode(' • ', array_map(function($a) { return escapeHtml($a['name'] . ': ' . $a['value']); }, $item['attributes'])) ?>
+                    </div>
+                  <?php endif; ?>
+                  <?php if (!empty($item['note'])): ?>
+                    <div style="font-size:0.75rem; color:#64748b; font-style:italic; margin-bottom:0.25rem;">
+                      📝 Ghi chú: <?= escapeHtml($item['note']) ?>
                     </div>
                   <?php endif; ?>
                   <span style="color:var(--primary-color); font-weight:700;"><?= formatVND($item['price']) ?></span>

@@ -3,14 +3,17 @@
  * Setup Admin & 4 Staff Accounts (PHP)
  * Chạy lệnh: php backend/scripts/setup-staff-accounts.php
  */
+require_once dirname(__DIR__) . '/src/config/Database.php';
+
+use FastFood\Config\Database;
+
 echo "====================================================\n";
 echo "      CÀI ĐẶT TÀI KHOẢN ADMIN & 4 THÀNH VIÊN (STAFF)\n";
 echo "====================================================\n";
 
+$pdo = null;
 try {
-    $pdo = new PDO("mysql:host=127.0.0.1;dbname=fastfood_db;charset=utf8mb4", 'root', '', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = Database::getConnection();
 
     $pdo->beginTransaction();
 
@@ -31,7 +34,7 @@ try {
         ['fullName' => 'Phạm Thu Hương (Thành viên 4)', 'email' => 'staff4@fastfood.vn', 'phone' => '0911000004'],
     ];
 
-    $insStmt = $pdo->prepare("INSERT INTO users (role_id, full_name, email, phone, password_hash, default_address, status)
+    $insStmt = $pdo->prepare("INSERT INTO users (role_id, full_name, email, phone, password_hash, address, status)
                               VALUES (5, ?, ?, ?, ?, 'Buôn Ma Thuột, Đắk Lắk', 'active')
                               ON DUPLICATE KEY UPDATE role_id = 5, full_name = VALUES(full_name), phone = VALUES(phone), password_hash = VALUES(password_hash), status = 'active'");
 

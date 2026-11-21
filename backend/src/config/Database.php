@@ -12,6 +12,7 @@ class Database {
 
     public static function getConnection(): PDO {
         if (self::$instance === null) {
+            date_default_timezone_set('Asia/Ho_Chi_Minh');
             $host = getenv('DB_HOST') ?: '127.0.0.1';
             $defaultPort = getenv('DB_PORT') ?: '3301';
             $ports = array_unique(array_filter([$defaultPort, '3301', '3306']));

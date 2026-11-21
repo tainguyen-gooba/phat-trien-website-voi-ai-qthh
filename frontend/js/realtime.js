@@ -1,111 +1,293 @@
-const LIVE_CONTENT_KEY = 'fastfood-live-content-v1';
-const LIVE_CONTENT_COLLECTIONS = new Set(['categories', 'products', 'restaurants']);
+/**
+ * FASTFOOD - Unified Realtime Engine (PHP Native & Cross-Tab Broadcast)
+ * Đồng bộ Realtime Đơn Hàng & Tin Nhắn giữa các Tab bằng BroadcastChannel và Polling
+ */
+(function(window) {
+  'use strict';
 
-function mergeLiveContent(update) {
-  if (!update || !LIVE_CONTENT_COLLECTIONS.has(update.collection) || !Array.isArray(update.records)) return false;
+  // 1. Âm thanh chuông báo đơn mới (Ding-Dong Chime bằng Web Audio API)
+  window.playOrderNotificationSound = function() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
 
-  let current = {};
-  try {
-    current = JSON.parse(localStorage.getItem(LIVE_CONTENT_KEY) || '{}');
-  } catch (error) {
-    console.error('Không thể đọc nội dung realtime đã lưu:', error);
+      // Note 1: E5 (659.25Hz)
+      const osc1 = ctx.createOscillator();
+      const gain1 = ctx.createGain();
+      osc1.type = 'sine';
+      osc1.frequency.setValueAtTime(659.25, now);
+      gain1.gain.setValueAtTime(0.3, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+      osc1.connect(gain1);
+      gain1.connect(ctx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.45);
+
+      // Note 2: B5 (987.77Hz)
+      const osc2 = ctx.createOscillator();
+      const gain2 = ctx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(987.77, now + 0.12);
+      gain2.gain.setValueAtTime(0.35, now + 0.12);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+      osc2.connect(gain2);
+      gain2.connect(ctx.destination);
+      osc2.start(now + 0.12);
+      osc2.stop(now + 0.75);
+    } catch (e) {
+      console.log('[Realtime] Âm thanh chờ tương tác người dùng:', e);
+    }
+  };
+
+  // 2. Kênh truyền tin trực tiếp giữa các tab (0ms Latency)
+  const channel = (typeof BroadcastChannel !== 'undefined') ? new BroadcastChannel('fastfood_realtime') : null;
+  const listeners = {};
+  const processedEventIds = new Set();
+
+  function triggerLocalListeners(eventName, payload) {
+    if (listeners[eventName] && Array.isArray(listeners[eventName])) {
+      listeners[eventName].forEach(cb => {
+        try { cb(payload); } catch (err) { console.error('[Realtime Listener Error]', err); }
+      });
+    }
+    const eventSlug = eventName.replace(/:/g, '-');
+    window.dispatchEvent(new CustomEvent('fastfood:' + eventSlug, { detail: payload }));
   }
 
-  const next = { ...current, [update.collection]: update.records };
-  if (JSON.stringify(current) === JSON.stringify(next)) return false;
-  localStorage.setItem(LIVE_CONTENT_KEY, JSON.stringify(next));
-  return true;
-}
+  // 3. Socket Object Interface (Tương thích 100% với Socket.IO của Admin & Chatbot)
+  const socket = {
+    connected: true,
+    id: 'ff-native-' + Math.random().toString(36).substring(2, 9),
 
-function getRealtimeOrigin() {
-  if (window.location.port === '5000') return window.location.origin;
-  if (window.location.protocol === 'file:') return 'http://localhost:5000';
-  return 'http://localhost:5000';
-}
+    on: function(event, callback) {
+      if (!listeners[event]) listeners[event] = [];
+      listeners[event].push(callback);
+      return socket;
+    },
 
-window.initFastfoodRealtime = function initFastfoodRealtime(user = null) {
-  if (window.fastfoodRealtimeReady) return window.fastfoodRealtimeReady;
+    off: function(event, callback) {
+      if (!listeners[event]) return socket;
+      if (!callback) {
+        delete listeners[event];
+      } else {
+        listeners[event] = listeners[event].filter(cb => cb !== callback);
+      }
+      return socket;
+    },
 
-  const backendOrigin = getRealtimeOrigin();
+    emit: function(event, data, callback) {
+      const eventId = 'evt-' + Date.now() + '-' + Math.random().toString(36).substring(2, 6);
+      processedEventIds.add(eventId);
 
-  window.fastfoodRealtimeReady = new Promise((resolve) => {
-    const start = () => {
-      const currentUser = user || window.StorageManager?.getUser();
-      const token = sessionStorage.getItem('fastfood_auth_token');
-      const socket = window.io(backendOrigin, {
-        auth: { token },
-        reconnection: true,
-        reconnectionAttempts: 10,
-      });
-      window.FASTFOOD_SOCKET = socket;
+      // A. Bắn qua BroadcastChannel cho các tab khác
+      if (channel) {
+        channel.postMessage({
+          id: eventId,
+          type: event,
+          data: data,
+          timestamp: Date.now()
+        });
+      }
 
-      socket.on('connect', () => {
-        window.dispatchEvent(new CustomEvent('fastfood:socket-connected', { detail: { socket } }));
-        fetch(`${backendOrigin}/api/v1/realtime/content`, { headers: { Accept: 'application/json' } })
-          .then(async (response) => {
-            const result = await response.json();
-            if (!response.ok || !result.success) throw new Error(result.message || 'Không thể tải nội dung realtime.');
-            let changed = false;
-            Object.entries(result.data).forEach(([collection, records]) => {
-              changed = mergeLiveContent({ collection, records }) || changed;
-            });
-            if (changed) {
-              window.dispatchEvent(new CustomEvent('fastfood:content-synced', { detail: result.data }));
-            }
-          })
-          .catch((error) => console.error('[Realtime content load failed]', error.message));
-      });
+      // B. Kích hoạt tại tab hiện tại
+      triggerLocalListeners(event, data);
 
-      socket.on('content:updated', (update) => {
-        if (!mergeLiveContent(update)) return;
-        const isAdminPath = window.location.pathname.includes('/admin') || window.location.pathname.includes('dashboard.html');
-        if (!isAdminPath) {
-          window.location.reload();
-        } else {
-          window.UIComponents?.showToast?.('Nội dung website đã được đồng bộ.', 'success');
+      // C. Xử lý backend HTTP nếu là tác vụ cập nhật đơn hoặc gửi chat
+      if (event === 'admin:order:status' && data) {
+        const orderNo = String(data.orderNo || data.id || '').replace(/^#/, '').trim();
+        const status = data.status;
+        if (orderNo && status) {
+          fetch(`/api/v1/realtime/orders/${encodeURIComponent(orderNo)}/status`, {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + (sessionStorage.getItem('fastfood_auth_token') || '')
+            },
+            body: JSON.stringify({ status: status })
+          }).catch(err => console.warn('[Realtime Status Sync Error]', err));
+
+          // Phát sự kiện order:updated cho khách hàng ở tab khác
+          const updatePayload = {
+            id: orderNo,
+            orderCode: orderNo,
+            orderNo: '#' + orderNo,
+            status: status,
+            statusText: status
+          };
+          if (channel) {
+            channel.postMessage({ type: 'order:updated', data: updatePayload });
+          }
+          triggerLocalListeners('order:updated', updatePayload);
         }
-      });
-      socket.on('notification:new', (notification) => {
-        window.dispatchEvent(new CustomEvent('fastfood:notification-new', { detail: notification }));
-        window.UIComponents?.showToast(notification.content || notification.title, 'info');
-      });
-      socket.on('support:new_message', (payload) => {
-        window.dispatchEvent(new CustomEvent('fastfood:support-message', { detail: payload }));
-      });
-      socket.on('support:status', (payload) => {
-        window.dispatchEvent(new CustomEvent('fastfood:support-status', { detail: payload }));
-      });
-      socket.on('order:updated', (update) => {
-        window.dispatchEvent(new CustomEvent('fastfood:order-updated', { detail: update }));
-      });
-      socket.on('payment:updated', (update) => {
-        window.dispatchEvent(new CustomEvent('fastfood:payment-updated', { detail: update }));
-      });
-      socket.on('realtime:error', (error) => {
-        window.UIComponents?.showToast(error.message || 'Đã xảy ra lỗi realtime.', 'error');
-      });
-      socket.on('connect_error', (error) => {
-        console.error('[Realtime connection failed]', error.message);
-      });
+      }
 
-      resolve(socket);
-    };
+      if (typeof callback === 'function') {
+        setTimeout(() => callback(null, { success: true }), 15);
+      }
+      return socket;
+    },
 
-    if (window.io) {
-      start();
-      return;
+    timeout: function(ms) {
+      return {
+        emit: function(event, data, callback) {
+          return socket.emit(event, data, callback);
+        }
+      };
     }
+  };
 
-    const script = document.createElement('script');
-    script.src = `${backendOrigin}/socket.io/socket.io.js`;
-    script.onload = start;
-    script.onerror = () => {
-      window.fastfoodRealtimeReady = null;
-      console.warn('Không thể tải Socket.IO client, hệ thống dùng đồng bộ HTTP.');
-      resolve(null);
+  // 4. Lắng nghe tin nhắn từ BroadcastChannel (Cross-tab Realtime)
+  if (channel) {
+    channel.onmessage = function(event) {
+      const payload = event.data;
+      if (!payload || !payload.type) return;
+
+      if (payload.id && processedEventIds.has(payload.id)) {
+        return; // Bỏ qua nếu là sự kiện chính tab này vừa phát
+      }
+      if (payload.id) processedEventIds.add(payload.id);
+
+      const eventName = payload.type;
+      const eventData = payload.data !== undefined ? payload.data : payload;
+
+      // Nếu có đơn mới và đang ở trang Admin -> phát chuông báo
+      if (eventName === 'order:new') {
+        const isAdmin = window.location.pathname.includes('/admin') || window.location.pathname.includes('dashboard');
+        if (isAdmin) {
+          window.playOrderNotificationSound();
+        }
+      }
+
+      // Nếu nội dung website/bestseller được cập nhật từ Admin -> tự động đồng bộ trang chủ
+      if (eventName === 'content:updated') {
+        const isAdmin = window.location.pathname.includes('/admin') || window.location.pathname.includes('dashboard');
+        if (!isAdmin && (window.location.pathname.endsWith('index.php') || window.location.pathname === '/' || window.location.pathname === '')) {
+          setTimeout(() => window.location.reload(), 300);
+        }
+      }
+
+      triggerLocalListeners(eventName, eventData);
     };
-    document.head.appendChild(script);
-  });
+  }
 
-  return window.fastfoodRealtimeReady;
-};
+  // 5. Intelligent Background Polling (Dự phòng đồng bộ với Database MySQL)
+  let lastOrderId = 0;
+  let lastChatId = 0;
+  let isPolling = false;
+
+  async function pollServer() {
+    if (isPolling) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
+    isPolling = true;
+
+    try {
+      const isAdmin = window.location.pathname.includes('/admin');
+      const trackedOrder = window.TRACKED_ORDER_CODE || '';
+      const params = new URLSearchParams({
+        action: 'poll',
+        lastOrderId: String(lastOrderId),
+        lastChatId: String(lastChatId),
+        orderCode: trackedOrder
+      });
+
+      const res = await fetch(`/api/realtime.php?${params.toString()}`, {
+        headers: { Accept: 'application/json' }
+      });
+      if (!res.ok) throw new Error('Poll failed');
+      const result = await res.json();
+
+      if (result.success && result.data) {
+        const d = result.data;
+
+        // Cập nhật mốc ban đầu nếu là lần đầu tiên poll
+        if (lastOrderId === 0 && d.maxOrderId) {
+          lastOrderId = d.maxOrderId;
+        } else if (d.maxOrderId) {
+          lastOrderId = Math.max(lastOrderId, d.maxOrderId);
+        }
+
+        if (lastChatId === 0 && d.maxChatId) {
+          lastChatId = d.maxChatId;
+        } else if (d.maxChatId) {
+          lastChatId = Math.max(lastChatId, d.maxChatId);
+        }
+
+        // A. Có đơn hàng mới cho Admin
+        if (Array.isArray(d.newOrders) && d.newOrders.length > 0) {
+          d.newOrders.forEach(order => {
+            const orderPayload = { order: order };
+            triggerLocalListeners('order:new', orderPayload);
+            if (isAdmin) window.playOrderNotificationSound();
+          });
+        }
+
+        // B. Có tin nhắn mới
+        if (Array.isArray(d.newMessages) && d.newMessages.length > 0) {
+          d.newMessages.forEach(msg => {
+            const chatPayload = {
+              sessionId: 'cust-' + msg.customer_id,
+              customerId: msg.customer_id,
+              message: {
+                id: msg.id,
+                sender: msg.sender_role,
+                senderRole: msg.sender_role,
+                message: msg.message,
+                time: (msg.created_at || '').substring(11, 16)
+              }
+            };
+            triggerLocalListeners('support:new_message', chatPayload);
+          });
+        }
+
+        // C. Trạng thái đơn hàng đang theo dõi (trang order-tracking.php)
+        if (d.trackedOrder) {
+          triggerLocalListeners('order:updated', d.trackedOrder);
+        }
+
+        // D. Tổng số tin nhắn chưa đọc cho Admin
+        if (d.unreadChatCount !== undefined) {
+          triggerLocalListeners('support:unread_count', { count: d.unreadChatCount });
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('support:unread_count', { detail: { count: d.unreadChatCount } }));
+            if (typeof window.updateMessagesNavBadge === 'function') {
+              window.updateMessagesNavBadge(d.unreadChatCount);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      // Im lặng để không làm phiền console khi mất mạng tạm thời
+    } finally {
+      isPolling = false;
+    }
+  }
+
+  // Khởi chạy vòng lặp Polling dự phòng mỗi 8s (và đồng bộ ngay khi người dùng chuyển lại tab)
+  setInterval(pollServer, 8000);
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) pollServer();
+    });
+  }
+
+  // 6. Global Exports
+  window.FASTFOOD_SOCKET = socket;
+  window.initFastfoodRealtime = function(user = null) {
+    if (window.fastfoodRealtimeReady) return window.fastfoodRealtimeReady;
+
+    window.fastfoodRealtimeReady = new Promise(resolve => {
+      setTimeout(() => {
+        triggerLocalListeners('connect', {});
+        window.dispatchEvent(new CustomEvent('fastfood:socket-connected', { detail: { socket } }));
+        resolve(socket);
+      }, 30);
+    });
+    return window.fastfoodRealtimeReady;
+  };
+
+  // Khởi động sẵn
+  window.initFastfoodRealtime();
+
+})(window);

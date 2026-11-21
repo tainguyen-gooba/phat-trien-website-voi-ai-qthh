@@ -179,6 +179,7 @@
 
   async function pollServer() {
     if (isPolling) return;
+    if (typeof document !== 'undefined' && document.hidden) return;
     isPolling = true;
 
     try {
@@ -244,6 +245,17 @@
         if (d.trackedOrder) {
           triggerLocalListeners('order:updated', d.trackedOrder);
         }
+
+        // D. Tổng số tin nhắn chưa đọc cho Admin
+        if (d.unreadChatCount !== undefined) {
+          triggerLocalListeners('support:unread_count', { count: d.unreadChatCount });
+          if (typeof window !== 'undefined') {
+            window.dispatchEvent(new CustomEvent('support:unread_count', { detail: { count: d.unreadChatCount } }));
+            if (typeof window.updateMessagesNavBadge === 'function') {
+              window.updateMessagesNavBadge(d.unreadChatCount);
+            }
+          }
+        }
       }
     } catch (err) {
       // Im lặng để không làm phiền console khi mất mạng tạm thời
@@ -252,8 +264,13 @@
     }
   }
 
-  // Khởi chạy vòng lặp Polling mỗi 2.5s
-  setInterval(pollServer, 2500);
+  // Khởi chạy vòng lặp Polling dự phòng mỗi 8s (và đồng bộ ngay khi người dùng chuyển lại tab)
+  setInterval(pollServer, 8000);
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) pollServer();
+    });
+  }
 
   // 6. Global Exports
   window.FASTFOOD_SOCKET = socket;

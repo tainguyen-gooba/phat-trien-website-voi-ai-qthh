@@ -2,6 +2,7 @@
 /**
  * FASTFOOD - Built-in PHP Server Router
  */
+date_default_timezone_set('Asia/Ho_Chi_Minh');
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 
 // 1. Chuyển hướng các trang cũ .html sang .php

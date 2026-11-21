@@ -2,6 +2,7 @@
 /**
  * FASTFOOD - Admin Console Dashboard (PHP MVC Native)
  */
+date_default_timezone_set('Asia/Ho_Chi_Minh');
 require_once dirname(__DIR__) . '/config/config.php';
 requireAdminOrStaff();
 
@@ -9,6 +10,15 @@ $currentUser = currentUser();
 $isAdmin = isAdmin();
 $isStaff = isStaff();
 $db = getDB();
+
+$unreadMessagesCount = 0;
+if (isset($db) && $db instanceof \PDO) {
+    try {
+        $unreadMessagesCount = (int)($db->query("SELECT COUNT(*) FROM ai_chat_messages WHERE sender = 'user' AND is_read = 0")->fetchColumn() ?: 0);
+    } catch (\Throwable $e) {
+        $unreadMessagesCount = 0;
+    }
+}
 
 // 1. Categories
 $categoriesRaw = $db->query("SELECT id, name, slug, icon_url, display_order, is_active FROM categories ORDER BY display_order ASC, id ASC")->fetchAll();
@@ -54,6 +64,30 @@ $bsConfig = $bsRaw ? json_decode($bsRaw, true) : [
     'end_time'      => date('Y-m-d H:i:s', strtotime('+2 days 23:59:59')),
     'discount_text' => 'Ưu đãi có hạn',
     'product_ids'   => [1, 2, 3, 5]
+];
+
+// Cấu hình Chân Trang (Footer Settings)
+$footerRaw = $db->query("SELECT content FROM website_content WHERE collection_name = 'footer_settings' LIMIT 1")->fetchColumn();
+$footerConfig = $footerRaw ? json_decode($footerRaw, true) : [
+    'brand_desc'    => 'FASTFOOD Buôn Ma Thuột - Đặt món ngon địa phương, giao tận nơi nóng hổi và siêu tốc trong 20 phút.',
+    'hotline'       => '1900 8888',
+    'email'         => 'hotro@fastfood.vn',
+    'map_url'       => 'https://www.google.com/maps/search/?api=1&query=Buon+Ma+Thuot%2C+Dak+Lak',
+    'working_hours' => '06:00 - 23:30 hàng ngày',
+    'address'       => '16 Hoàng Diệu, P. Thắng Lợi, TP. Buôn Ma Thuột',
+    'copyright'     => '© ' . date('Y') . ' FASTFOOD Buôn Ma Thuột. Dự án phát triển Website đặt đồ ăn trực tuyến chuẩn PHP MVC.',
+    'explore_links' => [
+        ['label' => 'Trang chủ FASTFOOD', 'url' => 'index.php'],
+        ['label' => 'Thực đơn hôm nay', 'url' => 'foods.php'],
+        ['label' => 'Món ăn bán chạy', 'url' => 'foods.php?sort=popular'],
+        ['label' => 'Khuyến mãi & Combo', 'url' => 'foods.php?sort=price-asc']
+    ],
+    'policy_links'  => [
+        ['label' => 'Chính sách giao hàng', 'url' => 'policies.php'],
+        ['label' => 'Quy định hủy đơn & phí ship', 'url' => 'policies.php#cancellation'],
+        ['label' => 'Bảo mật thông tin khách hàng', 'url' => 'policies.php#privacy'],
+        ['label' => 'Điều khoản dịch vụ', 'url' => 'policies.php#terms']
+    ]
 ];
 
 // 3. Orders
@@ -943,17 +977,26 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 15px;
-      margin-bottom: 26px;
+      gap: 18px;
+      margin-bottom: 28px;
     }
 
     .stat-card {
       min-width: 0;
-      padding: 17px 18px;
-      border: 1px solid #f0f0f0;
-      border-radius: 13px;
-      background: #fff;
-      box-shadow: 0 4px 15px rgba(35, 35, 35, .025);
+      padding: 20px 22px;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      background: #ffffff;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+      transition: all .2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 25px rgba(249, 115, 22, 0.08);
+      border-color: #fdba74;
     }
 
     .stat-top {
@@ -964,52 +1007,56 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
 
     .stat-label {
-      color: #858585;
-      font-size: 11px;
-      font-weight: 650;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: -0.1px;
     }
 
     .stat-icon {
       display: grid;
-      width: 34px;
-      height: 34px;
+      width: 40px;
+      height: 40px;
       place-items: center;
-      border-radius: 10px;
-      background: var(--orange-soft);
+      border-radius: 12px;
+      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
       color: var(--orange);
+      border: 1px solid #fed7aa;
     }
 
     .stat-icon svg {
-      width: 17px;
-      height: 17px;
+      width: 20px;
+      height: 20px;
     }
 
     .stat-value {
       display: block;
-      margin-top: 13px;
-      font-size: 23px;
-      font-weight: 800;
-      letter-spacing: -.6px;
+      margin-top: 14px;
+      font-size: 26px;
+      font-weight: 850;
+      color: #0f172a;
+      letter-spacing: -0.8px;
     }
 
     .stat-note {
       display: block;
-      margin-top: 5px;
-      color: #a0a0a0;
-      font-size: 10px;
+      margin-top: 6px;
+      color: #94a3b8;
+      font-size: 11px;
+      font-weight: 550;
     }
 
     .stat-note .positive {
-      color: var(--green);
+      color: #16a34a;
       font-weight: 750;
     }
 
     .table-panel {
       overflow: hidden;
-      border: 1px solid #eee;
-      border-radius: 14px;
-      background: #fff;
-      box-shadow: var(--shadow);
+      border: 1px solid #e2e8f0;
+      border-radius: 18px;
+      background: #ffffff;
+      box-shadow: 0 4px 18px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
     }
 
     .panel-heading {
@@ -2200,220 +2247,679 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
 
     #chat-inbox[hidden] {
-      display: none;
+      display: none !important;
     }
 
     .chat-inbox {
       display: grid;
-      grid-template-columns: minmax(230px, .75fr) minmax(0, 1.8fr);
-      gap: 16px;
-      min-height: 490px;
-      max-height: 680px;
+      grid-template-columns: minmax(320px, 360px) minmax(0, 1fr);
+      gap: 18px;
+      min-height: 620px;
+      height: calc(100vh - 180px);
+      max-height: 880px;
     }
 
     .chat-inbox-panel {
       min-width: 0;
       overflow: hidden;
-      border: 1px solid #eee;
-      border-radius: 17px;
+      border: 1px solid #e2e8f0;
+      border-radius: 20px;
       background: #fff;
-      box-shadow: var(--shadow);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+      display: flex;
+      flex-direction: column;
     }
 
+    /* Left Sidebar: Conversations & Mode Switcher */
     .chat-inbox-heading {
-      padding: 18px 20px;
-      border-bottom: 1px solid #f1f1f1;
+      padding: 16px 18px;
+      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      flex-shrink: 0;
     }
 
-    .chat-inbox-heading h2 {
+    .chat-heading-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .chat-heading-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-badge-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+      border: 1px solid #fed7aa;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+    }
+
+    .chat-heading-brand h2 {
       margin: 0;
       font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.2px;
     }
 
-    .chat-inbox-heading p {
-      margin: 5px 0 0;
-      color: #999;
+    .chat-heading-brand p {
+      margin: 2px 0 0;
+      color: #64748b;
       font-size: 11px;
     }
 
-    .chat-conversation-list {
-      max-height: 590px;
-      overflow-y: auto;
-    }
-
-    .chat-conversation {
+    .chat-refresh-icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #64748b;
+      cursor: pointer;
       display: grid;
-      width: 100%;
-      gap: 5px;
-      padding: 14px 16px;
+      place-items: center;
+      transition: all .2s ease;
+    }
+
+    .chat-refresh-icon-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+      border-color: #cbd5e1;
+    }
+
+    .chat-refresh-icon-btn.spinning svg {
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Modern Mode Switcher Card */
+    .chat-mode-control-card {
+      background: linear-gradient(135deg, #fffaf5 0%, #fff1e6 100%);
+      border: 1px solid #fed7aa;
+      border-radius: 14px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .chat-mode-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .chat-mode-label {
+      font-size: 11px;
+      font-weight: 750;
+      color: #9a3412;
+    }
+
+    .chat-mode-status-tag {
+      font-size: 10.5px;
+      font-weight: 800;
+      padding: 2px 8px;
+      border-radius: 20px;
+    }
+
+    .chat-mode-status-tag.mode-auto {
+      background: #f97316;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(249, 115, 22, 0.25);
+    }
+
+    .chat-mode-status-tag.mode-admin {
+      background: #059669;
+      color: #ffffff;
+      box-shadow: 0 2px 6px rgba(5, 150, 105, 0.25);
+    }
+
+    .chat-mode-switch-group {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.6);
+      padding: 4px;
+      border-radius: 10px;
+      border: 1px solid rgba(254, 215, 170, 0.8);
+    }
+
+    .btn-mode-pill {
       border: 0;
-      border-bottom: 1px solid #f4f4f4;
-      background: #fff;
+      background: transparent;
+      padding: 7px 10px;
+      border-radius: 8px;
+      font-size: 11.5px;
+      font-weight: 750;
+      color: #64748b;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all .2s ease;
+    }
+
+    .btn-mode-pill:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.9);
+      color: #0f172a;
+    }
+
+    .btn-mode-pill.active {
+      background: #ea580c;
+      color: #ffffff;
+      box-shadow: 0 3px 8px rgba(234, 88, 12, 0.3);
+    }
+
+    .btn-mode-pill[data-mode="admin"].active {
+      background: #059669;
+      box-shadow: 0 3px 8px rgba(5, 150, 105, 0.3);
+    }
+
+    .chat-mode-hint {
+      margin: 0;
+      font-size: 10.5px;
+      line-height: 1.45;
+      color: #9a3412;
+    }
+
+    /* Search Box */
+    .chat-search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 0 10px;
+      height: 36px;
+      transition: all .15s ease;
+    }
+
+    .chat-search-box:focus-within {
+      border-color: #f97316;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+    }
+
+    .chat-search-box svg {
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .chat-search-box input {
+      border: 0;
+      background: transparent;
+      outline: 0;
+      width: 100%;
+      font-size: 12px;
+      color: #0f172a;
+    }
+
+    .chat-search-box input::placeholder {
+      color: #94a3b8;
+    }
+
+    /* Conversations List */
+    .chat-conversation-list {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .chat-conversation-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid transparent;
+      border-radius: 12px;
+      background: #ffffff;
       text-align: left;
+      cursor: pointer;
+      transition: all .15s ease;
     }
 
-    .chat-conversation:hover,
-    .chat-conversation.active {
+    .chat-conversation-item:hover {
+      background: #f8fafc;
+      border-color: #f1f5f9;
+    }
+
+    .chat-conversation-item.active {
       background: #fff7ed;
+      border-color: #fed7aa;
+      border-left: 4px solid #f97316;
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.08);
     }
 
-    .chat-conversation strong {
+    .conv-avatar {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+      color: #0369a1;
+      font-weight: 800;
+      font-size: 15px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .chat-conversation-item.active .conv-avatar {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #ffffff;
+    }
+
+    .conv-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .conv-top-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .conv-name {
+      font-size: 13px;
+      font-weight: 750;
+      color: #0f172a;
       overflow: hidden;
-      color: var(--ink);
-      font-size: 12px;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .chat-conversation span,
-    .chat-conversation small {
+    .conv-time {
+      font-size: 11px;
+      color: #94a3b8;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .conv-bottom-row {
+      display: flex;
+      align-items: center;
+    }
+
+    .conv-preview {
+      margin: 0;
+      font-size: 12px;
+      color: #64748b;
       overflow: hidden;
-      color: #888;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      line-height: 1.4;
+    }
+
+    .prefix-user {
+      color: #0f172a;
+      font-weight: 600;
+    }
+
+    .prefix-admin {
+      color: #ea580c;
+      font-weight: 700;
+    }
+
+    .prefix-ai {
+      color: #8b5cf6;
+      font-weight: 700;
+    }
+
+    .conv-meta-row {
+      display: flex;
+      align-items: center;
+      margin-top: 2px;
+    }
+
+    .conv-tag {
       font-size: 10px;
+      font-weight: 600;
+      padding: 1px 6px;
+      border-radius: 4px;
+      background: #f1f5f9;
+      color: #64748b;
+      overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    .chat-empty {
-      padding: 18px;
-      color: #999;
-      font-size: 12px;
+    .chat-empty-state {
+      padding: 30px 16px;
+      text-align: center;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
     }
 
+    .chat-empty-state .empty-icon {
+      font-size: 28px;
+    }
+
+    .chat-empty-state p {
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* Right Main Chat Thread */
     .chat-thread {
       display: flex;
-      min-height: 0;
       flex-direction: column;
+      min-height: 0;
     }
 
     .chat-thread-heading {
+      padding: 12px 18px;
+      border-bottom: 1px solid #f1f5f9;
+      background: #ffffff;
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       justify-content: space-between;
-      gap: 14px;
-      padding: 18px 20px;
-      border-bottom: 1px solid #f1f1f1;
+      gap: 12px;
+      flex-wrap: wrap;
+      flex-shrink: 0;
     }
 
-    .chat-thread-heading h2 {
-      margin: 0;
-      font-size: 15px;
-    }
-
-    .chat-thread-heading p {
-      margin: 5px 0 0;
-      color: #999;
-      font-size: 10px;
-    }
-
-    #chat-assistant-status {
-      color: #a75a20;
-      text-align: right;
-    }
-
-    .admin-chat-messages {
+    .chat-customer-profile {
       display: flex;
-      min-height: 0;
-      flex: 1;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      flex: 1 1 220px;
+    }
+
+    .chat-customer-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fed7aa 0%, #f97316 100%);
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+      box-shadow: 0 2px 8px rgba(249, 115, 22, 0.2);
+    }
+
+    .chat-customer-info {
+      display: flex;
       flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .chat-customer-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .chat-customer-name-row h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+    }
+
+    .chat-customer-type-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 6px;
+      background: #f1f5f9;
+      color: #475569;
+      white-space: nowrap;
+      display: inline-block;
+    }
+
+    .chat-customer-info p {
+      margin: 0;
+      font-size: 11.5px;
+      color: #64748b;
+    }
+
+    .chat-date-separator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 18px 0 10px;
+      position: relative;
+    }
+
+    .chat-date-separator::before {
+      content: '';
+      position: absolute;
+      left: 10%;
+      right: 10%;
+      top: 50%;
+      height: 1px;
+      background: #e2e8f0;
+      z-index: 1;
+    }
+
+    .chat-date-separator span {
+      position: relative;
+      z-index: 2;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      color: #64748b;
+      font-size: 10.5px;
+      font-weight: 750;
+      padding: 3px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+    }
+
+    .chat-thread-actions {
+      display: flex;
+      align-items: center;
       gap: 10px;
+      flex-shrink: 0;
+    }
+
+    .chat-assistant-status-pill {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .chat-assistant-status-pill.auto {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+
+    .chat-assistant-status-pill.direct {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+
+    .chat-assistant-status-pill.paused {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    /* Message List */
+    .admin-chat-messages {
+      flex: 1;
+      min-height: 0;
       overflow-y: auto;
-      padding: 18px;
-      background: #fafafa;
+      padding: 20px;
+      background: #f8fafc;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .chat-thread-empty {
+      margin: auto;
+      text-align: center;
+      color: #94a3b8;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .chat-thread-empty span {
+      font-size: 32px;
+    }
+
+    .chat-thread-empty p {
+      margin: 0;
+      font-size: 13px;
     }
 
     .admin-chat-message {
       width: fit-content;
-      max-width: min(78%, 560px);
-      padding: 10px 13px;
-      border: 1px solid #eee;
-      border-radius: 13px 13px 13px 4px;
-      background: #fff;
-      overflow-wrap: anywhere;
+      max-width: min(80%, 600px);
+      padding: 12px 16px;
+      border-radius: 16px 16px 16px 4px;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-bottom: 14px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
 
+    /* Outgoing Admin Message */
     .admin-chat-message.outgoing {
       align-self: flex-end;
-      border-color: #ffe0c2;
-      border-radius: 13px 13px 4px 13px;
-      background: #fff0df;
+      border-radius: 16px 16px 4px 16px;
+      background: linear-gradient(135deg, #fffaf5 0%, #fff7ed 100%);
+      border-color: #fed7aa;
+      box-shadow: 0 2px 10px rgba(249, 115, 22, 0.08);
     }
 
+    /* AI Assistant Message */
     .admin-chat-message.assistant {
-      border-color: #f0e2d4;
-      background: #fffaf5;
+      align-self: flex-start;
+      border-radius: 16px 16px 16px 4px;
+      background: linear-gradient(135deg, #faf5ff 0%, #f5f3ff 100%);
+      border-color: #ddd6fe;
+      box-shadow: 0 2px 10px rgba(139, 92, 246, 0.08);
     }
 
-    .admin-chat-message strong {
-      display: block;
-      margin-bottom: 4px;
-      color: #999;
-      font-size: 9px;
+    /* Consecutive messages from same sender: compact spacing (4px) */
+    .admin-chat-message.outgoing + .admin-chat-message.outgoing,
+    .admin-chat-message:not(.outgoing):not(.assistant) + .admin-chat-message:not(.outgoing):not(.assistant),
+    .admin-chat-message.assistant + .admin-chat-message.assistant,
+    .admin-chat-message.same-sender-consecutive {
+      margin-top: -10px;
     }
 
-    .admin-chat-message p {
-      margin: 0;
-      color: #333;
-      font-size: 12px;
-      line-height: 1.55;
-      white-space: pre-wrap;
-    }
-
-    .admin-chat-form {
+    .admin-msg-header {
       display: flex;
-      gap: 9px;
-      padding: 12px;
-      border-top: 1px solid #eee;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 4px;
     }
 
-    .admin-chat-form input {
-      min-width: 0;
-      flex: 1;
-      height: 42px;
-      padding: 0 12px;
-      border: 1px solid #ddd;
-      border-radius: 9px;
-      outline: 0;
-    }
-
-    .admin-chat-form input:focus {
-      border-color: #fdba74;
-      box-shadow: 0 0 0 3px rgba(249, 115, 22, .08);
-    }
-
-    .admin-chat-form button {
-      padding: 0 15px;
-      border: 0;
-      border-radius: 9px;
-      background: var(--orange);
-      color: #fff;
-      font-size: 12px;
+    /* Distinct Sender Badges */
+    .admin-msg-sender-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 11px;
       font-weight: 750;
+      padding: 3px 9px;
+      border-radius: 999px;
+      line-height: 1.25;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
     }
 
-    .admin-chat-form button:disabled {
-      cursor: wait;
-      opacity: .6;
+    .admin-msg-sender-badge.badge-customer {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      color: #1e40af;
     }
 
-    #admin-chat-feedback {
-      min-height: 17px;
-      margin: 0;
-      padding: 0 13px 8px;
-      color: #56805d;
-      font-size: 10px;
+    .admin-msg-sender-badge.badge-admin {
+      background: #fef3c7;
+      border: 1px solid #fde68a;
+      color: #92400e;
     }
 
-    #admin-chat-feedback.error {
-      color: #b94a48;
+    .admin-msg-sender-badge.badge-ai {
+      background: #f3e8ff;
+      border: 1px solid #d8b4fe;
+      color: #6b21a8;
     }
 
-    /* --- AI Copilot Toolbar in Admin Chat --- */
+    .admin-msg-time {
+      font-size: 11px;
+      font-weight: 500;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+
+    .admin-msg-text {
+      font-size: 13.5px;
+      line-height: 1.6;
+      color: #1e293b;
+      word-break: break-word;
+    }
+
+    .admin-chat-message.outgoing .admin-msg-text {
+      color: #431407;
+    }
+
+    .admin-chat-message.assistant .admin-msg-text {
+      color: #3b0764;
+    }
+
+    /* AI Copilot Bar */
     .admin-chat-ai-bar {
-      padding: 9px 13px;
+      padding: 10px 16px;
       background: linear-gradient(135deg, #fff7ed 0%, #fffaf5 100%);
       border-top: 1px solid #fed7aa;
       border-bottom: 1px solid #ffedd5;
+      flex-shrink: 0;
     }
 
     .ai-bar-header {
@@ -2421,52 +2927,58 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       align-items: center;
       justify-content: space-between;
       gap: 10px;
-      margin-bottom: 7px;
+      margin-bottom: 8px;
     }
 
     .ai-bar-title {
       display: flex;
       align-items: center;
       gap: 6px;
-      font-size: 11px;
-      color: #9a3412;
+      font-size: 11.5px;
       font-weight: 750;
+      color: #9a3412;
     }
 
-    .ai-bar-controls {
-      display: flex;
-      align-items: center;
-      gap: 6px;
+    .ai-sparkle {
+      font-size: 14px;
     }
 
     .ai-action-btn {
-      padding: 4px 10px;
-      font-size: 11px;
-      font-weight: 700;
-      border-radius: 6px;
+      padding: 6px 12px;
+      font-size: 11.5px;
+      font-weight: 750;
+      border-radius: 8px;
       border: 1px solid #f97316;
-      background: #f97316;
-      color: #fff;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #ffffff;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      transition: all .15s ease;
+      gap: 5px;
+      box-shadow: 0 2px 6px rgba(234, 88, 12, 0.2);
+      transition: all .18s ease;
     }
 
     .ai-action-btn:hover {
-      background: #ea580c;
       transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3);
     }
 
     .ai-action-btn.secondary {
-      background: #fff;
+      background: #ffffff;
       color: #c2410c;
       border-color: #fdba74;
+      box-shadow: none;
     }
 
     .ai-action-btn.secondary:hover {
       background: #fff7ed;
+      border-color: #ea580c;
+    }
+
+    .ai-action-btn.btn-sm {
+      padding: 4px 10px;
+      font-size: 11px;
     }
 
     .ai-quick-chips {
@@ -2478,10 +2990,232 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
 
     .quick-chip-label {
-      font-size: 10px;
+      font-size: 11px;
+      font-weight: 700;
       color: #9a3412;
-      font-weight: 600;
       white-space: nowrap;
+    }
+
+    .ai-chip {
+      padding: 4px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      border-radius: 20px;
+      border: 1px solid #fed7aa;
+      background: #ffffff;
+      color: #7c2d12;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all .15s ease;
+    }
+
+    .ai-chip:hover {
+      background: #f97316;
+      color: #ffffff;
+      border-color: #f97316;
+      transform: translateY(-1px);
+    }
+
+    /* Chat Input Form */
+    .admin-chat-form {
+      padding: 12px 18px;
+      background: #ffffff;
+      border-top: 1px solid #f1f5f9;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Tools Cluster: Product Picker + Attachment Button */
+    .admin-chat-tools-cluster {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .btn-attach-trigger {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 12px;
+      border: 1px solid #fed7aa;
+      background: #fff7ed;
+      color: #ea580c;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-attach-trigger:hover {
+      background: #f97316;
+      color: #ffffff;
+      border-color: #f97316;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+      transform: translateY(-1px);
+    }
+
+    /* Upload Preview Strip */
+    .admin-chat-upload-preview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 18px;
+      background: linear-gradient(135deg, #fffaf5 0%, #fff7ed 100%);
+      border-top: 1px solid #fed7aa;
+      border-bottom: 1px solid #ffedd5;
+      flex-shrink: 0;
+      animation: fadeInPreview 0.2s ease;
+    }
+
+    @keyframes fadeInPreview {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .admin-preview-thumb-wrap {
+      position: relative;
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      border: 1px solid #fed7aa;
+      background: #ffffff;
+      flex-shrink: 0;
+    }
+
+    #admin-preview-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 7px;
+      display: block;
+    }
+
+    .admin-btn-remove-preview {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ef4444;
+      color: #ffffff;
+      border: 2px solid #ffffff;
+      font-size: 13px;
+      font-weight: bold;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+      transition: all 0.15s ease;
+      padding: 0;
+    }
+
+    .admin-btn-remove-preview:hover {
+      background: #dc2626;
+      transform: scale(1.1);
+    }
+
+    .admin-preview-meta {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .admin-preview-filename {
+      font-size: 12px;
+      font-weight: 600;
+      color: #1e293b;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 260px;
+    }
+
+    .admin-preview-filesize {
+      font-size: 11px;
+      color: #64748b;
+    }
+
+    .admin-chat-input-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: #f8fafc;
+      border: 1px solid #cbd5e1;
+      border-radius: 12px;
+      padding: 4px 6px 4px 14px;
+      transition: all .18s ease;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .admin-chat-input-wrapper:focus-within {
+      border-color: #f97316;
+      background: #ffffff;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+    }
+
+    .admin-chat-input-wrapper input {
+      flex: 1;
+      min-width: 0;
+      height: 38px;
+      border: 0;
+      background: transparent;
+      outline: 0;
+      font-size: 13.5px;
+      color: #0f172a;
+    }
+
+    .admin-chat-input-wrapper input::placeholder {
+      color: #94a3b8;
+    }
+
+    .admin-chat-input-wrapper button {
+      height: 36px;
+      padding: 0 16px;
+      border: 0;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 750;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 2px 6px rgba(249, 115, 22, 0.25);
+      transition: all .18s ease;
+    }
+
+    .admin-chat-input-wrapper button:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(249, 115, 22, 0.35);
+    }
+
+    .admin-chat-input-wrapper button:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+
+    #admin-chat-feedback {
+      min-height: 18px;
+      margin: 0;
+      padding: 0 18px 8px;
+      color: #059669;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    #admin-chat-feedback.error {
+      color: #dc2626;
     }
 
     .ai-chip {
@@ -2500,6 +3234,553 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       background: #f97316;
       color: #fff;
       border-color: #f97316;
+    }
+
+    /* Kho Món Ăn FASTFOOD (Product Picker Drawer) */
+    .chat-inbox-panel.chat-thread {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-picker-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 12px;
+      border: 1px solid #fed7aa;
+      background: #fff7ed;
+      color: #ea580c;
+      font-size: 12.5px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .btn-picker-trigger:hover {
+      background: #f97316;
+      color: #fff;
+      border-color: #f97316;
+      box-shadow: 0 4px 12px rgba(249, 115, 22, 0.25);
+    }
+
+    .admin-product-picker-drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 440px;
+      max-width: 100%;
+      background: #ffffff;
+      border-left: 1px solid #e2e8f0;
+      box-shadow: -10px 0 30px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      z-index: 100;
+      transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      animation: drawerSlideIn 0.28s ease-out;
+    }
+
+    .admin-product-picker-drawer[hidden] {
+      display: none !important;
+    }
+
+    @keyframes drawerSlideIn {
+      from { transform: translateX(100%); }
+      to { transform: translateX(0); }
+    }
+
+    .picker-drawer-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f8fafc;
+      flex-shrink: 0;
+    }
+
+    .picker-header-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .picker-header-icon {
+      font-size: 24px;
+    }
+
+    .picker-header-title h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    .picker-header-title p {
+      margin: 2px 0 0;
+      font-size: 11.5px;
+      color: #64748b;
+    }
+
+    .picker-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .picker-icon-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      color: #64748b;
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .picker-icon-btn:hover {
+      background: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .picker-close-btn {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .picker-close-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fecaca;
+    }
+
+    .picker-drawer-controls {
+      padding: 12px 16px;
+      border-bottom: 1px solid #f1f5f9;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      background: #fff;
+      flex-shrink: 0;
+    }
+
+    .picker-search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .picker-search-box svg {
+      position: absolute;
+      left: 12px;
+      color: #94a3b8;
+    }
+
+    .picker-search-box input {
+      width: 100%;
+      padding: 8px 32px 8px 34px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      font-size: 13px;
+      outline: none;
+      transition: border-color 0.15s ease;
+    }
+
+    .picker-search-box input:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
+    }
+
+    .picker-clear-btn {
+      position: absolute;
+      right: 8px;
+      border: none;
+      background: transparent;
+      color: #94a3b8;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .picker-status-tabs {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .picker-status-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .picker-tab {
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      color: #475569;
+      font-size: 11.5px;
+      font-weight: 650;
+      white-space: nowrap;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .picker-tab:hover {
+      background: #f1f5f9;
+    }
+
+    .picker-tab.active {
+      background: #f97316;
+      color: #fff;
+      border-color: #f97316;
+    }
+
+    .picker-category-filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+      color: #64748b;
+    }
+
+    .picker-select {
+      flex: 1;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: 1px solid #e2e8f0;
+      font-size: 12px;
+      outline: none;
+    }
+
+    .picker-product-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    /* Product Card Item in Picker */
+    .picker-product-card {
+      display: flex;
+      gap: 12px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      background: #fff;
+      transition: all 0.15s ease;
+    }
+
+    .picker-product-card:hover {
+      border-color: #fed7aa;
+      background: #fffdfa;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .picker-card-thumb-wrap {
+      position: relative;
+      width: 72px;
+      height: 72px;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #f8fafc;
+      flex-shrink: 0;
+      border: 1px solid #f1f5f9;
+    }
+
+    .picker-card-thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .picker-card-body {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .picker-card-title-row {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .picker-card-name {
+      margin: 0;
+      font-size: 13px;
+      font-weight: 750;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .picker-card-category {
+      font-size: 10.5px;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .picker-card-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .picker-price-current {
+      font-size: 13.5px;
+      font-weight: 800;
+      color: #ea580c;
+    }
+
+    .picker-price-old {
+      font-size: 11px;
+      color: #94a3b8;
+      text-decoration: line-through;
+    }
+
+    .picker-card-desc {
+      margin: 0;
+      font-size: 11px;
+      color: #64748b;
+      line-height: 1.35;
+      display: -webkit-box;
+      -webkit-line-clamp: 1;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .picker-card-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 4px;
+    }
+
+    .picker-status-tag {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .picker-status-tag.in_stock {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .picker-status-tag.out_of_stock {
+      background: #ffedd5;
+      color: #9a3412;
+    }
+
+    .picker-status-tag.unavailable_today {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .btn-picker-send-chat {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 5px 10px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .btn-picker-send-chat:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(249, 115, 22, 0.35);
+    }
+
+    .picker-drawer-footer {
+      padding: 10px 16px;
+      border-top: 1px solid #f1f5f9;
+      background: #f8fafc;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #64748b;
+      flex-shrink: 0;
+    }
+
+    .picker-guide-text {
+      color: #f97316;
+    }
+
+    /* Message product card bubble in Admin Chat */
+    .admin-msg-product-card {
+      display: flex;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid #fed7aa;
+      background: #ffffff;
+      margin-top: 6px;
+      max-width: 320px;
+    }
+
+    .admin-product-card-thumb {
+      width: 60px;
+      height: 60px;
+      border-radius: 8px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .admin-product-card-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .admin-product-card-tag {
+      font-size: 9.5px;
+      font-weight: 800;
+      color: #ea580c;
+      text-transform: uppercase;
+    }
+
+    .admin-product-card-title {
+      margin: 0;
+      font-size: 12.5px;
+      font-weight: 750;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .admin-product-card-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .admin-product-card-price {
+      font-size: 13px;
+      font-weight: 800;
+      color: #ea580c;
+    }
+
+    .admin-product-card-old-price {
+      font-size: 10.5px;
+      color: #94a3b8;
+      text-decoration: line-through;
+    }
+
+    .admin-product-card-preview-note {
+      font-size: 10px;
+      color: #16a34a;
+      font-weight: 600;
+    }
+
+    /* Message Image Bubble in Admin Chat */
+    .admin-msg-image-bubble {
+      max-width: 280px;
+      border-radius: 12px;
+      overflow: hidden;
+      margin-top: 6px;
+      cursor: zoom-in;
+      border: 1px solid #e2e8f0;
+      background: #f8fafc;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .admin-msg-image-bubble:hover {
+      transform: scale(1.02);
+      box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    }
+
+    .admin-chat-image-thumb {
+      display: block;
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+    }
+
+    /* Admin Lightbox Modal */
+    .admin-chat-lightbox-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 999999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: ffFadeIn 0.2s ease;
+    }
+
+    .admin-chat-lightbox-modal[hidden] {
+      display: none !important;
+    }
+
+    .admin-lightbox-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.85);
+      backdrop-filter: blur(4px);
+    }
+
+    .admin-lightbox-container {
+      position: relative;
+      z-index: 1;
+      max-width: 90vw;
+      max-height: 85vh;
+    }
+
+    .admin-lightbox-container img {
+      max-width: 100%;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: 12px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    .admin-lightbox-close {
+      position: absolute;
+      top: -16px;
+      right: -16px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: #ffffff;
+      color: #0f172a;
+      border: none;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+      transition: all 0.15s ease;
+    }
+
+    .admin-lightbox-close:hover {
+      background: #f97316;
+      color: #ffffff;
+      transform: scale(1.1);
     }
 
     .nav-badge-ai {
@@ -3328,16 +4609,52 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
 
     @keyframes badge-pulse {
-
-      0%,
-      100% {
+      0%, 100% {
         transform: scale(1);
+        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45);
       }
-
       50% {
-        transform: scale(1.1);
-        box-shadow: 0 0 8px rgba(249, 115, 22, 0.6);
+        transform: scale(1.08);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.7);
       }
+    }
+
+    .nav-badge-messages {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 2px 7px;
+      min-width: 18px;
+      text-align: center;
+      line-height: 1.2;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45);
+      animation: badge-pulse 2s infinite ease-in-out;
+    }
+
+    .nav-item > span:first-of-type {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .conv-unread-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      min-width: 18px;
+      height: 18px;
+      line-height: 1;
+      padding: 0 6px;
+      border-radius: 999px;
+      margin-left: 6px;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.45);
     }
 
     .review-card.just-added {
@@ -3724,6 +5041,583 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         animation: none;
       }
     }
+
+    /* === Best Seller & Giờ Vàng Configuration UI === */
+    .bestseller-section {
+      background: #fff;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid #f1f5f9;
+    }
+
+    .bs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 18px;
+      margin-bottom: 22px;
+      flex-wrap: wrap;
+      gap: 14px;
+    }
+
+    .bs-header-title {
+      font-size: 19px;
+      font-weight: 800;
+      color: #0f172a;
+      margin: 0 0 4px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .bs-header-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #fb923c, #ea580c);
+      color: #fff;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
+      flex-shrink: 0;
+    }
+
+    .bs-header-desc {
+      font-size: 13px;
+      color: #64748b;
+      margin: 0;
+    }
+
+    .bs-top-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.08fr) minmax(0, 0.92fr);
+      gap: 20px;
+      margin-bottom: 26px;
+      align-items: stretch;
+    }
+
+    .bs-panel-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bs-panel-title {
+      font-size: 15px;
+      font-weight: 800;
+      margin: 0 0 16px;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bs-step-num {
+      width: 24px;
+      height: 24px;
+      border-radius: 7px;
+      background: #ffedd5;
+      color: #c2410c;
+      font-size: 12px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .bs-field {
+      margin-bottom: 14px;
+    }
+
+    .bs-field:last-child {
+      margin-bottom: 0;
+    }
+
+    .bs-label {
+      display: block;
+      font-size: 12.5px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    .bs-input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      font-size: 13.5px;
+      color: #0f172a;
+      background: #fff;
+      transition: border-color .15s, box-shadow .15s;
+    }
+
+    .bs-input:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14);
+    }
+
+    .bs-toggle-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 11px 14px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .bs-toggle-label {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .bs-toggle-sub {
+      display: block;
+      font-size: 11.5px;
+      color: #64748b;
+      font-weight: 500;
+      margin-top: 2px;
+    }
+
+    .bs-switch {
+      position: relative;
+      display: inline-flex;
+      width: 44px;
+      height: 24px;
+      flex-shrink: 0;
+    }
+
+    .bs-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+      position: absolute;
+    }
+
+    .bs-switch-slider {
+      position: absolute;
+      inset: 0;
+      background: #cbd5e1;
+      border-radius: 999px;
+      transition: background .2s;
+    }
+
+    .bs-switch-slider::before {
+      content: "";
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      left: 3px;
+      top: 3px;
+      background: #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .2);
+      transition: transform .2s;
+    }
+
+    .bs-switch input:checked + .bs-switch-slider {
+      background: var(--orange-dark);
+    }
+
+    .bs-switch input:checked + .bs-switch-slider::before {
+      transform: translateX(20px);
+    }
+
+    .bs-datetime-split {
+      display: grid;
+      grid-template-columns: 1.25fr 0.95fr;
+      gap: 10px;
+    }
+
+    .bs-preset-row {
+      display: flex;
+      gap: 7px;
+      margin-top: 10px;
+      flex-wrap: wrap;
+    }
+
+    .bs-preset-btn,
+    .bs-action-btn {
+      padding: 6px 11px;
+      border-radius: 8px;
+      border: 1px solid #fed7aa;
+      background: #fff7ed;
+      color: #c2410c;
+      font-size: 12px;
+      font-weight: 700;
+      transition: all .15s;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .bs-preset-btn:hover,
+    .bs-action-btn:hover {
+      background: #ffedd5;
+      border-color: #fb923c;
+    }
+
+    .bs-preset-btn.is-active {
+      background: #ea580c;
+      border-color: #ea580c;
+      color: #fff;
+      box-shadow: 0 3px 10px rgba(234, 88, 12, 0.25);
+    }
+
+    .bs-action-btn.is-secondary {
+      background: #fff;
+      border-color: #cbd5e1;
+      color: #475569;
+    }
+
+    .bs-action-btn.is-secondary:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    /* Live Preview: Homepage Orange Board Replica */
+    .bs-preview-wrap {
+      background: #fff7ed;
+      border: 1.5px dashed #fdba74;
+      border-radius: 14px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .bs-preview-board {
+      background: radial-gradient(circle at 10% 18%, rgba(255, 255, 255, 0.16) 0%, transparent 40%),
+        radial-gradient(circle at 90% 82%, rgba(255, 255, 255, 0.16) 0%, transparent 45%),
+        linear-gradient(135deg, #f97316 0%, #ea580c 52%, #c2410c 100%);
+      border-radius: 16px;
+      padding: 18px;
+      color: #fff;
+      box-shadow: 0 12px 28px rgba(234, 88, 12, 0.25);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex: 1;
+    }
+
+    .bs-preview-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .bs-preview-title-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 4px;
+    }
+
+    .bs-preview-title {
+      font-size: 16px;
+      font-weight: 900;
+      color: #fff;
+      line-height: 1.3;
+    }
+
+    .bs-preview-badge {
+      background: rgba(255, 255, 255, 0.24);
+      border: 1px solid rgba(255, 255, 255, 0.45);
+      color: #fff;
+      font-size: 10px;
+      font-weight: 800;
+      padding: 3px 9px;
+      border-radius: 999px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      white-space: nowrap;
+    }
+
+    .bs-preview-subtitle {
+      color: rgba(255, 255, 255, 0.92);
+      font-size: 12px;
+      display: block;
+      line-height: 1.45;
+    }
+
+    .bs-preview-timer {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(0, 0, 0, 0.24);
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      padding: 6px 10px;
+      border-radius: 10px;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #fff;
+    }
+
+    .bs-preview-digit {
+      background: #fff;
+      color: #ea580c;
+      font-weight: 900;
+      padding: 2px 6px;
+      border-radius: 5px;
+      min-width: 24px;
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .bs-preview-products {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .bs-preview-mini-card {
+      background: #fff;
+      color: #0f172a;
+      border-radius: 10px;
+      padding: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      min-width: 0;
+    }
+
+    .bs-preview-mini-card img {
+      width: 38px;
+      height: 38px;
+      border-radius: 7px;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .bs-preview-mini-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .bs-preview-mini-name {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bs-preview-mini-price {
+      font-size: 11px;
+      font-weight: 800;
+      color: #ea580c;
+    }
+
+    .bs-preview-footer {
+      margin-top: auto;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.22);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.94);
+    }
+
+    .bs-preview-count-pill {
+      background: #fff;
+      color: #ea580c;
+      font-weight: 800;
+      padding: 2px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
+
+    /* Section 3: Product Picker */
+    .bs-picker-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .bs-picker-controls {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .bs-search-box {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .bs-search-box input {
+      padding: 8px 12px 8px 32px;
+      border: 1px solid #cbd5e1;
+      border-radius: 9px;
+      font-size: 13px;
+      width: 220px;
+      background: #fff;
+    }
+
+    .bs-search-box input:focus {
+      outline: none;
+      border-color: var(--orange);
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14);
+    }
+
+    .bs-search-icon {
+      position: absolute;
+      left: 10px;
+      color: #94a3b8;
+      font-size: 13px;
+      pointer-events: none;
+    }
+
+    .bs-filter-tabs {
+      display: inline-flex;
+      background: #f1f5f9;
+      padding: 3px;
+      border-radius: 9px;
+      gap: 2px;
+    }
+
+    .bs-filter-tab {
+      border: 0;
+      background: transparent;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 5px 10px;
+      border-radius: 7px;
+      transition: all .15s;
+    }
+
+    .bs-filter-tab.is-active {
+      background: #fff;
+      color: #ea580c;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, .08);
+    }
+
+    .bs-product-scroll {
+      max-height: 440px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 14px;
+      background: #f8fafc;
+    }
+
+    .bs-product-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+      gap: 11px;
+    }
+
+    .bs-prod-card {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      padding: 10px 12px;
+      border: 1.5px solid #e2e8f0;
+      background: #fff;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform .15s, border-color .15s, background .15s, box-shadow .15s;
+    }
+
+    .bs-prod-card:hover {
+      border-color: #fdba74;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+    }
+
+    .bs-prod-card.is-selected {
+      border-color: #ea580c;
+      background: #fff7ed;
+      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.12);
+    }
+
+    .bs-prod-checkbox {
+      width: 18px;
+      height: 18px;
+      accent-color: #ea580c;
+      flex-shrink: 0;
+      cursor: pointer;
+    }
+
+    .bs-prod-thumb {
+      width: 50px;
+      height: 50px;
+      border-radius: 9px;
+      object-fit: cover;
+      flex-shrink: 0;
+      border: 1px solid #e2e8f0;
+      background: #f1f5f9;
+    }
+
+    .bs-prod-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .bs-prod-name {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+
+    .bs-prod-price {
+      font-size: 12.5px;
+      font-weight: 800;
+      color: #ea580c;
+    }
+
+    @media (max-width: 1024px) {
+      .bs-top-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .bestseller-section {
+        padding: 16px;
+      }
+
+      .bs-datetime-split,
+      .bs-preview-products {
+        grid-template-columns: 1fr;
+      }
+
+      .bs-search-box,
+      .bs-search-box input {
+        width: 100%;
+      }
+    }
   </style>
 </head>
 
@@ -3780,7 +5674,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M4 5h16v12H9l-5 4z" />
             <path d="M8 9h8M8 13h5" />
-          </svg>Tin nhắn khách hàng
+          </svg><span>Tin nhắn khách hàng</span>
+          <span class="nav-badge nav-badge-messages" id="messages-nav-badge" <?= $unreadMessagesCount > 0 ? '' : 'hidden' ?>><?= $unreadMessagesCount > 99 ? '99+' : $unreadMessagesCount ?></span>
         </button>
         <button class="nav-item" type="button" data-section="ai-bot">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -3806,6 +5701,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg><span>Best Seller & Giờ Vàng</span>
           <span class="nav-badge" style="background:#ea580c; color:#fff; font-weight:800; font-size:10px; padding:2px 6px;">HOT</span>
+        </button>
+        <button class="nav-item" type="button" data-section="footer-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="3" y1="15" x2="21" y2="15"></line>
+            <path d="M7 19h10"></path>
+          </svg><span>Cài Đặt Chân Trang</span>
         </button>
       </nav>
       <div class="sidebar-bottom">
@@ -4011,66 +5913,197 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         <section class="chat-inbox" id="chat-inbox" aria-label="Hộp thư tin nhắn khách hàng" hidden>
           <aside class="chat-inbox-panel" aria-label="Danh sách hội thoại khách hàng">
             <div class="chat-inbox-heading">
-              <h2>Nhân viên hỗ trợ</h2>
-              <p>Hộp thư tin nhắn khách hàng trực tiếp</p>
-              <button type="button" class="ai-action-btn secondary" id="btn-admin-busy-toggle"
-                style="margin-top:10px;width:100%;justify-content:center;"
-                title="Chuyển trạng thái Admin: Khi Đang bận AI sẽ tự động trả lời khách, khi Đang trực bạn tự trả lời">
-                🟢 Đang trực (Tự trả lời)
-              </button>
+              <div class="chat-heading-top-row">
+                <div class="chat-heading-brand">
+                  <span class="chat-badge-icon">💬</span>
+                  <div>
+                    <h2>Hộp Thư Khách Hàng</h2>
+                    <p>CSKH Trực Tuyến &amp; Trợ Lý AI</p>
+                  </div>
+                </div>
+                <button type="button" class="chat-refresh-icon-btn" id="btn-refresh-conversations" title="Tải lại danh sách tin nhắn">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                </button>
+                <button type="button" class="chat-refresh-icon-btn" id="btn-clear-all-conversations" title="Xóa toàn bộ lịch sử tin nhắn" style="color: #ef4444; margin-left: 4px;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                </button>
+              </div>
+
+              <!-- CHUYỂN ĐỔI CHẾ ĐỘ: AI TỰ CHAT 24/7 vs ADMIN TRỰC TIẾP CHAT -->
+              <div class="chat-mode-control-card">
+                <div class="chat-mode-card-header">
+                  <span class="chat-mode-label">Chế độ hỗ trợ hiện tại:</span>
+                  <span class="chat-mode-status-tag mode-auto" id="chat-mode-current-badge">🤖 AI Tự Chat (24/7)</span>
+                </div>
+                <div class="chat-mode-switch-group" role="tablist">
+                  <button type="button" class="btn-mode-pill active" id="btn-mode-ai" data-mode="auto" title="AI tự động trả lời khách hàng 24/7">
+                    <span class="mode-icon">🤖</span>
+                    <span class="mode-text">AI Tự Chat</span>
+                  </button>
+                  <button type="button" class="btn-mode-pill" id="btn-mode-admin" data-mode="admin" title="Admin trực tiếp đọc và chat với khách hàng (Tắt AI tự động)">
+                    <span class="mode-icon">👨‍💼</span>
+                    <span class="mode-text">Admin Trực Tiếp</span>
+                  </button>
+                </div>
+                <p class="chat-mode-hint" id="chat-mode-desc-text">
+                  ✨ <strong>AI Tự Chat:</strong> Trợ lý AI đang tự động phản hồi khách hàng 24/7. Bạn có thể theo dõi và can thiệp khi cần.
+                </p>
+              </div>
+
+              <!-- Tìm kiếm hội thoại -->
+              <div class="chat-search-box">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="chat-conv-search-input" placeholder="Tìm tên khách, SĐT, tin nhắn..." autocomplete="off">
+              </div>
             </div>
             <div class="chat-conversation-list" id="chat-conversation-list" aria-live="polite"></div>
           </aside>
+
           <section class="chat-inbox-panel chat-thread" aria-label="Nội dung cuộc trò chuyện">
             <header class="chat-thread-heading">
-              <div>
-                <h2 id="chat-thread-title">Chọn một khách hàng</h2>
-                <p>Hỗ trợ khách hàng trực tiếp</p>
+              <div class="chat-customer-profile">
+                <div class="chat-customer-avatar" id="chat-customer-avatar">👤</div>
+                <div class="chat-customer-info">
+                  <div class="chat-customer-name-row">
+                    <h2 id="chat-thread-title">Chọn một khách hàng</h2>
+                    <span class="chat-customer-type-badge" id="chat-customer-type-badge">Khách hàng</span>
+                  </div>
+                  <p id="chat-customer-meta">Chọn một hội thoại ở danh sách bên trái để bắt đầu chat</p>
+                </div>
               </div>
-              <p id="chat-assistant-status">Khi Admin bận, Trợ lý tự động sẽ trả lời khách.</p>
+              <div class="chat-thread-actions">
+                <span class="chat-assistant-status-pill auto" id="chat-assistant-status">Đang kết nối...</span>
+                <button type="button" class="ai-action-btn secondary btn-sm" id="btn-toggle-ai-automation"
+                  title="Bật hoặc tạm dừng AI tự động trả lời cho riêng khách hàng này">
+                  🤖 Bật AI cho khách này
+                </button>
+                <button type="button" class="ai-action-btn btn-sm" id="btn-delete-conv"
+                  title="Xóa cuộc trò chuyện này" style="display: none; background: #fee2e2; color: #b91c1c; border-color: #fca5a5; margin-left: 6px;">
+                  🗑️ Xóa hội thoại
+                </button>
+              </div>
             </header>
+
             <div class="admin-chat-messages" id="admin-chat-messages" aria-live="polite"></div>
+
             <!-- AI Copilot Support Toolbar for Admin -->
             <div class="admin-chat-ai-bar" id="admin-chat-ai-bar">
               <div class="ai-bar-header">
                 <div class="ai-bar-title">
                   <span class="ai-sparkle">✨</span>
-                  <strong>Trợ lý AI Hỗ trợ Trả lời</strong>
+                  <strong>AI Copilot Hỗ Trợ Soạn Tin</strong>
                   <span class="ai-intent-tag" id="ai-detected-intent" hidden></span>
                 </div>
                 <div class="ai-bar-controls">
-                  <button type="button" class="ai-action-btn" id="btn-ai-suggest-reply"
-                    title="AI phân tích tin nhắn khách và soạn sẵn câu trả lời">
-                    ✨ Gợi ý câu trả lời AI
+                  <button type="button" class="ai-action-btn" id="btn-ai-open-picker"
+                    title="Mở Kho Món Ăn FASTFOOD để chọn món và 1-click gửi thẻ vào cuộc trò chuyện">
+                    🍔 Kho Món Ăn (1-Click Gửi)
                   </button>
-                  <button type="button" class="ai-action-btn secondary" id="btn-toggle-ai-automation"
-                    title="Bật hoặc tạm dừng AI tự động trả lời cho khách này">
-                    🤖 Bật AI tự động
+                  <button type="button" class="ai-action-btn" id="btn-ai-suggest-reply"
+                    title="AI phân tích câu hỏi gần nhất của khách và soạn sẵn câu trả lời đầy đủ">
+                    ✨ Gợi ý câu trả lời AI
                   </button>
                 </div>
               </div>
               <div class="ai-quick-chips" id="ai-quick-chips">
-                <span class="quick-chip-label">Trả lời nhanh:</span>
+                <span class="quick-chip-label">Mẫu nhanh:</span>
                 <button type="button" class="ai-chip"
-                  data-text="Dạ chào bạn, FASTFOOD đã nhận được yêu cầu và đang xử lý ngay cho bạn đây ạ!">⚡ Chào &amp;
-                  Nhận xử lý</button>
+                  data-text="Dạ chào bạn, FASTFOOD đã nhận được yêu cầu và đang xử lý ngay cho bạn đây ạ!">⚡ Chào &amp; Nhận đơn</button>
                 <button type="button" class="ai-chip"
-                  data-text="Đơn hàng của bạn đang được quán chuẩn bị nóng hổi và sắp bàn giao cho tài xế rồi bạn nhé!">🍳
-                  Quán đang làm món</button>
+                  data-text="Đơn hàng của bạn đang được quán chuẩn bị nóng hổi và sắp bàn giao cho tài xế rồi bạn nhé!">🍳 Quán đang làm món</button>
                 <button type="button" class="ai-chip"
-                  data-text="Tài xế FASTFOOD đang trên đường giao đến bạn, bạn chú ý điện thoại trong 5-10 phút tới nhé!">🛵
-                  Đang giao hàng</button>
+                  data-text="Tài xế FASTFOOD đang trên đường giao đến bạn, bạn chú ý điện thoại trong 5-10 phút tới nhé!">🛵 Đang giao hàng</button>
                 <button type="button" class="ai-chip"
-                  data-text="FASTFOOD chân thành xin lỗi bạn vì sự bất tiện này. Mình xin gửi tặng bạn mã giảm giá FASTFOOD20 cho lần đặt tiếp theo ạ!">🎁
-                  Xin lỗi &amp; Tặng mã</button>
+                  data-text="Dạ quán hoạt động từ 06:00 đến 23:30 tại 16 Hoàng Diệu, Buôn Ma Thuột. Bạn cần đặt món nào ạ?">🏠 Giờ mở cửa &amp; Địa chỉ</button>
+                <button type="button" class="ai-chip"
+                  data-text="FASTFOOD chân thành xin lỗi bạn vì sự bất tiện này. Quán xin gửi tặng bạn mã giảm giá FASTFOOD20 cho đơn hàng tiếp theo ạ!">🎁 Xin lỗi &amp; Tặng mã</button>
               </div>
             </div>
+
+            <!-- Upload Preview Strip (Initially Hidden) -->
+            <div class="admin-chat-upload-preview" id="admin-chat-upload-preview" style="display: none;">
+              <div class="admin-preview-thumb-wrap">
+                <img id="admin-preview-thumb" src="" alt="Xem trước ảnh" />
+                <button type="button" class="admin-btn-remove-preview" id="admin-btn-remove-preview" title="Hủy ảnh">&times;</button>
+              </div>
+              <div class="admin-preview-meta">
+                <span class="admin-preview-filename" id="admin-preview-filename"></span>
+                <span class="admin-preview-filesize" id="admin-preview-filesize"></span>
+              </div>
+            </div>
+
             <form class="admin-chat-form" id="admin-chat-form">
-              <input type="text" name="message" maxlength="1000" placeholder="Nhập tin nhắn..." autocomplete="off"
-                required>
-              <button type="submit">Gửi</button>
+              <div class="admin-chat-tools-cluster">
+                <button type="button" class="btn-picker-trigger" id="btn-open-product-picker" title="Mở Kho Món Ăn FASTFOOD tra cứu & 1-click gửi thẻ">
+                  <span>🍔 Kho Món Ăn</span>
+                </button>
+                <input type="file" id="admin-chat-file-input" accept="image/jpeg,image/png,image/webp" style="display: none;">
+                <button type="button" class="btn-attach-trigger" id="admin-chat-attach-btn" title="Gửi hình ảnh (JPG, PNG, WEBP tối đa 5MB)">
+                  <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                    <circle cx="12" cy="13" r="4"/>
+                  </svg>
+                </button>
+              </div>
+              <div class="admin-chat-input-wrapper">
+                <input type="text" name="message" id="admin-chat-input-field" maxlength="1000" placeholder="Nhập tin nhắn phản hồi cho khách hàng..." autocomplete="off">
+                <button type="submit" id="admin-chat-submit-btn" title="Gửi tin nhắn (Enter)">
+                  <span>Gửi</span>
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.3"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+              </div>
             </form>
             <p id="admin-chat-feedback" role="status"></p>
+
+            <!-- Kho Món Ăn FASTFOOD (Product Picker Drawer) -->
+            <aside class="admin-product-picker-drawer" id="admin-product-picker-drawer" hidden aria-label="Kho Món Ăn FASTFOOD">
+              <div class="picker-drawer-header">
+                <div class="picker-header-title">
+                  <span class="picker-header-icon">🍔</span>
+                  <div>
+                    <h3>Kho Món Ăn FASTFOOD</h3>
+                    <p>Tra cứu nhanh &amp; 1-click gửi thẻ món vào chat</p>
+                  </div>
+                </div>
+                <div class="picker-header-actions">
+                  <button type="button" class="picker-icon-btn" id="picker-btn-refresh" title="Làm mới danh sách món">
+                    <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/></svg>
+                  </button>
+                  <button type="button" class="picker-icon-btn picker-close-btn" id="picker-btn-close" title="Đóng kho món ăn (Esc)">✕</button>
+                </div>
+              </div>
+
+              <div class="picker-drawer-controls">
+                <div class="picker-search-box">
+                  <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                  <input type="text" id="picker-search-input" placeholder="Tìm tên món, mã món, danh mục..." autocomplete="off">
+                  <button type="button" id="picker-search-clear" class="picker-clear-btn" hidden title="Xóa tìm kiếm">✕</button>
+                </div>
+
+                <div class="picker-status-tabs" role="tablist">
+                  <button type="button" class="picker-tab active" data-status="all">Tất cả (<span id="picker-cnt-all">0</span>)</button>
+                  <button type="button" class="picker-tab tab-available" data-status="in_stock">Còn hàng (<span id="picker-cnt-available">0</span>)</button>
+                  <button type="button" class="picker-tab tab-out" data-status="out_of_stock">Tạm hết (<span id="picker-cnt-out">0</span>)</button>
+                  <button type="button" class="picker-tab tab-disabled" data-status="unavailable_today">Hôm nay không bán (<span id="picker-cnt-disabled">0</span>)</button>
+                </div>
+
+                <div class="picker-category-filter">
+                  <label for="picker-cat-select">Danh mục:</label>
+                  <select id="picker-cat-select" class="picker-select">
+                    <option value="all">-- Tất cả danh mục món --</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="picker-product-list" id="picker-product-list" aria-live="polite">
+                <!-- Render động danh sách món ăn qua JavaScript -->
+              </div>
+
+              <div class="picker-drawer-footer">
+                <span id="picker-status-summary">Hiển thị 0 món ăn</span>
+                <span class="picker-guide-text">⚡ Nhấp <strong>"Gửi vào chat"</strong> để gửi ngay thẻ món cho khách</span>
+              </div>
+            </aside>
           </section>
         </section>
         <!-- Section Trợ lý AI Chatbot Quản trị dành cho Admin -->
@@ -4175,89 +6208,107 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         </section>
 
         <!-- BEST SELLER & FLASH DEAL CONFIGURATION SECTION -->
-        <section class="bestseller-section" id="bestseller-section" hidden style="background:#fff; border-radius:16px; padding:24px; box-shadow:var(--shadow); border:1px solid #f1f5f9;">
-          <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e2e8f0; padding-bottom:16px; margin-bottom:20px; flex-wrap:wrap; gap:12px;">
+        <section class="bestseller-section" id="bestseller-section" hidden>
+          <div class="bs-header">
             <div>
-              <h2 style="font-size:18px; font-weight:800; color:#0f172a; margin:0 0 4px; display:flex; align-items:center; gap:8px;">
-                <span>🔥</span> Cài Đặt Mục Best Seller & Giờ Vàng Đếm Ngược
+              <h2 class="bs-header-title">
+                <span class="bs-header-icon">🔥</span>
+                <span>Cài Đặt Mục Best Seller &amp; Giờ Vàng Đếm Ngược</span>
               </h2>
-              <p style="font-size:13px; color:#64748b; margin:0;">Tùy chỉnh tiêu đề, đồng hồ đếm ngược Flash Deal và chọn danh sách món ăn bán chạy nhất hiển thị trên Trang Chủ.</p>
+              <p class="bs-header-desc">Tùy chỉnh tiêu đề, đồng hồ đếm ngược Flash Deal và chọn danh sách món ăn bán chạy nhất hiển thị trên Trang Chủ.</p>
             </div>
-            <button type="button" class="primary-button" id="btn-save-bestseller" style="background:#ea580c; border-color:#ea580c; padding:10px 22px; font-size:14px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:6px;">
+            <button type="button" class="primary-button" id="btn-save-bestseller" style="background:#ea580c; border-color:#ea580c; padding:10px 22px; font-size:14px; font-weight:700; border-radius:10px; display:inline-flex; align-items:center; gap:7px; box-shadow:0 6px 16px rgba(234,88,12,.22);">
               <span>💾</span> Lưu Cài Đặt Best Seller
             </button>
           </div>
 
-          <div style="display:grid; grid-template-columns:1.1fr 0.9fr; gap:20px; margin-bottom:24px;">
+          <div class="bs-top-grid">
             <!-- Cột trái: Thông tin tiêu đề & Đồng hồ -->
-            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:18px;">
-              <h3 style="font-size:15px; font-weight:700; margin:0 0 14px; color:#1e293b;">1. Cấu hình tiêu đề & Thời gian</h3>
+            <div class="bs-panel-card">
+              <h3 class="bs-panel-title"><span class="bs-step-num">1</span> Cấu hình tiêu đề &amp; Thời gian</h3>
 
-              <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Tiêu đề mục (Title):</label>
-                <input type="text" id="bs-cfg-title" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= escapeHtml($bsConfig['title'] ?? 'Món Ăn Bán Chạy Nhất (Best Sellers)') ?>">
+              <div class="bs-field">
+                <label class="bs-label" for="bs-cfg-title">Tiêu đề mục (Title)</label>
+                <input type="text" id="bs-cfg-title" class="bs-input" value="<?= escapeHtml($bsConfig['title'] ?? 'Món Ăn Bán Chạy Nhất (Best Sellers)') ?>">
               </div>
 
-              <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Mô tả phụ (Subtitle):</label>
-                <input type="text" id="bs-cfg-subtitle" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= escapeHtml($bsConfig['subtitle'] ?? 'Được khách hàng đặt nhiều nhất trong tuần qua - Ưu đãi giờ vàng giới hạn!') ?>">
+              <div class="bs-field">
+                <label class="bs-label" for="bs-cfg-subtitle">Mô tả phụ (Subtitle)</label>
+                <input type="text" id="bs-cfg-subtitle" class="bs-input" value="<?= escapeHtml($bsConfig['subtitle'] ?? 'Được khách hàng đặt nhiều nhất trong tuần qua - Ưu đãi giờ vàng giới hạn!') ?>">
               </div>
 
-              <div style="margin-bottom:14px;">
-                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Nhãn huy hiệu (Badge Tag):</label>
-                <input type="text" id="bs-cfg-badge" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= escapeHtml($bsConfig['badge'] ?? '🔥 GIỜ VÀNG BEST SELLER') ?>" placeholder="Ví dụ: 🔥 GIỜ VÀNG BEST SELLER">
+              <div class="bs-field">
+                <label class="bs-label" for="bs-cfg-badge">Nhãn huy hiệu (Badge Tag)</label>
+                <input type="text" id="bs-cfg-badge" class="bs-input" value="<?= escapeHtml($bsConfig['badge'] ?? '🔥 GIỜ VÀNG BEST SELLER') ?>" placeholder="Ví dụ: 🔥 GIỜ VÀNG BEST SELLER">
               </div>
 
-              <div style="margin-bottom:14px;">
-                <label style="display:flex; align-items:center; gap:8px; font-size:14px; font-weight:700; color:#0f172a; cursor:pointer;">
-                  <input type="checkbox" id="bs-cfg-timer-enabled" <?= !empty($bsConfig['timer_enabled']) ? 'checked' : '' ?> style="width:18px; height:18px; accent-color:#ea580c;">
-                  Bật đồng hồ đếm ngược Giờ Vàng (Flash Countdown Timer)
+              <div class="bs-field">
+                <label class="bs-toggle-row" for="bs-cfg-timer-enabled">
+                  <div>
+                    <span class="bs-toggle-label">Bật đồng hồ đếm ngược Giờ Vàng</span>
+                    <span class="bs-toggle-sub">Hiển thị bộ đếm ngược Flash Countdown Timer trên Bảng Cam</span>
+                  </div>
+                  <span class="bs-switch">
+                    <input type="checkbox" id="bs-cfg-timer-enabled" <?= !empty($bsConfig['timer_enabled']) ? 'checked' : '' ?>>
+                    <span class="bs-switch-slider"></span>
+                  </span>
                 </label>
               </div>
 
-              <div style="margin-bottom:14px;" id="bs-endtime-group">
-                <label style="display:block; font-size:13px; font-weight:700; color:#334155; margin-bottom:6px;">Thời điểm kết thúc đếm ngược:</label>
+              <div class="bs-field" id="bs-endtime-group" style="<?= empty($bsConfig['timer_enabled']) ? 'display:none;' : '' ?>">
+                <label class="bs-label" for="bs-cfg-enddate">Thời điểm kết thúc đếm ngược</label>
                 <?php 
-                  $rawEnd = !empty($bsConfig['end_time']) ? date('Y-m-d\TH:i', strtotime($bsConfig['end_time'])) : date('Y-m-d\TH:i', strtotime('+2 days 23:59:59'));
+                  $endTimestamp = !empty($bsConfig['end_time']) ? strtotime($bsConfig['end_time']) : strtotime('+2 days 23:59:59');
+                  if (!$endTimestamp) $endTimestamp = strtotime('+2 days 23:59:59');
+                  $rawEnd = date('Y-m-d\TH:i', $endTimestamp);
+                  $rawEndDate = date('Y-m-d', $endTimestamp);
+                  $rawEndTime = date('H:i', $endTimestamp);
                 ?>
-                <input type="datetime-local" id="bs-cfg-endtime" class="form-input" style="width:100%; padding:9px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:14px;" value="<?= $rawEnd ?>">
+                <input type="hidden" id="bs-cfg-endtime" value="<?= escapeHtml($rawEnd) ?>">
+                <div class="bs-datetime-split">
+                  <input type="date" id="bs-cfg-enddate" class="bs-input" value="<?= escapeHtml($rawEndDate) ?>" aria-label="Ngày kết thúc">
+                  <input type="time" id="bs-cfg-endtime-part" class="bs-input" value="<?= escapeHtml($rawEndTime) ?>" aria-label="Giờ kết thúc">
+                </div>
 
-                <div style="display:flex; gap:6px; margin-top:8px; flex-wrap:wrap;">
-                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="6" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+6 Tiếng</button>
-                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="12" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+12 Tiếng</button>
-                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="24" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+24 Tiếng</button>
-                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="72" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+3 Ngày</button>
-                  <button type="button" class="btn btn-outline btn-sm bs-preset-btn" data-hours="168" style="font-size:11.5px; padding:3px 8px; border-radius:6px; cursor:pointer;">+7 Ngày</button>
+                <div class="bs-preset-row">
+                  <button type="button" class="bs-preset-btn" data-hours="6">+6 Tiếng</button>
+                  <button type="button" class="bs-preset-btn" data-hours="12">+12 Tiếng</button>
+                  <button type="button" class="bs-preset-btn" data-hours="24">+24 Tiếng</button>
+                  <button type="button" class="bs-preset-btn" data-hours="72">+3 Ngày</button>
+                  <button type="button" class="bs-preset-btn" data-hours="168">+7 Ngày</button>
                 </div>
               </div>
             </div>
 
             <!-- Cột phải: Xem trước giao diện (Live Preview) -->
-            <div style="background:#fff7ed; border:1.5px dashed #fed7aa; border-radius:12px; padding:18px;">
-              <h3 style="font-size:15px; font-weight:700; margin:0 0 14px; color:#c2410c;">2. Xem trước hiển thị trên Trang Chủ</h3>
-              
-              <div style="background:#fff; border-radius:10px; padding:16px; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
-                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
-                  <div>
-                    <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
-                      <strong id="preview-bs-title" style="font-size:15px; color:#0f172a;"><?= escapeHtml($bsConfig['title'] ?? 'Món Ăn Bán Chạy Nhất (Best Sellers)') ?></strong>
-                      <span id="preview-bs-badge" style="background:#ea580c; color:#fff; font-size:10px; font-weight:800; padding:2px 6px; border-radius:10px; text-transform:uppercase;">
+            <div class="bs-preview-wrap">
+              <h3 class="bs-panel-title" style="color:#c2410c;"><span class="bs-step-num">2</span> Xem trước hiển thị trên Trang Chủ</h3>
+
+              <div class="bs-preview-board">
+                <div class="bs-preview-top">
+                  <div style="min-width:0; flex:1;">
+                    <div class="bs-preview-title-row">
+                      <strong class="bs-preview-title" id="preview-bs-title"><?= escapeHtml($bsConfig['title'] ?? 'Món Ăn Bán Chạy Nhất (Best Sellers)') ?></strong>
+                      <span class="bs-preview-badge" id="preview-bs-badge" style="<?= empty($bsConfig['badge']) ? 'display:none;' : '' ?>">
                         <?= escapeHtml($bsConfig['badge'] ?? '🔥 GIỜ VÀNG BEST SELLER') ?>
                       </span>
                     </div>
-                    <small id="preview-bs-subtitle" style="color:#64748b; font-size:12px; display:block;"><?= escapeHtml($bsConfig['subtitle'] ?? 'Được khách hàng đặt nhiều nhất trong tuần qua') ?></small>
+                    <small class="bs-preview-subtitle" id="preview-bs-subtitle"><?= escapeHtml($bsConfig['subtitle'] ?? 'Được khách hàng đặt nhiều nhất trong tuần qua') ?></small>
                   </div>
 
-                  <div id="preview-bs-timer" style="display:flex; align-items:center; gap:4px; background:#fff7ed; border:1px solid #fed7aa; padding:4px 8px; border-radius:8px; font-size:12px; font-weight:800; color:#ea580c;">
+                  <div class="bs-preview-timer" id="preview-bs-timer" style="<?= empty($bsConfig['timer_enabled']) ? 'display:none;' : '' ?>">
                     <span>⏳ Kết thúc:</span>
-                    <span style="background:#ea580c; color:#fff; padding:1px 5px; border-radius:4px;">04</span> :
-                    <span style="background:#ea580c; color:#fff; padding:1px 5px; border-radius:4px;">25</span> :
-                    <span style="background:#ea580c; color:#fff; padding:1px 5px; border-radius:4px;">18</span>
+                    <span class="bs-preview-digit" id="preview-bs-hours">00</span> :
+                    <span class="bs-preview-digit" id="preview-bs-minutes">00</span> :
+                    <span class="bs-preview-digit" id="preview-bs-seconds">00</span>
                   </div>
                 </div>
 
-                <div style="margin-top:14px; font-size:12px; color:#64748b; border-top:1px solid #f1f5f9; padding-top:10px;">
-                  <span>Đã chọn: <b id="preview-selected-count" style="color:#ea580c; font-size:14px;"><?= count($bsConfig['product_ids'] ?? [1,2,3,5]) ?></b> món ăn bán chạy</span>
+                <div class="bs-preview-products" id="preview-bs-products"></div>
+
+                <div class="bs-preview-footer">
+                  <span>Hiển thị trực tiếp trên Bảng Cam Trang Chủ</span>
+                  <span class="bs-preview-count-pill">Đã chọn <b id="preview-selected-count"><?= count($bsConfig['product_ids'] ?? [1,2,3,5]) ?></b> món</span>
                 </div>
               </div>
             </div>
@@ -4265,19 +6316,27 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
           <!-- PHẦN 3: BẢNG CHỌN MÓN ĂN LÀM BEST SELLER -->
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:10px;">
+            <div class="bs-picker-head">
               <div>
-                <h3 style="font-size:15px; font-weight:700; margin:0 0 2px; color:#1e293b;">3. Chọn danh sách món ăn Best Seller</h3>
-                <p style="font-size:12px; color:#64748b; margin:0;">Tick chọn các món muốn hiển thị tại vị trí Best Sellers trên Trang Chủ (khuyên dùng 4 hoặc 8 món).</p>
+                <h3 class="bs-panel-title" style="margin-bottom:4px;"><span class="bs-step-num">3</span> Chọn danh sách món ăn Best Seller</h3>
+                <p style="font-size:12.5px; color:#64748b; margin:0;">Tick chọn các món muốn hiển thị tại vị trí Best Sellers trên Trang Chủ (khuyên dùng 4 hoặc 8 món).</p>
               </div>
-              <div style="display:flex; align-items:center; gap:8px;">
-                <input type="text" id="bs-search-product" placeholder="Tìm tên món ăn..." style="padding:6px 12px; border:1px solid #cbd5e1; border-radius:8px; font-size:13px; width:220px;">
-                <button type="button" class="btn btn-outline btn-sm" id="btn-select-top4" style="font-size:12px; padding:6px 12px; cursor:pointer;">Chọn nhanh 4 món đầu</button>
+              <div class="bs-picker-controls">
+                <div class="bs-search-box">
+                  <span class="bs-search-icon">🔍</span>
+                  <input type="text" id="bs-search-product" placeholder="Tìm tên món ăn...">
+                </div>
+                <div class="bs-filter-tabs" role="group" aria-label="Lọc món ăn">
+                  <button type="button" class="bs-filter-tab is-active" data-bs-filter="all">Tất cả</button>
+                  <button type="button" class="bs-filter-tab" data-bs-filter="selected">Đã chọn (<span id="bs-filter-selected-count"><?= count($bsConfig['product_ids'] ?? [1,2,3,5]) ?></span>)</button>
+                </div>
+                <button type="button" class="bs-action-btn" id="btn-select-top4">✨ Chọn nhanh 4 món đầu</button>
+                <button type="button" class="bs-action-btn is-secondary" id="btn-clear-bestseller">Bỏ chọn hết</button>
               </div>
             </div>
 
-            <div style="max-height:420px; overflow-y:auto; border:1px solid #e2e8f0; border-radius:12px; padding:12px; background:#fff;">
-              <div id="bs-product-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:12px;">
+            <div class="bs-product-scroll">
+              <div id="bs-product-grid" class="bs-product-grid">
                 <?php 
                   $selectedIds = array_map('intval', $bsConfig['product_ids'] ?? [1, 2, 3, 5]);
                   foreach ($productsRaw as $p): 
@@ -4286,15 +6345,136 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                     if (strpos($pImg, 'http') !== 0) $pImg = getAssetUrl($pImg);
                     $isChecked = in_array($pId, $selectedIds);
                 ?>
-                  <label class="bs-prod-card" data-name="<?= escapeHtml(mb_strtolower($p['name'])) ?>" style="display:flex; align-items:center; gap:10px; padding:8px 12px; border:1.5px solid <?= $isChecked ? '#ea580c' : '#e2e8f0' ?>; background:<?= $isChecked ? '#fff7ed' : '#fff' ?>; border-radius:10px; cursor:pointer; transition:all .2s;">
-                    <input type="checkbox" class="bs-prod-checkbox" value="<?= $pId ?>" <?= $isChecked ? 'checked' : '' ?> style="width:18px; height:18px; accent-color:#ea580c; flex-shrink:0;">
-                    <img src="<?= escapeHtml($pImg) ?>" alt="<?= escapeHtml($p['name']) ?>" style="width:48px; height:48px; border-radius:8px; object-fit:cover; flex-shrink:0; border:1px solid #eee;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';">
-                    <div style="min-width:0; flex:1;">
-                      <strong style="display:block; font-size:13px; color:#0f172a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" title="<?= escapeHtml($p['name']) ?>"><?= escapeHtml($p['name']) ?></strong>
-                      <span style="font-size:12px; font-weight:700; color:#ea580c;"><?= formatVND($p['price']) ?></span>
+                  <label class="bs-prod-card<?= $isChecked ? ' is-selected' : '' ?>" data-name="<?= escapeHtml(mb_strtolower($p['name'])) ?>" data-title="<?= escapeHtml($p['name']) ?>" data-price="<?= escapeHtml(formatVND($p['price'])) ?>" data-img="<?= escapeHtml($pImg) ?>">
+                    <input type="checkbox" class="bs-prod-checkbox" value="<?= $pId ?>" <?= $isChecked ? 'checked' : '' ?>>
+                    <img class="bs-prod-thumb" src="<?= escapeHtml($pImg) ?>" alt="<?= escapeHtml($p['name']) ?>" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';">
+                    <div class="bs-prod-info">
+                      <strong class="bs-prod-name" title="<?= escapeHtml($p['name']) ?>"><?= escapeHtml($p['name']) ?></strong>
+                      <span class="bs-prod-price"><?= formatVND($p['price']) ?></span>
                     </div>
                   </label>
                 <?php endforeach; ?>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <?php
+          $exploreLines = [];
+          if (!empty($footerConfig['explore_links']) && is_array($footerConfig['explore_links'])) {
+              foreach ($footerConfig['explore_links'] as $el) {
+                  $exploreLines[] = ($el['label'] ?? '') . '|' . ($el['url'] ?? '');
+              }
+          }
+          $exploreText = implode("\n", $exploreLines);
+
+          $policyLines = [];
+          if (!empty($footerConfig['policy_links']) && is_array($footerConfig['policy_links'])) {
+              foreach ($footerConfig['policy_links'] as $pl) {
+                  $policyLines[] = ($pl['label'] ?? '') . '|' . ($pl['url'] ?? '');
+              }
+          }
+          $policyText = implode("\n", $policyLines);
+        ?>
+
+        <!-- FOOTER SETTINGS SECTION -->
+        <section class="bestseller-section" id="footer-settings-section" hidden>
+          <div class="bs-header">
+            <div>
+              <h2 class="bs-header-title">
+                <span class="bs-header-icon" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8);">⚙️</span>
+                <span>Cài Đặt Thông Tin Chân Trang (Footer)</span>
+              </h2>
+              <p class="bs-header-desc">Chỉnh sửa thông tin liên hệ, hotline, email, giờ hoạt động, địa chỉ và các liên kết hiển thị ở chân trang website.</p>
+            </div>
+            <button type="button" class="primary-button" id="btn-save-footer" style="background:#ea580c; border-color:#ea580c; padding:10px 22px; font-size:14px; font-weight:700; border-radius:10px; display:inline-flex; align-items:center; gap:7px; box-shadow:0 6px 16px rgba(234,88,12,.22);">
+              <span>💾</span> Lưu Cài Đặt Chân Trang
+            </button>
+          </div>
+
+          <div class="bs-top-grid">
+            <!-- Cột 1: Thông tin thương hiệu & Liên hệ -->
+            <div class="bs-panel-card">
+              <h3 class="bs-panel-title"><span class="bs-step-num">1</span> Thông tin thương hiệu &amp; Liên hệ</h3>
+
+              <div class="bs-field">
+                <label class="bs-label" for="ft-cfg-brand-desc">Giới thiệu ngắn gọn thương hiệu (Cột 1)</label>
+                <textarea id="ft-cfg-brand-desc" class="bs-input" rows="3" style="resize:vertical;"><?= escapeHtml($footerConfig['brand_desc'] ?? '') ?></textarea>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="bs-field">
+                  <label class="bs-label" for="ft-cfg-hotline">Hotline đặt món (24/7)</label>
+                  <input type="text" id="ft-cfg-hotline" class="bs-input" value="<?= escapeHtml($footerConfig['hotline'] ?? '1900 8888') ?>">
+                </div>
+
+                <div class="bs-field">
+                  <label class="bs-label" for="ft-cfg-email">Email hỗ trợ khách hàng</label>
+                  <input type="email" id="ft-cfg-email" class="bs-input" value="<?= escapeHtml($footerConfig['email'] ?? 'hotro@fastfood.vn') ?>">
+                </div>
+              </div>
+
+              <div class="bs-field">
+                <label class="bs-label" for="ft-cfg-working-hours">Giờ hoạt động phục vụ</label>
+                <input type="text" id="ft-cfg-working-hours" class="bs-input" value="<?= escapeHtml($footerConfig['working_hours'] ?? '06:00 - 23:30 hàng ngày') ?>">
+              </div>
+
+              <div class="bs-field">
+                <label class="bs-label" for="ft-cfg-address">Địa chỉ cơ sở / cửa hàng</label>
+                <input type="text" id="ft-cfg-address" class="bs-input" value="<?= escapeHtml($footerConfig['address'] ?? '16 Hoàng Diệu, P. Thắng Lợi, TP. Buôn Ma Thuột') ?>">
+              </div>
+
+              <div class="bs-field">
+                <label class="bs-label" for="ft-cfg-map-url">Đường dẫn Google Maps (Mở khi bấm icon bản đồ)</label>
+                <input type="text" id="ft-cfg-map-url" class="bs-input" value="<?= escapeHtml($footerConfig['map_url'] ?? '') ?>">
+              </div>
+
+              <div class="bs-field">
+                <label class="bs-label" for="ft-cfg-copyright">Dòng chữ bản quyền (Copyright dòng cuối)</label>
+                <input type="text" id="ft-cfg-copyright" class="bs-input" value="<?= escapeHtml($footerConfig['copyright'] ?? '') ?>">
+              </div>
+            </div>
+
+            <!-- Cột 2: Liên kết cột 2, cột 3 & Xem trước -->
+            <div class="bs-panel-card">
+              <h3 class="bs-panel-title"><span class="bs-step-num">2</span> Danh sách liên kết &amp; Xem trước</h3>
+
+              <div class="bs-field">
+                <label class="bs-label" for="ft-cfg-explore-links">
+                  Liên kết cột "Khám Phá" (Định dạng: <code>Tên hiển thị|Đường dẫn</code>)
+                </label>
+                <textarea id="ft-cfg-explore-links" class="bs-input" rows="4" style="resize:vertical; font-family:monospace; font-size:12.5px;"><?= escapeHtml($exploreText) ?></textarea>
+                <small style="color:#64748b; font-size:11.5px; margin-top:3px; display:block;">Mỗi dòng 1 liên kết. Ví dụ: Thực đơn hôm nay|foods.php</small>
+              </div>
+
+              <div class="bs-field">
+                <label class="bs-label" for="ft-cfg-policy-links">
+                  Liên kết cột "Chính Sách &amp; Hỗ Trợ" (Định dạng: <code>Tên hiển thị|Đường dẫn</code>)
+                </label>
+                <textarea id="ft-cfg-policy-links" class="bs-input" rows="4" style="resize:vertical; font-family:monospace; font-size:12.5px;"><?= escapeHtml($policyText) ?></textarea>
+                <small style="color:#64748b; font-size:11.5px; margin-top:3px; display:block;">Mỗi dòng 1 liên kết. Ví dụ: Chính sách giao hàng|policies.php</small>
+              </div>
+
+              <!-- Mini Footer Live Preview -->
+              <div style="background:#0f172a; border-radius:12px; padding:16px; margin-top:14px; color:#cbd5e1; font-size:12px; border:1px solid #1e293b;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #334155; padding-bottom:8px;">
+                  <strong style="color:#f8fafc; font-size:12.5px; display:flex; align-items:center; gap:6px;">
+                    <span>👁️</span> Bản xem trước chân trang trực tiếp
+                  </strong>
+                  <span style="background:#ea580c; color:#fff; font-size:10px; font-weight:700; padding:2px 6px; border-radius:4px;">LIVE</span>
+                </div>
+                <div style="display:grid; grid-template-columns: 1.2fr 1fr; gap:12px; line-height:1.45;">
+                  <div>
+                    <div style="color:#f97316; font-weight:800; font-size:13px; margin-bottom:4px;">FASTFOOD BMT</div>
+                    <div id="prev-ft-desc" style="color:#94a3b8; font-size:11.5px; margin-bottom:6px;"><?= escapeHtml(mb_substr($footerConfig['brand_desc'] ?? '', 0, 70)) ?>...</div>
+                    <div style="color:#38bdf8;">📞 <span id="prev-ft-hotline"><?= escapeHtml($footerConfig['hotline'] ?? '') ?></span></div>
+                  </div>
+                  <div>
+                    <div style="color:#f8fafc; font-weight:700; font-size:12px; margin-bottom:3px;">Tổng Đài Hỗ Trợ</div>
+                    <div style="color:#94a3b8; font-size:11.5px;">⏰ <span id="prev-ft-hours"><?= escapeHtml($footerConfig['working_hours'] ?? '') ?></span></div>
+                    <div style="color:#94a3b8; font-size:11.5px;">📍 <span id="prev-ft-addr"><?= escapeHtml(mb_substr($footerConfig['address'] ?? '', 0, 30)) ?>...</span></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -4321,6 +6501,48 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
   </dialog>
   <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
 
+  <script>
+    // Global Admin Messages Nav Badge API
+    (function () {
+      window.getMessagesNavBadgeCount = function () {
+        const badge = document.getElementById('messages-nav-badge');
+        if (!badge) return 0;
+        if (badge.hasAttribute('hidden') || badge.style.display === 'none') return 0;
+        const text = (badge.textContent || '').trim();
+        if (!text) return 0;
+        if (text === '99+') return 100;
+        const parsed = parseInt(text, 10);
+        return isNaN(parsed) ? 0 : Math.max(0, parsed);
+      };
+
+      window.updateMessagesNavBadge = function (count) {
+        const badge = document.getElementById('messages-nav-badge');
+        if (!badge) return;
+        const parsedCount = parseInt(count, 10);
+        const finalCount = isNaN(parsedCount) ? 0 : Math.max(0, parsedCount);
+
+        if (finalCount > 0) {
+          badge.textContent = finalCount > 99 ? '99+' : String(finalCount);
+          badge.removeAttribute('hidden');
+          badge.style.display = '';
+        } else {
+          badge.textContent = '0';
+          badge.setAttribute('hidden', '');
+        }
+      };
+
+      window.clearMessagesBadge = function () {
+        window.updateMessagesNavBadge(0);
+      };
+
+      window.addEventListener('support:unread_count', function (event) {
+        const count = event && event.detail !== undefined
+          ? (typeof event.detail === 'object' && event.detail !== null && event.detail.count !== undefined ? event.detail.count : event.detail)
+          : 0;
+        window.updateMessagesNavBadge(count);
+      });
+    })();
+  </script>
   <script src="/socket.io/socket.io.js"></script>
   <script src="/js/data.js"></script>
   <script src="/js/realtime.js"></script>
@@ -4498,6 +6720,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         });
         liveSocket.on('notification:new', (notification) => {
           handleIncomingNotification(notification);
+        });
+        liveSocket.on('support:unread_count', ({ count } = {}) => {
+          if (typeof window.updateMessagesNavBadge === 'function') {
+            window.updateMessagesNavBadge(count);
+          }
         });
         window.addEventListener('fastfood:notification-new', (event) => {
           if (event.detail) handleIncomingNotification(event.detail);
@@ -4729,6 +6956,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       const tablePanel = document.getElementById('table-title').closest('.table-panel');
       const reviewsSection = document.getElementById('reviews-section');
       const bestsellerSection = document.getElementById('bestseller-section');
+      const footerSettingsSection = document.getElementById('footer-settings-section');
       const reviewsList = document.getElementById('reviews-list');
       const reviewsCount = document.getElementById('reviews-count');
       reviewsUiReady = true;
@@ -5798,11 +8026,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       function renderSection() {
         const section = sections[activeSection];
         const addButton = document.getElementById('add-button');
-        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller') {
+        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'footer-settings') {
           const isMessages = activeSection === 'messages';
           const isReviews = activeSection === 'reviews';
           const isAiBot = activeSection === 'ai-bot';
           const isBestseller = activeSection === 'bestseller';
+          const isFooterSettings = activeSection === 'footer-settings';
           let sectionTitle = 'Tin nhắn khách hàng';
           let sectionDesc = 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.';
           if (isReviews) {
@@ -5814,6 +8043,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           } else if (isBestseller) {
             sectionTitle = 'Cài Đặt Best Seller & Giờ Vàng';
             sectionDesc = 'Tùy chỉnh thời gian đếm ngược Flash Deal và chọn danh sách món ăn bán chạy nhất.';
+          } else if (isFooterSettings) {
+            sectionTitle = 'Cài Đặt Chân Trang (Footer)';
+            sectionDesc = 'Chỉnh sửa thông tin liên hệ, hotline, email, địa chỉ và các liên kết hiển thị ở chân trang.';
           }
           document.getElementById('breadcrumb').textContent = isAiBot ? 'Trợ lý AI Chatbot' : sectionTitle;
           document.getElementById('page-title').textContent = sectionTitle;
@@ -5828,6 +8060,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           reviewsSection.hidden = !isReviews;
           if (aiBotSection) aiBotSection.hidden = !isAiBot;
           if (bestsellerSection) bestsellerSection.hidden = !isBestseller;
+          if (footerSettingsSection) footerSettingsSection.hidden = !isFooterSettings;
           window.adminChatInbox?.setActive(isMessages);
           if (isReviews) {
             clearReviewsBadge();
@@ -5840,6 +8073,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         reviewsSection.hidden = true;
         if (aiBotSection) aiBotSection.hidden = true;
         if (bestsellerSection) bestsellerSection.hidden = true;
+        if (footerSettingsSection) footerSettingsSection.hidden = true;
         tablePanel.hidden = false;
         window.adminChatInbox?.setActive(false);
         const collection = section.collection;
@@ -6041,7 +8275,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller') return;
+        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'footer-settings') return;
         if (activeSection === 'reviews') {
           reviewSearchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
           renderOrderReviews(renderedReviews);
@@ -6057,7 +8291,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           renderOrderReviews(renderedReviews);
           return;
         }
-        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot' && activeSection !== 'bestseller') {
+        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot' && activeSection !== 'bestseller' && activeSection !== 'footer-settings') {
           searchTerm = '';
           currentPage = 1;
           renderTable();
@@ -6220,7 +8454,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       const urlParams = new URLSearchParams(window.location.search);
       const initialSection = urlParams.get('section') || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
-      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller')) {
+      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller' || initialSection === 'footer-settings')) {
         const targetBtn = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
         if (targetBtn) {
           activeSection = initialSection;
@@ -6417,13 +8651,100 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       const bsBadgeInput = document.getElementById('bs-cfg-badge');
       const bsTimerEnabled = document.getElementById('bs-cfg-timer-enabled');
       const bsEndTimeInput = document.getElementById('bs-cfg-endtime');
+      const bsEndDatePart = document.getElementById('bs-cfg-enddate');
+      const bsEndTimePart = document.getElementById('bs-cfg-endtime-part');
       const bsEndTimeGroup = document.getElementById('bs-endtime-group');
+      const bsSearchInput = document.getElementById('bs-search-product');
 
       const prevTitle = document.getElementById('preview-bs-title');
       const prevSubtitle = document.getElementById('preview-bs-subtitle');
       const prevBadge = document.getElementById('preview-bs-badge');
       const prevTimer = document.getElementById('preview-bs-timer');
+      const prevHours = document.getElementById('preview-bs-hours');
+      const prevMinutes = document.getElementById('preview-bs-minutes');
+      const prevSeconds = document.getElementById('preview-bs-seconds');
+      const prevProductsEl = document.getElementById('preview-bs-products');
       const prevCount = document.getElementById('preview-selected-count');
+      const filterSelectedCount = document.getElementById('bs-filter-selected-count');
+      let bsActiveFilter = 'all';
+
+      function syncHiddenEndTimeFromParts() {
+        if (!bsEndTimeInput) return;
+        const d = bsEndDatePart?.value || '';
+        const t = bsEndTimePart?.value || '23:59';
+        bsEndTimeInput.value = d ? `${d}T${t}` : '';
+        updatePreviewCountdown();
+      }
+
+      function updatePreviewCountdown() {
+        if (!prevHours || !prevMinutes || !prevSeconds) return;
+        const raw = bsEndTimeInput?.value || '';
+        if (!raw) {
+          prevHours.textContent = '00';
+          prevMinutes.textContent = '00';
+          prevSeconds.textContent = '00';
+          return;
+        }
+        const targetMs = new Date(raw.replace('T', ' ').replace(/-/g, '/') + ':00').getTime();
+        let diff = Number.isFinite(targetMs) ? Math.max(0, Math.floor((targetMs - Date.now()) / 1000)) : 0;
+        const hrs = Math.floor(diff / 3600);
+        diff %= 3600;
+        const mins = Math.floor(diff / 60);
+        const secs = diff % 60;
+        prevHours.textContent = String(hrs).padStart(2, '0');
+        prevMinutes.textContent = String(mins).padStart(2, '0');
+        prevSeconds.textContent = String(secs).padStart(2, '0');
+      }
+
+      function syncTimerVisibility() {
+        const isEnabled = Boolean(bsTimerEnabled?.checked);
+        if (bsEndTimeGroup) bsEndTimeGroup.style.display = isEnabled ? 'block' : 'none';
+        if (prevTimer) prevTimer.style.display = isEnabled ? 'inline-flex' : 'none';
+      }
+
+      function renderPreviewProducts() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.bs-prod-checkbox:checked'));
+        if (prevCount) prevCount.textContent = checkedBoxes.length;
+        if (filterSelectedCount) filterSelectedCount.textContent = checkedBoxes.length;
+        if (!prevProductsEl) return;
+
+        if (checkedBoxes.length === 0) {
+          prevProductsEl.innerHTML = '<div style="grid-column:1 / -1; background:rgba(255,255,255,0.16); border:1px dashed rgba(255,255,255,0.4); border-radius:10px; padding:14px; text-align:center; font-size:12px; color:#fff;">Chưa chọn món nào — hãy tick chọn món ăn ở mục 3 bên dưới.</div>';
+          return;
+        }
+
+        const previewItems = checkedBoxes.slice(0, 4).map((cb) => {
+          const card = cb.closest('.bs-prod-card');
+          const title = card?.dataset.title || '';
+          const price = card?.dataset.price || '';
+          const img = card?.dataset.img || '';
+          return `
+            <div class="bs-preview-mini-card">
+              <img src="${escapeHtml(img)}" alt="${escapeHtml(title)}">
+              <div class="bs-preview-mini-info">
+                <strong class="bs-preview-mini-name">${escapeHtml(title)}</strong>
+                <span class="bs-preview-mini-price">${escapeHtml(price)}</span>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        const extraNote = checkedBoxes.length > 4
+          ? `<div style="grid-column:1 / -1; text-align:right; font-size:11px; color:rgba(255,255,255,0.92); font-weight:600;">+ ${checkedBoxes.length - 4} món khác sẽ hiển thị cùng trên Trang Chủ</div>`
+          : '';
+        prevProductsEl.innerHTML = previewItems + extraNote;
+      }
+
+      function applyProductFilter() {
+        const term = (bsSearchInput?.value || '').trim().toLowerCase();
+        document.querySelectorAll('.bs-prod-card').forEach(card => {
+          const name = card.dataset.name || '';
+          const cb = card.querySelector('.bs-prod-checkbox');
+          const matchesTerm = !term || name.includes(term);
+          const matchesTab = bsActiveFilter !== 'selected' || Boolean(cb?.checked);
+          card.style.display = (matchesTerm && matchesTab) ? 'flex' : 'none';
+        });
+      }
 
       // Bind input to live preview
       bsTitleInput?.addEventListener('input', () => {
@@ -6433,12 +8754,19 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (prevSubtitle) prevSubtitle.textContent = bsSubtitleInput.value.trim() || '';
       });
       bsBadgeInput?.addEventListener('input', () => {
-        if (prevBadge) prevBadge.textContent = bsBadgeInput.value.trim() || '';
+        if (!prevBadge) return;
+        const val = bsBadgeInput.value.trim();
+        prevBadge.textContent = val;
+        prevBadge.style.display = val ? 'inline-flex' : 'none';
       });
-      bsTimerEnabled?.addEventListener('change', () => {
-        const isEnabled = bsTimerEnabled.checked;
-        if (bsEndTimeGroup) bsEndTimeGroup.style.display = isEnabled ? 'block' : 'none';
-        if (prevTimer) prevTimer.style.display = isEnabled ? 'flex' : 'none';
+      bsTimerEnabled?.addEventListener('change', syncTimerVisibility);
+      bsEndDatePart?.addEventListener('change', () => {
+        document.querySelectorAll('.bs-preset-btn').forEach(b => b.classList.remove('is-active'));
+        syncHiddenEndTimeFromParts();
+      });
+      bsEndTimePart?.addEventListener('change', () => {
+        document.querySelectorAll('.bs-preset-btn').forEach(b => b.classList.remove('is-active'));
+        syncHiddenEndTimeFromParts();
       });
 
       // Preset buttons (+6h, +12h, etc.)
@@ -6451,27 +8779,32 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           const dd = String(target.getDate()).padStart(2, '0');
           const hh = String(target.getHours()).padStart(2, '0');
           const mi = String(target.getMinutes()).padStart(2, '0');
-          if (bsEndTimeInput) {
-            bsEndTimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
-          }
+          if (bsEndDatePart) bsEndDatePart.value = `${yyyy}-${mm}-${dd}`;
+          if (bsEndTimePart) bsEndTimePart.value = `${hh}:${mi}`;
+          if (bsEndTimeInput) bsEndTimeInput.value = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+          document.querySelectorAll('.bs-preset-btn').forEach(b => b.classList.remove('is-active'));
+          btn.classList.add('is-active');
+          updatePreviewCountdown();
           showToast(`Đã chỉnh thời gian kết thúc: +${hours} tiếng`, false);
         });
       });
 
       // Product selection checkboxes
-      function updateBsSelectedCount() {
-        const checked = document.querySelectorAll('.bs-prod-checkbox:checked');
-        if (prevCount) prevCount.textContent = checked.length;
-      }
-
       document.querySelectorAll('.bs-prod-checkbox').forEach(cb => {
         cb.addEventListener('change', () => {
           const card = cb.closest('.bs-prod-card');
-          if (card) {
-            card.style.borderColor = cb.checked ? '#ea580c' : '#e2e8f0';
-            card.style.background = cb.checked ? '#fff7ed' : '#fff';
-          }
-          updateBsSelectedCount();
+          if (card) card.classList.toggle('is-selected', cb.checked);
+          renderPreviewProducts();
+          applyProductFilter();
+        });
+      });
+
+      // Filter tabs (Tất cả / Đã chọn)
+      document.querySelectorAll('.bs-filter-tab').forEach(tab => {
+        tab.addEventListener('click', () => {
+          bsActiveFilter = tab.dataset.bsFilter || 'all';
+          document.querySelectorAll('.bs-filter-tab').forEach(t => t.classList.toggle('is-active', t === tab));
+          applyProductFilter();
         });
       });
 
@@ -6480,24 +8813,31 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         const allBoxes = Array.from(document.querySelectorAll('.bs-prod-checkbox'));
         allBoxes.forEach((cb, idx) => {
           cb.checked = (idx < 4);
-          const card = cb.closest('.bs-prod-card');
-          if (card) {
-            card.style.borderColor = cb.checked ? '#ea580c' : '#e2e8f0';
-            card.style.background = cb.checked ? '#fff7ed' : '#fff';
-          }
+          cb.closest('.bs-prod-card')?.classList.toggle('is-selected', cb.checked);
         });
-        updateBsSelectedCount();
+        renderPreviewProducts();
+        applyProductFilter();
         showToast('Đã chọn nhanh 4 món đầu tiên làm Best Seller!');
       });
 
-      // Search in product selection grid
-      document.getElementById('bs-search-product')?.addEventListener('input', (e) => {
-        const term = e.target.value.trim().toLowerCase();
-        document.querySelectorAll('.bs-prod-card').forEach(card => {
-          const name = card.dataset.name || '';
-          card.style.display = (!term || name.includes(term)) ? 'flex' : 'none';
+      // "Bỏ chọn hết"
+      document.getElementById('btn-clear-bestseller')?.addEventListener('click', () => {
+        document.querySelectorAll('.bs-prod-checkbox').forEach(cb => {
+          cb.checked = false;
+          cb.closest('.bs-prod-card')?.classList.remove('is-selected');
         });
+        renderPreviewProducts();
+        applyProductFilter();
       });
+
+      // Search in product selection grid
+      bsSearchInput?.addEventListener('input', applyProductFilter);
+
+      // Initialize preview state & live ticker
+      syncTimerVisibility();
+      renderPreviewProducts();
+      updatePreviewCountdown();
+      setInterval(updatePreviewCountdown, 1000);
 
       // Save Best Seller configuration
       document.getElementById('btn-save-bestseller')?.addEventListener('click', async () => {
@@ -6562,6 +8902,99 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         }
       });
 
+      // === CÀI ĐẶT THÔNG TIN CHÂN TRANG (FOOTER SETTINGS) LOGIC ===
+      function updateFooterLivePreview() {
+        const desc = document.getElementById('ft-cfg-brand-desc')?.value || '';
+        const hotline = document.getElementById('ft-cfg-hotline')?.value || '';
+        const hours = document.getElementById('ft-cfg-working-hours')?.value || '';
+        const addr = document.getElementById('ft-cfg-address')?.value || '';
+
+        const prevDesc = document.getElementById('prev-ft-desc');
+        const prevHotline = document.getElementById('prev-ft-hotline');
+        const prevHours = document.getElementById('prev-ft-hours');
+        const prevAddr = document.getElementById('prev-ft-addr');
+
+        if (prevDesc) prevDesc.textContent = (desc.length > 70 ? desc.substring(0, 70) + '...' : desc);
+        if (prevHotline) prevHotline.textContent = hotline;
+        if (prevHours) prevHours.textContent = hours;
+        if (prevAddr) prevAddr.textContent = (addr.length > 30 ? addr.substring(0, 30) + '...' : addr);
+      }
+
+      ['ft-cfg-brand-desc', 'ft-cfg-hotline', 'ft-cfg-working-hours', 'ft-cfg-address'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('input', updateFooterLivePreview);
+      });
+
+      document.getElementById('btn-save-footer')?.addEventListener('click', async () => {
+        const saveBtn = document.getElementById('btn-save-footer');
+        const brandDesc = document.getElementById('ft-cfg-brand-desc')?.value.trim() || '';
+        const hotline = document.getElementById('ft-cfg-hotline')?.value.trim() || '';
+        const email = document.getElementById('ft-cfg-email')?.value.trim() || '';
+        const workingHours = document.getElementById('ft-cfg-working-hours')?.value.trim() || '';
+        const address = document.getElementById('ft-cfg-address')?.value.trim() || '';
+        const mapUrl = document.getElementById('ft-cfg-map-url')?.value.trim() || '';
+        const copyright = document.getElementById('ft-cfg-copyright')?.value.trim() || '';
+
+        // Parse explore links
+        const rawExplore = document.getElementById('ft-cfg-explore-links')?.value || '';
+        const exploreLinks = rawExplore.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => {
+          const parts = line.split('|');
+          return { label: parts[0]?.trim() || '', url: parts[1]?.trim() || '#' };
+        });
+
+        // Parse policy links
+        const rawPolicy = document.getElementById('ft-cfg-policy-links')?.value || '';
+        const policyLinks = rawPolicy.split('\n').map((l) => l.trim()).filter(Boolean).map((line) => {
+          const parts = line.split('|');
+          return { label: parts[0]?.trim() || '', url: parts[1]?.trim() || '#' };
+        });
+
+        const payload = {
+          records: {
+            brand_desc: brandDesc,
+            hotline: hotline,
+            email: email,
+            working_hours: workingHours,
+            address: address,
+            map_url: mapUrl,
+            copyright: copyright,
+            explore_links: exploreLinks,
+            policy_links: policyLinks
+          }
+        };
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳</span> Đang lưu...';
+
+        try {
+          const res = await fetch('/api/v1/realtime/content/footer_settings', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ' + (sessionStorage.getItem('fastfood_auth_token') || serverToken)
+            },
+            body: JSON.stringify(payload)
+          });
+
+          const result = await res.json();
+          if (!res.ok || result.success === false) {
+            throw new Error(result.message || 'Không thể lưu cài đặt chân trang.');
+          }
+
+          showToast('✅ Đã lưu cài đặt thông tin Chân Trang (Footer) thành công!');
+
+          // Đồng bộ BroadcastChannel nếu có
+          try {
+            const channel = new BroadcastChannel('fastfood_realtime');
+            channel.postMessage({ type: 'content:updated', collection: 'footer_settings' });
+          } catch(e) {}
+        } catch (err) {
+          showToast('Lỗi: ' + err.message, true);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾</span> Lưu Cài Đặt Chân Trang';
+        }
+      });
+
       document.getElementById('today-label').textContent = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
       renderAll();
       loadOrderReviews({ silent: true });
@@ -6574,6 +9007,15 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       pendingPaymentEvents.forEach(handlePaymentUpdate);
     })();
   </script>
+
+  <!-- Admin Chat Lightbox Modal for Image Zoom -->
+  <div class="admin-chat-lightbox-modal" id="admin-chat-lightbox-modal" hidden role="dialog" aria-modal="true" aria-label="Xem ảnh phóng to">
+    <div class="admin-lightbox-backdrop" id="admin-lightbox-backdrop"></div>
+    <div class="admin-lightbox-container">
+      <img id="admin-lightbox-image" src="" alt="Ảnh phóng to" />
+      <button type="button" class="admin-lightbox-close" id="admin-lightbox-close" aria-label="Đóng (Esc)">✕</button>
+    </div>
+  </div>
 </body>
 
 </html>

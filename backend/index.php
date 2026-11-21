@@ -2,6 +2,7 @@
 /**
  * FASTFOOD - Backend API Entry Point (PHP Native)
  */
+date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 // Autoload FastFood namespace
 spl_autoload_register(function ($class) {

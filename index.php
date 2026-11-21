@@ -63,35 +63,10 @@ $reviews = $db->query("SELECT r.*, u.full_name, u.avatar_url
                        LEFT JOIN users u ON r.user_id = u.id 
                        ORDER BY r.id DESC LIMIT 3")->fetchAll();
 
-// 6. Kiểm tra quà tặng thành viên mới
-$showWelcomeVoucher = false;
-if (!empty($_SESSION['welcome_discount_applied'])) {
-    $showWelcomeVoucher = true;
-    unset($_SESSION['welcome_discount_applied']);
-}
-
 require_once ROOT_PATH . '/includes/header.php';
 ?>
 
 <main class="container">
-  <?php if ($showWelcomeVoucher): ?>
-    <div style="background: linear-gradient(135deg, #ea580c 0%, #f97316 100%); color: #fff; padding: 1.25rem 1.75rem; border-radius: 16px; margin: 1.5rem 0 2rem; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 10px 25px rgba(234, 88, 12, 0.25); position: relative; flex-wrap: wrap; gap: 1rem;">
-      <div style="display: flex; align-items: center; gap: 1rem;">
-        <span style="font-size: 2.5rem; flex-shrink: 0;">🎉</span>
-        <div>
-          <h3 style="font-size: 1.25rem; font-weight: 800; margin: 0 0 0.25rem; color: #fff;">
-            Chào mừng bạn mới! Nhận ngay Voucher Giảm 50%
-          </h3>
-          <p style="font-size: 0.92rem; margin: 0; opacity: 0.95;">
-            Mã <strong>NEW50</strong> (Giảm 50% giá trị món ăn) đã được tự động áp dụng vào giỏ hàng của bạn. Hãy chọn món và thưởng thức ngay!
-          </p>
-        </div>
-      </div>
-      <a href="<?= getUrl('foods.php') ?>" class="btn btn-light" style="white-space: nowrap; font-weight: 700; color: #ea580c; background: #fff; border-radius: 9999px; padding: 0.6rem 1.4rem;">
-        Đặt Món Ngay ➔
-      </a>
-    </div>
-  <?php endif; ?>
   <!-- 1. HERO SLIDER & BANNER -->
   <section class="hero-section">
     <div class="hero-slider-container" aria-label="Món ăn nổi bật">

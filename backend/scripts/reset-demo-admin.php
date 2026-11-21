@@ -2,10 +2,12 @@
 /**
  * Reset Demo Admin (PHP)
  */
+require_once dirname(__DIR__) . '/src/config/Database.php';
+
+use FastFood\Config\Database;
+
 try {
-    $pdo = new PDO("mysql:host=127.0.0.1;dbname=fastfood_db;charset=utf8mb4", 'root', '', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = Database::getConnection();
     $hash = password_hash('123456', PASSWORD_BCRYPT);
     $stmt = $pdo->prepare("UPDATE users SET password_hash = ?, status = 'active' WHERE email = 'admin@fastfood.vn'");
     $stmt->execute([$hash]);

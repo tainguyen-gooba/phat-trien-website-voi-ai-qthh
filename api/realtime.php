@@ -3,6 +3,7 @@
  * FASTFOOD - Realtime Engine API (/api/realtime.php)
  * Hỗ trợ Polling & Đồng bộ Realtime Đơn Hàng và Chat giữa các Tab
  */
+date_default_timezone_set('Asia/Ho_Chi_Minh');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
@@ -18,6 +19,11 @@ require_once ROOT_PATH . '/helpers/response.php';
 $db = getDB();
 $currentUser = currentUser();
 $isAdminUser = isAdminOrStaff();
+
+// Mở khóa file session ngay lập tức để giải phóng tài nguyên cho server
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
 
 $raw = file_get_contents('php://input');
 $body = json_decode($raw, true) ?: [];
@@ -84,6 +90,7 @@ switch ($action) {
 
         // C. Lấy tin nhắn chat mới
         $newMessages = [];
+        $unreadChatCount = 0;
         if ($isAdminUser) {
             // Admin nhận tất cả tin nhắn mới
             if ($lastChatId > 0) {
@@ -94,6 +101,13 @@ switch ($action) {
                                       ORDER BY m.id ASC LIMIT 50");
                 $stmt->execute([$lastChatId]);
                 $newMessages = $stmt->fetchAll();
+            }
+
+            // Đếm tổng tin nhắn chưa đọc từ khách hàng cho Admin
+            try {
+                $unreadChatCount = (int)$db->query("SELECT COUNT(*) FROM ai_chat_messages WHERE sender = 'user' AND is_read = 0")->fetchColumn();
+            } catch (\Exception $e) {
+                $unreadChatCount = 0;
             }
         } elseif ($customerId > 0) {
             // Khách chỉ nhận tin nhắn của chính họ
@@ -110,14 +124,20 @@ switch ($action) {
         $maxOrderId = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM orders")->fetchColumn();
         $maxChatId  = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM chat_messages")->fetchColumn();
 
-        jsonSuccess('Poll thành công', [
+        $pollData = [
             'newOrders'    => $newOrders,
             'newMessages'  => $newMessages,
             'trackedOrder' => $trackedOrder,
             'maxOrderId'   => $maxOrderId,
             'maxChatId'    => $maxChatId,
             'serverTime'   => date('Y-m-d H:i:s')
-        ]);
+        ];
+
+        if ($isAdminUser) {
+            $pollData['unreadChatCount'] = $unreadChatCount;
+        }
+
+        jsonSuccess('Poll thành công', $pollData);
         break;
 
     /**
@@ -127,6 +147,7 @@ switch ($action) {
         $message = trim($body['message'] ?? $_POST['message'] ?? '');
         $targetCustomerId = (int)($body['customerId'] ?? $_POST['customerId'] ?? 0);
         $senderRole = 'customer';
+        $isRead = 0;
 
         if (!$message) {
             jsonError('Tin nhắn không được để trống.');
@@ -138,6 +159,7 @@ switch ($action) {
             if ($targetCustomerId <= 0) {
                 jsonError('Admin cần chọn khách hàng để phản hồi.');
             }
+            $isRead = 1;
         } else {
             $senderRole = 'customer';
             $senderId = $currentUser['id'] ?? 0;
@@ -147,11 +169,12 @@ switch ($action) {
             if ($targetCustomerId <= 0) {
                 $targetCustomerId = 7; // Khách vãng lai mặc định
             }
+            $isRead = 0;
         }
 
-        $stmt = $db->prepare("INSERT INTO chat_messages (customer_id, sender_id, sender_role, message, created_at)
-                              VALUES (?, ?, ?, ?, NOW())");
-        $stmt->execute([$targetCustomerId, $senderId, $senderRole, $message]);
+        $stmt = $db->prepare("INSERT INTO chat_messages (customer_id, sender_id, sender_role, message, is_read, created_at)
+                              VALUES (?, ?, ?, ?, ?, NOW())");
+        $stmt->execute([$targetCustomerId, $senderId, $senderRole, $message, $isRead]);
         $msgId = (int)$db->lastInsertId();
 
         $msgRecord = [
@@ -161,6 +184,8 @@ switch ($action) {
             'senderRole'  => $senderRole,
             'sender'      => $senderRole,
             'message'     => $message,
+            'isRead'      => $isRead,
+            'is_read'     => $isRead,
             'createdAt'   => date('Y-m-d H:i:s'),
             'time'        => date('H:i')
         ];

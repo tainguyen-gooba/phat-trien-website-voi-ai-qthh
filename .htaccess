@@ -1,0 +1,6 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Chuyển tiếp API v1 sang backend/index.php
+    RewriteRule ^api/v1(?:/.*)?$ backend/index.php [QSA,L]
+</IfModule>

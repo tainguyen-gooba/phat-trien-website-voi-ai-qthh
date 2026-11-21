@@ -3,14 +3,16 @@
  * FASTFOOD Realtime Tables Migration (PHP)
  * Chạy lệnh: php backend/scripts/migrate-realtime.php
  */
+require_once dirname(__DIR__) . '/src/config/Database.php';
+
+use FastFood\Config\Database;
+
 echo "====================================================\n";
 echo "      MIGRATE CƠ SỞ DỮ LIỆU REALTIME (PHP)          \n";
 echo "====================================================\n";
 
 try {
-    $pdo = new PDO("mysql:host=127.0.0.1;dbname=fastfood_db;charset=utf8mb4", 'root', '', [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
-    ]);
+    $pdo = Database::getConnection();
 
     $pdo->exec("
       CREATE TABLE IF NOT EXISTS website_content (

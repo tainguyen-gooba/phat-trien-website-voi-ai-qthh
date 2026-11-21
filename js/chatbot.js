@@ -22,20 +22,22 @@
   }
 
   const FRONTEND_BASE = detectFrontendBaseUrl();
-  const API_BASE = window.location.port === '5000'
-    ? `${window.location.origin}/api/v1/chat`
-    : 'http://localhost:5000/api/v1/chat';
+  const API_BASE = (window.location.port === '5000' || window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
+    ? (window.location.port === '5000' ? `${window.location.origin}/api/v1/chat` : 'http://127.0.0.1:5000/api/v1/chat')
+    : `${window.location.origin}/api/v1/chat`;
 
   const FASTFOODChatbot = {
     isOpen: false,
     isExpanded: false,
-    sessionId: null,
+    currentChannel: 'ai', // 'ai' (Trợ lý AI 24/7) hoặc 'admin' (Chat tay với Admin)
+    aiSessionId: null,
+    adminSessionId: null,
     isSubmitting: false,
     initialized: false,
     lastRenderedMsgId: 0,
     renderedMessageIds: new Set(),
     pollTimer: null,
-    supportStatus: { adminOnline: false, effectiveBusy: true, aiPaused: false },
+    supportStatus: { adminOnline: true, effectiveBusy: false, aiPaused: false },
     elements: {},
 
     async init() {
@@ -103,7 +105,7 @@
       wrapper.id = 'ff-chatbot-wrapper';
       wrapper.className = 'ff-chatbot-wrapper';
       wrapper.innerHTML = `
-        <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat Nhân viên hỗ trợ" title="Chat với Nhân viên hỗ trợ FASTFOOD">
+        <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat hỗ trợ" title="Hỗ trợ & Tư vấn FASTFOOD">
           <div class="ff-trigger-glow"></div>
           <div class="ff-trigger-icon-wrap">
             <svg class="ff-icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -113,21 +115,20 @@
             <svg class="ff-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </div>
           <span class="ff-trigger-badge">24/7</span>
-          <span class="ff-trigger-tooltip">Nhắn với Nhân viên hỗ trợ FASTFOOD!</span>
+          <span class="ff-trigger-tooltip">Hỏi AI & Liên hệ với cửa hàng!</span>
         </button>
-        <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện với Nhân viên hỗ trợ" hidden>
+        <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện hỗ trợ" hidden>
           <header class="ff-chat-header">
             <div class="ff-header-identity">
               <div class="ff-avatar-wrap">
-                <span class="ff-avatar-icon" id="ff-header-avatar">👨‍💼</span>
+                <span class="ff-avatar-icon" id="ff-header-avatar">🤖</span>
                 <span class="ff-status-dot online" id="ff-header-status-dot"></span>
               </div>
               <div class="ff-header-info">
                 <div class="ff-header-title-row">
-                  <h3 class="ff-chat-name">Nhân viên hỗ trợ</h3>
-                  <span class="ff-verified-badge">✓</span>
+                  <h3 class="ff-chat-name" id="ff-chat-title">Trợ lý AI FASTFOOD</h3>
                 </div>
-                <p class="ff-chat-status" id="ff-chat-status-text">Hỗ trợ khách hàng trực tuyến 24/7</p>
+                <p class="ff-chat-status" id="ff-chat-status-text">Hỏi AI món ngon, giá cả & khuyến mãi 24/7</p>
               </div>
             </div>
             <div class="ff-header-actions">
@@ -137,15 +138,31 @@
               <button type="button" class="ff-btn-icon ff-btn-close" id="ff-btn-close" title="Đóng chat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></button>
             </div>
           </header>
-          <div class="ff-chat-body" id="ff-chat-body" aria-live="polite"></div>
-          <div class="ff-chat-typing" id="ff-chat-typing" hidden>
-            <div class="ff-typing-avatar">👨‍💼</div>
-            <div class="ff-typing-bubble">
-              <span>Nhân viên hỗ trợ đang phản hồi</span>
-              <div class="ff-typing-dots"><span></span><span></span><span></span></div>
+
+          <div class="ff-chat-tabs-bar" id="ff-chat-tabs-bar" role="tablist">
+            <button type="button" class="ff-chat-tab active" id="ff-tab-ai" data-channel="ai" role="tab" aria-selected="true">
+              <span class="ff-tab-emoji">🤖</span>
+              <span class="ff-tab-title">Trợ lý AI 24/7</span>
+            </button>
+            <button type="button" class="ff-chat-tab" id="ff-tab-admin" data-channel="admin" role="tab" aria-selected="false">
+              <span class="ff-tab-emoji">👨‍💼</span>
+              <span class="ff-tab-title">Liên hệ với cửa hàng</span>
+              <span class="ff-tab-unread-dot" id="ff-tab-admin-dot" style="display: none;"></span>
+            </button>
+          </div>
+
+          <div class="ff-chat-body" id="ff-chat-body-ai" aria-live="polite"></div>
+          <div class="ff-chat-body" id="ff-chat-body-admin" aria-live="polite" style="display: none;">
+            <div class="ff-direct-notice">
+              <span class="ff-direct-notice-icon">👨‍💼</span>
+              <div class="ff-direct-notice-text">
+                <strong>Kênh Liên Hệ Với Cửa Hàng</strong>
+                <p>Tin nhắn tại đây được gửi trực tiếp đến Cửa hàng FASTFOOD (Chat tay 100%, không qua AI).</p>
+              </div>
             </div>
           </div>
-          <div class="ff-quick-chips-wrap">
+
+          <div class="ff-quick-chips-wrap" id="ff-quick-chips-wrap">
             <div class="ff-quick-chips" id="ff-quick-chips">
               <button type="button" class="ff-chip-item" data-query="Hôm nay ăn gì?">🍜 Hôm nay ăn gì?</button>
               <button type="button" class="ff-chip-item" data-query="Món nào dưới 50.000đ?">💰 Món nào dưới 50.000đ?</button>
@@ -156,15 +173,41 @@
             </div>
           </div>
           <footer class="ff-chat-footer">
+            <div class="ff-chat-upload-preview" id="ff-chat-upload-preview" style="display: none;">
+              <div class="ff-preview-thumb-wrap">
+                <img id="ff-preview-thumb" src="" alt="Xem trước ảnh" />
+                <button type="button" class="ff-btn-remove-preview" id="ff-btn-remove-preview" title="Hủy ảnh" aria-label="Hủy ảnh">&times;</button>
+              </div>
+              <div class="ff-preview-meta">
+                <span class="ff-preview-filename" id="ff-preview-filename"></span>
+                <span class="ff-preview-filesize" id="ff-preview-filesize"></span>
+              </div>
+            </div>
+
             <form class="ff-chat-form" id="ff-chat-form" autocomplete="off">
-              <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Nhắn tin cho Nhân viên hỗ trợ..." maxlength="1000" required />
+              <input type="file" id="ff-chat-file-input" accept="image/jpeg,image/png,image/webp" style="display: none;" />
+              <button type="button" class="ff-chat-attach-btn" id="ff-chat-attach-btn" title="Gửi ảnh (JPG, PNG, WEBP tối đa 5MB)" aria-label="Đính kèm ảnh">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                  <circle cx="12" cy="13" r="4"></circle>
+                </svg>
+              </button>
+              <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Hỏi AI món ngon, gửi ảnh hoặc liên hệ cửa hàng..." maxlength="1000" />
               <button type="submit" class="ff-chat-send-btn" id="ff-chat-send-btn" aria-label="Gửi tin nhắn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
             </form>
-            <div class="ff-chat-disclaimer"><span>⚡ Kết nối trực tiếp đội ngũ hỗ trợ FASTFOOD</span></div>
+            <div class="ff-chat-disclaimer" id="ff-chat-disclaimer"><span>⚡ Trợ lý AI FASTFOOD phản hồi tự động tức thì</span></div>
           </footer>
         </section>
+
+        <div class="ff-chat-lightbox" id="ff-chat-lightbox" style="display: none;" role="dialog" aria-modal="true" aria-label="Xem ảnh phóng to">
+          <div class="ff-lightbox-backdrop" id="ff-lightbox-backdrop"></div>
+          <div class="ff-lightbox-content">
+            <img id="ff-lightbox-img" src="" alt="Ảnh phóng to" />
+            <button type="button" class="ff-lightbox-close" id="ff-lightbox-close" aria-label="Đóng (Esc)">&times;</button>
+          </div>
+        </div>
       `;
       document.body.appendChild(wrapper);
     },
@@ -174,8 +217,18 @@
         wrapper: document.getElementById('ff-chatbot-wrapper'),
         trigger: document.getElementById('ff-chat-trigger'),
         window: document.getElementById('ff-chat-window'),
-        body: document.getElementById('ff-chat-body'),
-        typing: document.getElementById('ff-chat-typing'),
+        tabAi: document.getElementById('ff-tab-ai'),
+        tabAdmin: document.getElementById('ff-tab-admin'),
+        adminDot: document.getElementById('ff-tab-admin-dot'),
+        bodyAi: document.getElementById('ff-chat-body-ai') || document.getElementById('ff-chat-body'),
+        bodyAdmin: document.getElementById('ff-chat-body-admin'),
+        title: document.getElementById('ff-chat-title') || document.querySelector('.ff-chat-name'),
+        avatar: document.getElementById('ff-header-avatar'),
+        statusText: document.getElementById('ff-chat-status-text'),
+        statusDot: document.getElementById('ff-header-status-dot'),
+        quickChipsWrap: document.getElementById('ff-quick-chips-wrap'),
+        quickChips: document.getElementById('ff-quick-chips'),
+        disclaimer: document.getElementById('ff-chat-disclaimer'),
         form: document.getElementById('ff-chat-form'),
         input: document.getElementById('ff-chat-input'),
         btnSend: document.getElementById('ff-chat-send-btn'),
@@ -183,19 +236,98 @@
         btnMinimize: document.getElementById('ff-btn-minimize'),
         btnExpand: document.getElementById('ff-btn-expand'),
         btnNewChat: document.getElementById('ff-btn-new-chat'),
-        quickChips: document.getElementById('ff-quick-chips'),
-        statusText: document.getElementById('ff-chat-status-text'),
-        statusDot: document.getElementById('ff-header-status-dot'),
+        attachBtn: document.getElementById('ff-chat-attach-btn'),
+        fileInput: document.getElementById('ff-chat-file-input'),
+        uploadPreview: document.getElementById('ff-chat-upload-preview'),
+        previewThumb: document.getElementById('ff-preview-thumb'),
+        previewFilename: document.getElementById('ff-preview-filename'),
+        previewFilesize: document.getElementById('ff-preview-filesize'),
+        btnRemovePreview: document.getElementById('ff-btn-remove-preview'),
+        lightbox: document.getElementById('ff-chat-lightbox'),
+        lightboxImg: document.getElementById('ff-lightbox-img'),
+        lightboxClose: document.getElementById('ff-lightbox-close'),
+        lightboxBackdrop: document.getElementById('ff-lightbox-backdrop'),
       };
     },
 
     initSession() {
-      let saved = localStorage.getItem(STORAGE_SESSION_KEY);
-      if (!saved) {
-        saved = 'ff_chat_' + Math.random().toString(36).substring(2, 12) + Date.now().toString(36);
-        localStorage.setItem(STORAGE_SESSION_KEY, saved);
+      // 1. Khởi tạo phiên cho kênh AI
+      let aiSaved = localStorage.getItem('fastfood_ai_session_id');
+      if (!aiSaved || !aiSaved.startsWith('ai_sess_')) {
+        aiSaved = 'ai_sess_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        localStorage.setItem('fastfood_ai_session_id', aiSaved);
       }
-      this.sessionId = saved;
+      this.aiSessionId = aiSaved;
+
+      // 2. Khởi tạo phiên cho kênh Admin chat tay
+      let adminSaved = localStorage.getItem('fastfood_admin_session_id');
+      const userId = this.getCurrentUserId();
+      if (userId) {
+        adminSaved = `admin_sess_u_${userId}`;
+      } else if (!adminSaved || !adminSaved.startsWith('admin_sess_')) {
+        adminSaved = 'admin_sess_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+      }
+      localStorage.setItem('fastfood_admin_session_id', adminSaved);
+      this.adminSessionId = adminSaved;
+
+      // Kênh đang chọn (mặc định là 'ai')
+      this.currentChannel = localStorage.getItem('fastfood_chat_active_channel') || 'ai';
+    },
+
+    switchChannel(channel) {
+      if (channel !== 'ai' && channel !== 'admin') return;
+      this.currentChannel = channel;
+      localStorage.setItem('fastfood_chat_active_channel', channel);
+
+      const isAi = (channel === 'ai');
+
+      if (this.elements.tabAi) {
+        this.elements.tabAi.classList.toggle('active', isAi);
+        this.elements.tabAi.setAttribute('aria-selected', isAi ? 'true' : 'false');
+      }
+      if (this.elements.tabAdmin) {
+        this.elements.tabAdmin.classList.toggle('active', !isAi);
+        this.elements.tabAdmin.setAttribute('aria-selected', !isAi ? 'true' : 'false');
+      }
+
+      if (this.elements.bodyAi) {
+        this.elements.bodyAi.style.display = isAi ? 'flex' : 'none';
+      }
+      if (this.elements.bodyAdmin) {
+        this.elements.bodyAdmin.style.display = isAi ? 'none' : 'flex';
+      }
+
+      if (!isAi && this.elements.adminDot) {
+        this.elements.adminDot.style.display = 'none';
+      }
+
+      if (this.elements.avatar) {
+        this.elements.avatar.textContent = isAi ? '🤖' : '👨‍💼';
+      }
+      if (this.elements.title) {
+        this.elements.title.textContent = isAi ? 'Trợ lý AI FASTFOOD' : 'Liên hệ với cửa hàng';
+      }
+      if (this.elements.statusText) {
+        this.elements.statusText.textContent = isAi
+          ? 'Hỏi AI món ngon, giá cả & khuyến mãi 24/7'
+          : 'Trò chuyện trực tiếp với Cửa hàng FASTFOOD';
+      }
+      if (this.elements.input) {
+        this.elements.input.placeholder = isAi
+          ? 'Hỏi AI món ngon, giá cả, khuyến mãi hôm nay...'
+          : 'Nhắn tin trực tiếp cho cửa hàng...';
+      }
+      if (this.elements.quickChipsWrap) {
+        this.elements.quickChipsWrap.style.display = isAi ? 'block' : 'none';
+      }
+      if (this.elements.disclaimer) {
+        this.elements.disclaimer.innerHTML = isAi
+          ? '<span>⚡ Trợ lý AI FASTFOOD phản hồi tự động tức thì</span>'
+          : '<span>👨‍💼 Liên hệ trực tiếp với Cửa hàng • Không có AI tự động</span>';
+      }
+
+      this.scrollToBottom();
+      setTimeout(() => this.elements.input?.focus(), 80);
     },
 
     getAuthToken() {
@@ -206,14 +338,110 @@
 
     getCurrentCustomerName() {
       try {
+        if (window.FASTFOOD_USER && window.FASTFOOD_USER.full_name) {
+          return window.FASTFOOD_USER.full_name;
+        }
+        if (window.FASTFOOD_USER && window.FASTFOOD_USER.name) {
+          return window.FASTFOOD_USER.name;
+        }
         const u = window.StorageManager?.getUser?.();
-        if (u?.full_name) return u.full_name;
+        if (u?.full_name || u?.name) return u.full_name || u.name;
       } catch (_) {}
       return 'Khách hàng';
     },
 
+    getCurrentUserId() {
+      try {
+        if (window.FASTFOOD_USER && window.FASTFOOD_USER.id) {
+          return parseInt(window.FASTFOOD_USER.id, 10);
+        }
+        const u = window.StorageManager?.getUser?.();
+        if (u?.id) return parseInt(u.id, 10);
+      } catch (_) {}
+      return null;
+    },
+
+    handleImageSelect(file) {
+      if (!file) return;
+
+      const allowedExts = ['jpg', 'jpeg', 'png', 'webp'];
+      const ext = (file.name.split('.').pop() || '').toLowerCase();
+      const isAllowedExt = allowedExts.includes(ext);
+      const isAllowedMime = /^image\/(jpeg|png|webp)$/i.test(file.type);
+
+      if (!isAllowedExt || !isAllowedMime) {
+        window.UIComponents?.showToast?.('Chỉ chấp nhận tệp hình ảnh JPG, PNG hoặc WEBP.', 'warning');
+        if (this.elements.fileInput) this.elements.fileInput.value = '';
+        return;
+      }
+
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        window.UIComponents?.showToast?.('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn.', 'warning');
+        if (this.elements.fileInput) this.elements.fileInput.value = '';
+        return;
+      }
+
+      if (this.selectedImagePreviewUrl) {
+        URL.revokeObjectURL(this.selectedImagePreviewUrl);
+      }
+
+      this.selectedImageFile = file;
+      this.selectedImagePreviewUrl = URL.createObjectURL(file);
+
+      if (this.elements.previewThumb) {
+        this.elements.previewThumb.src = this.selectedImagePreviewUrl;
+      }
+      if (this.elements.previewFilename) {
+        this.elements.previewFilename.textContent = file.name;
+      }
+      if (this.elements.previewFilesize) {
+        const kb = Math.round(file.size / 1024);
+        this.elements.previewFilesize.textContent = kb >= 1024 ? `${(kb / 1024).toFixed(1)} MB` : `${kb} KB`;
+      }
+      if (this.elements.uploadPreview) {
+        this.elements.uploadPreview.style.display = 'flex';
+      }
+
+      setTimeout(() => this.elements.input?.focus(), 50);
+    },
+
+    cancelImagePreview() {
+      if (this.selectedImagePreviewUrl) {
+        URL.revokeObjectURL(this.selectedImagePreviewUrl);
+        this.selectedImagePreviewUrl = null;
+      }
+      this.selectedImageFile = null;
+      if (this.elements.fileInput) {
+        this.elements.fileInput.value = '';
+      }
+      if (this.elements.uploadPreview) {
+        this.elements.uploadPreview.style.display = 'none';
+      }
+      if (this.elements.previewThumb) {
+        this.elements.previewThumb.src = '';
+      }
+    },
+
+    openLightbox(imgSrc, altText = 'Xem ảnh phóng to') {
+      if (!this.elements.lightbox || !imgSrc) return;
+      if (this.elements.lightboxImg) {
+        this.elements.lightboxImg.src = imgSrc;
+        this.elements.lightboxImg.alt = altText;
+      }
+      this.elements.lightbox.style.display = 'flex';
+    },
+
+    closeLightbox() {
+      if (!this.elements.lightbox) return;
+      this.elements.lightbox.style.display = 'none';
+      if (this.elements.lightboxImg) {
+        this.elements.lightboxImg.src = '';
+      }
+    },
+
     bindEvents() {
-      const { trigger, btnClose, btnMinimize, btnExpand, btnNewChat, form, quickChips } = this.elements;
+      const { trigger, btnClose, btnMinimize, btnExpand, btnNewChat, form, quickChips, tabAi, tabAdmin } = this.elements;
 
       trigger?.addEventListener('click', () => this.toggleChat());
       btnClose?.addEventListener('click', () => this.toggleChat(false));
@@ -221,23 +449,94 @@
       btnExpand?.addEventListener('click', () => this.toggleExpand());
       btnNewChat?.addEventListener('click', () => this.startNewSession());
 
+      // Chuyển đổi giữa 2 kênh: Trợ lý AI và Chat với Admin
+      tabAi?.addEventListener('click', () => this.switchChannel('ai'));
+      tabAdmin?.addEventListener('click', () => this.switchChannel('admin'));
+
+      // Nút đính kèm ảnh và chọn file
+      this.elements.attachBtn?.addEventListener('click', () => {
+        this.elements.fileInput?.click();
+      });
+
+      this.elements.fileInput?.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+          this.handleImageSelect(file);
+        }
+      });
+
+      this.elements.btnRemovePreview?.addEventListener('click', () => {
+        this.cancelImagePreview();
+      });
+
+      // Lightbox close events
+      this.elements.lightboxClose?.addEventListener('click', () => this.closeLightbox());
+      this.elements.lightboxBackdrop?.addEventListener('click', () => this.closeLightbox());
+
+      // Kéo thả ảnh (Drag & Drop)
+      const chatWin = this.elements.window;
+      if (chatWin) {
+        ['dragenter', 'dragover'].forEach(name => {
+          chatWin.addEventListener(name, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }, false);
+        });
+        chatWin.addEventListener('drop', (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const file = e.dataTransfer?.files?.[0];
+          if (file && file.type.startsWith('image/')) {
+            this.handleImageSelect(file);
+          }
+        }, false);
+      }
+
+      // Dán ảnh từ clipboard (Paste)
+      this.elements.input?.addEventListener('paste', (e) => {
+        const items = e.clipboardData?.items;
+        if (!items) return;
+        for (let i = 0; i < items.length; i++) {
+          if (items[i].type && items[i].type.indexOf('image') !== -1) {
+            const file = items[i].getAsFile();
+            if (file) {
+              e.preventDefault();
+              this.handleImageSelect(file);
+              break;
+            }
+          }
+        }
+      });
+
       form?.addEventListener('submit', (e) => {
         e.preventDefault();
         const val = this.elements.input.value.trim();
-        if (val) this.sendMessage(val);
+        if (val || this.selectedImageFile) {
+          this.sendMessage(val);
+        }
       });
 
       quickChips?.addEventListener('click', (e) => {
         const btn = e.target.closest('.ff-chip-item');
-        if (btn) {
+        if (btn && !this.isSubmitting) {
           const query = btn.dataset.query || btn.textContent.trim();
+          // Khi khách bấm câu hỏi gợi ý, tự động chuyển sang kênh AI để nhận phân tích món ngon tức thời
+          if (this.currentChannel !== 'ai') {
+            this.switchChannel('ai');
+          }
           this.sendMessage(query);
         }
       });
 
       document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && this.isOpen) {
-          this.toggleChat(false);
+        if (e.key === 'Escape') {
+          if (this.elements.lightbox && this.elements.lightbox.style.display === 'flex') {
+            this.closeLightbox();
+            return;
+          }
+          if (this.isOpen) {
+            this.toggleChat(false);
+          }
         }
       });
     },
@@ -260,33 +559,67 @@
 
       window.addEventListener('fastfood:support-message', (event) => {
         const payload = event.detail;
-        if (!payload || payload.sessionId !== this.sessionId || !payload.message) return;
+        if (!payload || !payload.message) return;
         const msg = payload.message;
-        if (msg.sender === 'admin' || msg.sender === 'assistant') {
-          this.renderMessage(msg);
+        if (msg.sender === 'admin' || payload.sessionId === this.adminSessionId) {
+          this.renderMessage(msg, 'admin');
           if (!this.isOpen && msg.sender === 'admin') {
-            window.UIComponents?.showToast('Nhân viên hỗ trợ vừa phản hồi tin nhắn của bạn!', 'info');
+            window.UIComponents?.showToast?.('Cửa hàng vừa phản hồi tin nhắn của bạn!', 'info');
           }
+        }
+      });
+
+      // Đồng bộ liên tab siêu tốc (< 15ms) qua BroadcastChannel và localStorage
+      try {
+        if (typeof BroadcastChannel !== 'undefined') {
+          this.broadcastChannel = new BroadcastChannel('fastfood_chat_realtime');
+          this.broadcastChannel.onmessage = (event) => {
+            const data = event.data;
+            if (data && data.type === 'ADMIN_REPLIED') {
+              if (!data.sessionId || data.sessionId === this.adminSessionId) {
+                if (data.message && typeof data.message === 'object') {
+                  this.renderMessage(data.message, 'admin');
+                }
+                this.syncLatestMessages();
+              }
+            }
+          };
+        }
+      } catch (_) {}
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'fastfood_chat_sync' && e.newValue) {
+          try {
+            const data = JSON.parse(e.newValue);
+            if (data && data.type === 'ADMIN_REPLIED') {
+              if (!data.sessionId || data.sessionId === this.adminSessionId) {
+                if (data.message && typeof data.message === 'object') {
+                  this.renderMessage(data.message, 'admin');
+                }
+                this.syncLatestMessages();
+              }
+            }
+          } catch (_) {}
         }
       });
     },
 
     joinSupportRoom() {
       const socket = window.FASTFOOD_SOCKET;
-      if (socket && socket.connected && this.sessionId) {
-        socket.emit('support:join', { sessionId: this.sessionId });
+      if (socket && socket.connected) {
+        if (this.adminSessionId) socket.emit('support:join', { sessionId: this.adminSessionId });
+        if (this.aiSessionId) socket.emit('support:join', { sessionId: this.aiSessionId });
       }
     },
 
     updateSupportStatusUI(status) {
       if (!status) return;
       this.supportStatus = { ...this.supportStatus, ...status };
-      const { statusText, statusDot } = this.elements;
-      if (!statusText) return;
-
-      statusText.textContent = 'Hỗ trợ khách hàng trực tuyến 24/7';
-      statusDot?.classList.add('online');
-      statusDot?.classList.remove('busy');
+      if (this.currentChannel === 'admin') {
+        if (this.elements.statusText) {
+          this.elements.statusText.textContent = 'Trò chuyện trực tiếp với Cửa hàng FASTFOOD';
+        }
+      }
     },
 
     startPolling() {
@@ -295,7 +628,7 @@
         if (this.isOpen && !this.isSubmitting) {
           this.syncLatestMessages();
         }
-      }, 3000);
+      }, 4500);
     },
 
     stopPolling() {
@@ -310,22 +643,36 @@
         const token = this.getAuthToken();
         const headers = {};
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        const res = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.sessionId)}`, { headers });
-        if (!res.ok) return;
-        const result = await res.json();
-        if (!result.success) return;
 
-        if (result.data?.supportStatus) {
-          this.updateSupportStatusUI(result.data.supportStatus);
+        // 1. Luôn đồng bộ tin nhắn từ Kênh Admin
+        if (this.adminSessionId) {
+          const resAdmin = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.adminSessionId)}`, { headers });
+          if (resAdmin.ok) {
+            const resultAdmin = await resAdmin.json();
+            if (resultAdmin.success && Array.isArray(resultAdmin.data?.messages)) {
+              resultAdmin.data.messages.forEach(m => {
+                if (m.id && !this.renderedMessageIds.has(String(m.id))) {
+                  this.renderMessage(m, 'admin');
+                }
+              });
+            }
+          }
         }
 
-        const messages = result.data?.messages;
-        if (!Array.isArray(messages)) return;
-        messages.forEach(m => {
-          if (m.id && !this.renderedMessageIds.has(String(m.id))) {
-            this.renderMessage(m);
+        // 2. Đồng bộ Kênh AI khi người dùng đang xem tab AI
+        if (this.aiSessionId && this.currentChannel === 'ai') {
+          const resAi = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.aiSessionId)}`, { headers });
+          if (resAi.ok) {
+            const resultAi = await resAi.json();
+            if (resultAi.success && Array.isArray(resultAi.data?.messages)) {
+              resultAi.data.messages.forEach(m => {
+                if (m.id && !this.renderedMessageIds.has(String(m.id))) {
+                  this.renderMessage(m, 'ai');
+                }
+              });
+            }
           }
-        });
+        }
       } catch (_) {}
     },
 
@@ -337,6 +684,7 @@
         chatWindow.removeAttribute('hidden');
         trigger.classList.add('is-active');
         this.joinSupportRoom();
+        this.switchChannel(this.currentChannel || 'ai');
         this.syncLatestMessages();
         this.startPolling();
         this.scrollToBottom();
@@ -371,92 +719,94 @@
     async startNewSession() {
       if (this.isSubmitting) return;
 
-      const confirmed = window.confirm('Bắt đầu cuộc trò chuyện mới với Nhân viên hỗ trợ?');
+      const isAi = (this.currentChannel === 'ai');
+      const channelName = isAi ? 'Trợ lý AI' : 'Cửa hàng';
+      const confirmed = window.confirm(`Bắt đầu cuộc trò chuyện mới với ${channelName}?`);
       if (!confirmed) return;
 
-      this.elements.body.innerHTML = '';
-      this.renderedMessageIds.clear();
-      this.lastRenderedMsgId = 0;
-      this.showTyping(true);
-
-      try {
-        const token = this.getAuthToken();
-        const headers = { 'Content-Type': 'application/json' };
-        if (token) headers['Authorization'] = `Bearer ${token}`;
-
-        const res = await fetch(`${API_BASE}/new-session`, { method: 'POST', headers });
-        const result = await res.json();
-
-        if (res.ok && result.success && result.data?.sessionId) {
-          this.sessionId = result.data.sessionId;
-          localStorage.setItem(STORAGE_SESSION_KEY, this.sessionId);
-          this.joinSupportRoom();
-          if (result.data.supportStatus) {
-            this.updateSupportStatusUI(result.data.supportStatus);
-          }
-          this.renderMessage({
-            sender: 'assistant',
-            message: result.data.welcomeMessage || 'Dạ chào bạn! Tôi là Nhân viên hỗ trợ FASTFOOD. Bạn cần tìm món ngon, săn khuyến mãi hay kiểm tra đơn hàng nào hôm nay?',
-          });
-        } else {
-          this.renderDefaultWelcome();
-        }
-      } catch (err) {
-        console.warn('[Nhân viên hỗ trợ] Tạo phiên offline:', err);
+      if (isAi) {
+        if (this.elements.bodyAi) this.elements.bodyAi.innerHTML = '';
+        this.aiSessionId = 'ai_sess_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
+        localStorage.setItem('fastfood_ai_session_id', this.aiSessionId);
         this.renderDefaultWelcome();
-      } finally {
-        this.showTyping(false);
+      } else {
+        if (this.elements.bodyAdmin) {
+          this.elements.bodyAdmin.innerHTML = `
+            <div class="ff-direct-notice">
+              <span class="ff-direct-notice-icon">👨‍💼</span>
+              <div class="ff-direct-notice-text">
+                <strong>Kênh Liên Hệ Với Cửa Hàng</strong>
+                <p>Tin nhắn tại đây được gửi trực tiếp đến Cửa hàng FASTFOOD (Chat tay 100%, không qua AI).</p>
+              </div>
+            </div>
+          `;
+        }
+        const userId = this.getCurrentUserId();
+        this.adminSessionId = userId ? `admin_sess_u_${userId}` : ('admin_sess_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36));
+        localStorage.setItem('fastfood_admin_session_id', this.adminSessionId);
       }
     },
 
     async loadHistory() {
+      // 1. Nạp lịch sử Kênh AI
+      await this.loadChannelHistory(this.aiSessionId, 'ai');
+      // 2. Nạp lịch sử Kênh Admin
+      await this.loadChannelHistory(this.adminSessionId, 'admin');
+      // 3. Hiển thị tab đang chọn
+      this.switchChannel(this.currentChannel || 'ai');
+    },
+
+    async loadChannelHistory(sessionId, channel) {
+      if (!sessionId) return;
       try {
         const token = this.getAuthToken();
         const headers = {};
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        const res = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.sessionId)}`, { headers });
+        const res = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(sessionId)}`, { headers });
         const result = await res.json();
 
-        if (result.success && result.data?.supportStatus) {
-          this.updateSupportStatusUI(result.data.supportStatus);
-        }
-
         if (result.success && Array.isArray(result.data?.messages) && result.data.messages.length > 0) {
-          this.elements.body.innerHTML = '';
-          this.renderedMessageIds.clear();
-          result.data.messages.forEach(m => this.renderMessage(m));
+          result.data.messages.forEach(m => this.renderMessage(m, channel));
         } else {
-          this.renderDefaultWelcome();
+          if (channel === 'ai') {
+            this.renderDefaultWelcome();
+          }
         }
       } catch (_) {
-        this.renderDefaultWelcome();
+        if (channel === 'ai') this.renderDefaultWelcome();
       }
     },
 
     renderDefaultWelcome() {
-      this.elements.body.innerHTML = '';
-      this.renderedMessageIds.clear();
-      const welcomeText = `Xin chào bạn! Tôi là **Nhân viên hỗ trợ** của nền tảng đặt đồ ăn FASTFOOD Buôn Ma Thuột 💖\n\n`
+      if (this.elements.bodyAi) {
+        this.elements.bodyAi.innerHTML = '';
+      }
+      const welcomeText = `Xin chào bạn! Tôi là **Trợ lý AI** của nền tảng đặt đồ ăn FASTFOOD Buôn Ma Thuột 💖\n\n`
         + `Mình có thể hỗ trợ bạn ngay lập tức:\n`
         + `• Gợi ý món ăn ngon, bán chạy hôm nay 🔥\n`
         + `• Tìm món giá sinh viên, combo tiết kiệm (dưới 50K) 💰\n`
         + `• Hướng dẫn đặt hàng, phí ship & mã giảm giá 🎁\n`
-        + `• Tra cứu đơn hàng & kết nối trực tiếp với Admin 📦\n\n`
-        + `Bạn bấm vào gợi ý bên dưới hoặc nhắn câu hỏi cho mình nhé!`;
+        + `• Tra cứu thực đơn & tình trạng đơn hàng 📦\n\n`
+        + `*Cần trò chuyện trực tiếp với nhân viên, bạn chỉ cần bấm tab **"Liên hệ với cửa hàng"** ở phía trên nhé!*`;
 
       this.renderMessage({
         sender: 'assistant',
         message: welcomeText,
-      });
+      }, 'ai');
     },
 
     /**
-     * Dự phòng ngay tại trình duyệt nếu máy đồng đội chưa bật Backend Node.js
+     * Dự phòng thông minh ngay tại trình duyệt nếu máy chủ tạm thời gián đoạn
      */
     buildLocalOfflineReply(userText) {
       const data = window.FASTFOOD_DATA;
-      const products = Array.isArray(data?.products) ? data.products : [];
+      let products = Array.isArray(data?.products) && data.products.length > 0 ? data.products : [
+        { id: '126', name: 'Burger Gà Teriyaki Kiểu Nhật Rong Biển', price: 49000, oldPrice: 59000, isBestSeller: true, image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80', restaurantName: 'FASTFOOD Buôn Ma Thuột' },
+        { id: '138', name: 'Bánh Mì Cuộn Gà Giòn Sốt Caesar Phô Mai', price: 49000, oldPrice: 49000, isBestSeller: true, image: 'https://images.unsplash.com/photo-1626700051175-6818013e1d4f?w=600&auto=format&fit=crop&q=80', restaurantName: 'FASTFOOD Buôn Ma Thuột' },
+        { id: '43', name: 'Trà Sữa Oolong Nướng Trân Châu Hoàng Kim (Size L)', price: 50000, oldPrice: 50000, isBestSeller: true, image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&auto=format&fit=crop&q=80', restaurantName: 'FASTFOOD Buôn Ma Thuột' },
+        { id: '254', name: 'Bắp Xào Bơ Tép Khô Mỡ Hành Thơm Lừng', price: 25000, oldPrice: 25000, isBestSeller: true, image: '/assets/images/foods/bap-xao.jpg', restaurantName: 'FASTFOOD Buôn Ma Thuột' }
+      ];
       const norm = userText
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
@@ -465,7 +815,7 @@
 
       if (products.length === 0) {
         return {
-          reply: 'Dạ Nhân viên hỗ trợ đã ghi nhận câu hỏi của bạn. Hiện kết nối tới máy chủ đang tạm gián đoạn, bạn thử kiểm tra lại backend (cổng 5000) hoặc duyệt thực đơn trên trang nhé!',
+          reply: 'Dạ Trợ lý AI đã ghi nhận câu hỏi của bạn. Hiện kết nối tới máy chủ đang tạm gián đoạn, bạn duyệt thực đơn trên trang nhé!',
           products: [],
         };
       }
@@ -498,7 +848,7 @@
           return norm.split(/\s+/).some(tok => tok.length >= 2 && pNorm.includes(tok));
         }).slice(0, 5);
         if (matched.length === 0) matched = products.filter(p => p.isBestSeller).slice(0, 4);
-        reply = 'Dạ Nhân viên hỗ trợ tìm thấy các món phù hợp với nhu cầu của bạn:\n\n';
+        reply = 'Dạ Trợ lý AI tìm thấy các món phù hợp với nhu cầu của bạn:\n\n';
       }
 
       matched.forEach((p, i) => {
@@ -520,69 +870,200 @@
     },
 
     async sendMessage(text) {
-      if (!text || this.isSubmitting) return;
+      if ((!text && !this.selectedImageFile) || this.isSubmitting) return;
 
-      const userText = text.trim();
+      const userText = (text || '').trim();
+
+      // Chống bấm liên tiếp gây trùng lặp tin nhắn
+      const now = Date.now();
+      if (!this.selectedImageFile && this._lastSentText === userText && (now - (this._lastSentTime || 0)) < 2500) {
+        console.warn('[FASTFOOD Chat] Đang xử lý tin nhắn, vui lòng chờ trong giây lát...');
+        return;
+      }
+      this._lastSentText = userText;
+      this._lastSentTime = now;
+
       this.elements.input.value = '';
       this.isSubmitting = true;
 
-      this.renderMessage({
-        sender: 'user',
-        message: userText,
-        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-      });
+      const channel = this.currentChannel; // 'ai' hoặc 'admin'
+      const activeSessionId = (channel === 'ai') ? this.aiSessionId : this.adminSessionId;
+      const customerName = this.getCurrentCustomerName();
+      const userId = this.getCurrentUserId();
+      const userEmail = window.FASTFOOD_USER?.email || window.StorageManager?.getUser?.()?.email || '';
+      const userPhone = window.FASTFOOD_USER?.phone || window.StorageManager?.getUser?.()?.phone || '';
 
-      this.showTyping(true);
+      const imageFileToUpload = this.selectedImageFile;
+      const localPreviewUrl = this.selectedImagePreviewUrl;
+
+      // Xóa preview trên input
+      this.cancelImagePreview();
+
+      const tempId = 'tmp_' + Date.now();
+      let pendingRow = null;
+
+      if (imageFileToUpload) {
+        pendingRow = this.renderMessage({
+          id: tempId,
+          sender: 'user',
+          customerName: customerName,
+          message: userText || '[Hình ảnh]',
+          messageType: 'image',
+          metadata: {
+            type: 'image',
+            imageUrl: localPreviewUrl,
+            fileName: imageFileToUpload.name,
+            fileSize: imageFileToUpload.size,
+            caption: userText
+          },
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        }, channel);
+        if (pendingRow) pendingRow.dataset.imageUrl = localPreviewUrl;
+      } else {
+        pendingRow = this.renderMessage({
+          id: tempId,
+          sender: 'user',
+          customerName: customerName,
+          message: userText,
+          messageType: 'text',
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        }, channel);
+      }
 
       try {
         const token = this.getAuthToken();
+        let uploadedImageUrl = null;
+        let uploadedMeta = null;
+
+        // Nếu có tệp ảnh cần tải lên
+        if (imageFileToUpload) {
+          const formData = new FormData();
+          formData.append('image', imageFileToUpload);
+          formData.append('sessionId', activeSessionId);
+
+          const upHeaders = {};
+          if (token) upHeaders['Authorization'] = `Bearer ${token}`;
+
+          const upRes = await fetch(`${API_BASE}/chat/upload-image`, {
+            method: 'POST',
+            headers: upHeaders,
+            body: formData
+          });
+
+          const upResult = await upRes.json();
+          if (!upRes.ok || !upResult.success || !upResult.data?.url) {
+            throw new Error(upResult.message || 'Không thể tải ảnh lên máy chủ');
+          }
+
+          uploadedImageUrl = upResult.data.url;
+          uploadedMeta = {
+            type: 'image',
+            imageUrl: uploadedImageUrl,
+            fileName: upResult.data.fileName,
+            fileSize: upResult.data.fileSize,
+            mimeType: upResult.data.mimeType,
+            caption: userText
+          };
+
+          if (pendingRow) {
+            pendingRow.dataset.imageUrl = uploadedImageUrl;
+            const imgEl = pendingRow.querySelector('.ff-msg-image');
+            if (imgEl) imgEl.src = uploadedImageUrl;
+            const wrapEl = pendingRow.querySelector('.ff-msg-image-wrap');
+            if (wrapEl) wrapEl.dataset.imgUrl = uploadedImageUrl;
+          }
+        }
+
+        // Bắn tín hiệu tức thời liên tab cho Admin Inbox (< 15ms)
+        if (channel === 'admin') {
+          try {
+            const syncPayload = {
+              type: 'CUSTOMER_SENT',
+              channel: 'admin',
+              sessionId: activeSessionId,
+              customerName: customerName,
+              userId: userId,
+              text: userText || '[Hình ảnh]',
+              messageType: imageFileToUpload ? 'image' : 'text',
+              metadata: uploadedMeta || null,
+              imageUrl: uploadedImageUrl || null,
+              time: Date.now()
+            };
+            if (this.broadcastChannel) {
+              this.broadcastChannel.postMessage(syncPayload);
+            }
+            localStorage.setItem('fastfood_chat_sync', JSON.stringify(syncPayload));
+          } catch (_) {}
+        }
+
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const postBody = {
+          message: userText || (imageFileToUpload ? '[Hình ảnh]' : ''),
+          messageType: imageFileToUpload ? 'image' : 'text',
+          metadata: uploadedMeta || null,
+          sessionId: activeSessionId,
+          channel: channel,
+          customerName: customerName,
+          userId: userId,
+          email: userEmail,
+          phone: userPhone,
+        };
 
         const res = await fetch(`${API_BASE}/message`, {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            message: userText,
-            sessionId: this.sessionId,
-            customerName: this.getCurrentCustomerName(),
-          }),
+          body: JSON.stringify(postBody),
         });
 
         const result = await res.json();
-        this.showTyping(false);
 
+        // 1. Cập nhật ID thật của TIN NHẮN NGƯỜI DÙNG để chống trùng lặp khi sync history
+        const userRealId = result.data?.userMessageId || (result.data?.autoReplied === false ? result.data?.messageId : null);
+        if (result.success && userRealId) {
+          const userRealIdStr = String(userRealId);
+          this.renderedMessageIds.add(userRealIdStr);
+          if (pendingRow) {
+            pendingRow.dataset.msgId = userRealIdStr;
+          }
+        }
+
+        // 2. Kênh AI hoặc Trợ lý ảo tự động gợi ý phản hồi
         if (res.ok && result.success && result.data) {
-          const { autoReplied, reply, products, order, messageId, adminBusy, adminOnline } = result.data;
-          this.updateSupportStatusUI({ adminBusy, effectiveBusy: adminBusy, adminOnline });
-
-          if (autoReplied && reply) {
+          const { reply, products, order, autoReplied } = result.data;
+          const botMessageId = result.data.assistantMessageId || (result.data.autoReplied ? result.data.messageId : null);
+          if (reply && (channel === 'ai' || autoReplied)) {
             this.renderMessage({
-              id: messageId,
+              id: botMessageId,
               sender: 'assistant',
               message: reply,
               metadata: { products, order },
               time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-            });
+            }, channel);
           }
-        } else {
+        } else if (channel === 'ai') {
           const fallback = this.buildLocalOfflineReply(userText);
           this.renderMessage({
             sender: 'assistant',
             message: fallback.reply,
             metadata: { products: fallback.products },
-          });
+            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          }, 'ai');
         }
       } catch (err) {
-        console.warn('[Nhân viên hỗ trợ] Dùng chế độ dự phòng cục bộ:', err);
-        this.showTyping(false);
-        const fallback = this.buildLocalOfflineReply(userText);
-        this.renderMessage({
-          sender: 'assistant',
-          message: fallback.reply,
-          metadata: { products: fallback.products },
-          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        });
+        console.warn('[FASTFOOD Chat] Lỗi gửi tin nhắn:', err);
+        if (channel === 'ai' && !imageFileToUpload) {
+          const fallback = this.buildLocalOfflineReply(userText);
+          this.renderMessage({
+            sender: 'assistant',
+            message: fallback.reply,
+            metadata: { products: fallback.products },
+            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          }, 'ai');
+        } else {
+          window.UIComponents?.showToast?.(err.message || 'Lỗi gửi tin nhắn. Vui lòng thử lại!', 'error');
+        }
       } finally {
         this.isSubmitting = false;
         setTimeout(() => this.elements.input?.focus(), 100);
@@ -590,23 +1071,22 @@
     },
 
     showTyping(show) {
-      if (show) {
-        this.elements.typing.removeAttribute('hidden');
-      } else {
+      if (this.elements.typing) {
+        this.elements.typing.style.display = 'none';
         this.elements.typing.setAttribute('hidden', '');
       }
-      this.scrollToBottom();
     },
 
     scrollToBottom() {
       requestAnimationFrame(() => {
-        if (this.elements.body) {
-          this.elements.body.scrollTop = this.elements.body.scrollHeight;
+        const targetBody = (this.currentChannel === 'admin') ? this.elements.bodyAdmin : this.elements.bodyAi;
+        if (targetBody) {
+          targetBody.scrollTop = targetBody.scrollHeight;
         }
       });
     },
 
-    renderMessage(msgData) {
+    renderMessage(msgData, targetChannel) {
       if (!msgData) return;
       const msgIdStr = msgData.id ? String(msgData.id) : '';
       if (msgIdStr && this.renderedMessageIds.has(msgIdStr)) {
@@ -620,30 +1100,134 @@
         }
       }
 
+      // Xác định kênh đích
+      let channel = targetChannel;
+      if (!channel) {
+        if (msgData.sender === 'admin' || (msgData.sessionId && String(msgData.sessionId).startsWith('admin_sess_'))) {
+          channel = 'admin';
+        } else {
+          channel = 'ai';
+        }
+      }
+
       const isUser = msgData.sender === 'user';
       const isAdmin = msgData.sender === 'admin';
-      const timeStr = msgData.time
-        || (msgData.createdAt ? new Date(msgData.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '');
+      const targetBody = (channel === 'admin') ? this.elements.bodyAdmin : this.elements.bodyAi;
+
+      const isImageMsg = msgData.messageType === 'image' ||
+                         msgData.metadata?.type === 'image' ||
+                         Boolean(msgData.metadata?.imageUrl) ||
+                         Boolean(msgData.imageUrl);
+      const imageUrl = msgData.metadata?.imageUrl || msgData.imageUrl || '';
+
+      const isProductCard = msgData.messageType === 'product_card' ||
+                            msgData.metadata?.type === 'product_card' ||
+                            Boolean(msgData.metadata?.product);
+
+      // Chống trùng lặp tin nhắn người dùng (deduplication giữa optimistic render và sync history)
+      if (isUser && targetBody) {
+        const cleanText = (msgData.message || '').trim().replace(/\s+/g, ' ');
+        const existingUserRows = targetBody.querySelectorAll('.ff-msg-row.user');
+        for (let i = existingUserRows.length - 1; i >= 0; i--) {
+          const r = existingUserRows[i];
+          const contentEl = r.querySelector('.ff-msg-content');
+          const existingText = contentEl ? contentEl.textContent.trim().replace(/\s+/g, ' ') : '';
+          const textMatch = cleanText && (existingText === cleanText);
+          const imgMatch = imageUrl && (r.dataset.imageUrl === imageUrl || (r.dataset.imageUrl && imageUrl.includes(r.dataset.imageUrl)));
+          if (textMatch || imgMatch) {
+            // NẾU ĐÃ CÓ BONG BÓNG TIN NHẮN TRÙNG NỘI DUNG: CẬP NHẬT ID VÀ TUYỆT ĐỐI KHÔNG TẠO BUBBLE MỚI!
+            if (msgIdStr) {
+              r.dataset.msgId = msgIdStr;
+              this.renderedMessageIds.add(msgIdStr);
+            }
+            if (imageUrl) r.dataset.imageUrl = imageUrl;
+            return r;
+          }
+        }
+      }
+      // Chèn vạch phân cách ngày (Date Separator) nếu sang ngày mới
+      if (targetBody) {
+        const rawDate = msgData.createdAt ? new Date(msgData.createdAt.replace(' ', 'T')) : new Date();
+        if (!isNaN(rawDate.getTime())) {
+          const dateKey = rawDate.toLocaleDateString('vi-VN');
+          const lastDateProp = (channel === 'admin') ? '_lastAdminDate' : '_lastAiDate';
+          if (this[lastDateProp] !== dateKey) {
+            this[lastDateProp] = dateKey;
+            const todayKey = new Date().toLocaleDateString('vi-VN');
+            const yesterdayKey = new Date(Date.now() - 86400000).toLocaleDateString('vi-VN');
+            let dateLabel = dateKey;
+            if (dateKey === todayKey) dateLabel = `Hôm nay, ${dateKey}`;
+            else if (dateKey === yesterdayKey) dateLabel = `Hôm qua, ${dateKey}`;
+            else {
+              const dayName = rawDate.toLocaleDateString('vi-VN', { weekday: 'long' });
+              dateLabel = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)}, ${dateKey}`;
+            }
+
+            const dateDivider = document.createElement('div');
+            dateDivider.className = 'ff-chat-date-divider';
+            dateDivider.innerHTML = `<span>📅 ${dateLabel}</span>`;
+            targetBody.appendChild(dateDivider);
+          }
+        }
+      }
+
+      // Chuẩn hóa giờ hiển thị chính xác theo giờ Việt Nam
+      let timeStr = '';
+      if (msgData.createdAt) {
+        const d = new Date(msgData.createdAt.replace(' ', 'T'));
+        if (!isNaN(d.getTime())) {
+          timeStr = d.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+        }
+      }
+      if (!timeStr && msgData.time && /^\d{1,2}:\d{2}$/.test(msgData.time)) {
+        timeStr = msgData.time;
+      }
+      if (!timeStr) {
+        timeStr = new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+      }
 
       const row = document.createElement('article');
       row.className = `ff-msg-row ${isUser ? 'user' : 'assistant'}${isAdmin ? ' admin' : ''}`;
       if (msgIdStr) row.dataset.msgId = msgIdStr;
+      if (imageUrl) row.dataset.imageUrl = imageUrl;
 
       let avatarHtml = '';
       let senderLabelHtml = '';
       if (!isUser) {
         avatarHtml = isAdmin
-          ? `<div class="ff-msg-avatar" title="Nhân viên hỗ trợ trực tiếp">👨‍💼</div>`
-          : `<div class="ff-msg-avatar" title="Nhân viên hỗ trợ tự động">🤖</div>`;
+          ? `<div class="ff-msg-avatar" title="Cửa hàng FASTFOOD">👨‍💼</div>`
+          : `<div class="ff-msg-avatar" title="Trợ lý AI FASTFOOD">🤖</div>`;
         senderLabelHtml = isAdmin
-          ? `<div class="ff-sender-tag is-admin">👨‍💼 ${this.escapeHtml(msgData.metadata?.adminName || 'Nhân viên hỗ trợ trực tiếp')}</div>`
-          : `<div class="ff-sender-tag">🤖 Trợ lý tự động</div>`;
+          ? `<div class="ff-sender-tag is-admin">👨‍💼 ${this.escapeHtml(msgData.metadata?.adminName || 'Cửa hàng FASTFOOD')}</div>`
+          : `<div class="ff-sender-tag">🤖 Trợ lý AI FASTFOOD</div>`;
       }
 
-      const formattedText = this.formatMarkdown(msgData.message || '');
+      // Hiển thị khối ảnh nếu có
+      let imageBubbleHtml = '';
+      if (isImageMsg && imageUrl) {
+        imageBubbleHtml = `
+          <div class="ff-msg-image-wrap" data-img-url="${this.escapeHtml(imageUrl)}" title="Nhấp để xem ảnh phóng to">
+            <img src="${this.escapeHtml(imageUrl)}"
+                 alt="${this.escapeHtml(msgData.message || 'Hình ảnh chat')}"
+                 class="ff-msg-image"
+                 loading="lazy"
+                 onerror="this.style.display='none'; if (this.nextElementSibling) this.nextElementSibling.style.display='flex';" />
+            <div class="ff-msg-image-error" style="display: none;">
+              <span>⚠️ Không thể tải hình ảnh</span>
+            </div>
+          </div>
+        `;
+      }
+
+      const showText = (isImageMsg && (!msgData.message || msgData.message === '[Hình ảnh]'))
+        ? ''
+        : (msgData.message || '');
+      const formattedText = showText ? `<div class="ff-msg-content">${this.formatMarkdown(showText)}</div>` : '';
 
       let cardsHtml = '';
-      if (msgData.metadata?.products && msgData.metadata.products.length > 0) {
+      if (isProductCard && (msgData.metadata?.product || msgData.metadata?.products?.[0])) {
+        cardsHtml = this.buildSingleProductCardHtml(msgData.metadata.product || msgData.metadata.products[0]);
+      } else if (msgData.metadata?.products && msgData.metadata.products.length > 0) {
         cardsHtml = this.buildProductCardsHtml(msgData.metadata.products);
       }
       if (msgData.metadata?.order && msgData.metadata.order.isAuthorized !== false && msgData.metadata.order.found !== false) {
@@ -654,11 +1238,22 @@
         ${avatarHtml}
         <div class="ff-msg-bubble">
           ${senderLabelHtml}
-          <div class="ff-msg-content">${formattedText}</div>
+          ${imageBubbleHtml}
+          ${formattedText}
           ${cardsHtml}
           ${timeStr ? `<span class="ff-msg-time">${timeStr}</span>` : ''}
         </div>
       `;
+
+      // Gắn sự kiện phóng to ảnh (Lightbox Zoom)
+      const imgWraps = row.querySelectorAll('.ff-msg-image-wrap');
+      imgWraps.forEach(wrap => {
+        wrap.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const u = wrap.dataset.imgUrl;
+          if (u) this.openLightbox(u);
+        });
+      });
 
       const addBtns = row.querySelectorAll('.ff-btn-card-add');
       addBtns.forEach(btn => {
@@ -673,8 +1268,87 @@
         });
       });
 
-      this.elements.body.appendChild(row);
+      // Đưa vào đúng body của kênh
+      if (targetBody) {
+        targetBody.appendChild(row);
+      }
+
+      // Thông báo có tin nhắn Admin nếu đang ở tab AI
+      if (channel === 'admin' && isAdmin && this.currentChannel !== 'admin' && this.elements.adminDot) {
+        this.elements.adminDot.style.display = 'inline-block';
+        window.UIComponents?.showToast?.('Cửa hàng vừa phản hồi trong mục "Liên hệ với cửa hàng"!', 'info');
+      }
+
       this.scrollToBottom();
+      return row;
+    },
+
+    buildSingleProductCardHtml(product) {
+      if (!product) return '';
+      const p = product;
+      const priceFmt = new Intl.NumberFormat('vi-VN').format(p.price || 0) + 'đ';
+      const oldPrice = Number(p.originalPrice || p.basePrice || 0);
+      const curPrice = Number(p.price || 0);
+      const oldPriceFmt = (oldPrice > curPrice) ? new Intl.NumberFormat('vi-VN').format(oldPrice) + 'đ' : '';
+      const discountPercent = p.discountPercent || (oldPrice > curPrice ? Math.round(((oldPrice - curPrice) / oldPrice) * 100) : 0);
+      const discountBadge = discountPercent > 0 ? `<span class="ff-card-discount-tag">-${discountPercent}%</span>` : '';
+      
+      const detailUrl = this.resolveFrontendPath(`food-detail.php?id=${encodeURIComponent(p.id)}`);
+      const imgSrc = this.normalizeImageUrl(p.image);
+
+      const status = p.status || (p.isAvailable === 0 || p.is_available === 0 ? 'out_of_stock' : 'in_stock');
+      let statusBadge = '';
+      let canOrder = true;
+
+      if (status === 'out_of_stock') {
+        statusBadge = '<span class="ff-card-status out-of-stock">🟠 Tạm hết</span>';
+        canOrder = false;
+      } else if (status === 'unavailable_today') {
+        statusBadge = '<span class="ff-card-status unavailable">🔴 Hôm nay không bán</span>';
+        canOrder = false;
+      } else {
+        statusBadge = '<span class="ff-card-status in-stock">🟢 Còn hàng</span>';
+        canOrder = true;
+      }
+
+      const desc = p.description ? `<p class="ff-single-card-desc">${this.escapeHtml(p.description)}</p>` : '';
+
+      const orderBtn = canOrder
+        ? `<button type="button" class="ff-btn-card-add ff-btn-single-order"
+             data-id="${this.escapeHtml(p.id)}"
+             data-name="${this.escapeHtml(p.name)}"
+             data-price="${curPrice}"
+             data-image="${this.escapeHtml(imgSrc)}">
+             🛒 Đặt món
+           </button>`
+        : `<button type="button" class="ff-btn-single-order disabled" disabled>
+             ${status === 'unavailable_today' ? 'Hôm nay không bán' : 'Tạm hết món'}
+           </button>`;
+
+      return `
+        <div class="ff-single-product-card" data-product-id="${this.escapeHtml(p.id)}">
+          <div class="ff-single-card-top">
+            <div class="ff-single-card-thumb-wrap">
+              <img src="${this.escapeHtml(imgSrc)}" alt="${this.escapeHtml(p.name)}" class="ff-single-card-thumb" loading="lazy" onerror="this.onerror=null;this.src='${DEFAULT_FOOD_IMG}'" />
+              ${discountBadge}
+            </div>
+            <div class="ff-single-card-meta">
+              <span class="ff-single-card-badge-row">${statusBadge}</span>
+              <h4 class="ff-single-card-title" title="${this.escapeHtml(p.name)}">${this.escapeHtml(p.name)}</h4>
+              <span class="ff-single-card-cat">${this.escapeHtml(p.categoryName || p.restaurantName || 'FASTFOOD')}</span>
+              <div class="ff-single-card-price-row">
+                <span class="ff-single-card-price">${priceFmt}</span>
+                ${oldPriceFmt ? `<span class="ff-single-card-old-price">${oldPriceFmt}</span>` : ''}
+              </div>
+            </div>
+          </div>
+          ${desc}
+          <div class="ff-single-card-actions">
+            <a href="${detailUrl}" class="ff-btn-single-view">Xem chi tiết</a>
+            ${orderBtn}
+          </div>
+        </div>
+      `;
     },
 
     buildProductCardsHtml(products) {

@@ -2,6 +2,8 @@
 /**
  * FASTFOOD - Cấu hình kết nối MySQL Database (PDO)
  */
+date_default_timezone_set('Asia/Ho_Chi_Minh');
+
 define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 define('DB_PORT', getenv('DB_PORT') ?: '3301');
 define('DB_NAME', getenv('DB_NAME') ?: 'fastfood_db');

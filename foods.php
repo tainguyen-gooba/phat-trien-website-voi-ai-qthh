@@ -146,10 +146,11 @@ require_once ROOT_PATH . '/includes/header.php';
 
 <script>
 function toggleFavorite(productId, btn) {
-  const isLiked = btn.classList.toggle('is-liked');
-  btn.textContent = isLiked ? '♥' : '♡';
-  if (window.UIComponents?.showToast) {
-    window.UIComponents.showToast(isLiked ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích.', 'info');
+  if (window.FavoritesManager) {
+    window.FavoritesManager.toggle(productId, btn);
+  } else {
+    const isLiked = btn.classList.toggle('is-liked');
+    btn.textContent = isLiked ? '♥' : '♡';
   }
 }
 

@@ -25,6 +25,11 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
   <title><?= escapeHtml($pageTitle) ?></title>
   <link rel="icon" type="image/svg+xml" href="<?= getAssetUrl('assets/images/logo.svg') ?>">
 
+  <!-- Google Fonts - Chuẩn tiếng Việt không lỗi phông -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
   <!-- CSS Design System -->
   <link rel="stylesheet" href="<?= getAssetUrl('css/variables.css') ?>">
   <link rel="stylesheet" href="<?= getAssetUrl('css/reset.css') ?>">

@@ -5732,6 +5732,15 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           </svg><span>Best Seller & Giờ Vàng</span>
           <span class="nav-badge" style="background:#ea580c; color:#fff; font-weight:800; font-size:10px; padding:2px 6px;">HOT</span>
         </button>
+        <button class="nav-item" type="button" data-section="banners">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+            <line x1="8" y1="21" x2="16" y2="21"></line>
+            <line x1="12" y1="17" x2="12" y2="21"></line>
+            <path d="m5 13 4-4 3 3 4-5 3 4"></path>
+          </svg><span>Quản Lý Banner</span>
+          <span class="nav-badge" style="background:#2563eb; color:#fff; font-weight:800; font-size:10px; padding:2px 6px;">NEW</span>
+        </button>
         <button class="nav-item" type="button" data-section="footer-settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -6407,6 +6416,52 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           $policyText = implode("\n", $policyLines);
         ?>
 
+        <!-- BANNER MANAGEMENT SECTION (QUẢN LÝ BANNER & HERO SLIDER) -->
+        <section class="bestseller-section" id="banners-section" hidden>
+          <div class="bs-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <h2 class="bs-header-title">
+                <span class="bs-header-icon" style="background: linear-gradient(135deg, #f97316, #ea580c);">🎨</span>
+                <span>Quản Lý Banner &amp; Slider Trang Chủ</span>
+              </h2>
+              <p class="bs-header-desc">Tùy biến hình ảnh nổi bật, tiêu đề, nhãn ưu đãi và cài đặt tốc độ tự động chuyển ảnh (1-2s) cho Hero Banner.</p>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="primary-button" id="btn-add-banner" style="background:#2563eb; border-color:#2563eb; padding:9px 18px; font-size:14px; font-weight:700; border-radius:10px; display:inline-flex; align-items:center; gap:6px;">
+                <span>➕</span> Thêm Banner Mới
+              </button>
+              <button type="button" class="primary-button" id="btn-save-banners" style="background:#ea580c; border-color:#ea580c; padding:9px 20px; font-size:14px; font-weight:700; border-radius:10px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 6px 16px rgba(234,88,12,.22);">
+                <span>💾</span> Lưu Tất Cả Thay Đổi
+              </button>
+            </div>
+          </div>
+
+          <!-- Tùy chỉnh tốc độ tự chuyển ảnh (1-2s) -->
+          <div class="bs-panel-card" style="margin-bottom:1.5rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+            <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
+              <div>
+                <h4 style="font-weight:700; font-size:1rem; margin-bottom:0.25rem; color:#1e293b;">⚡ Thời Gian Tự Động Chuyển Slide (Auto-slide Interval)</h4>
+                <p style="font-size:0.875rem; color:#64748b; margin:0;">Tùy chỉnh khoảng thời gian slider tự động đổi ảnh (Yêu cầu 1-2s):</p>
+              </div>
+              <div style="display:flex; align-items:center; gap:10px;">
+                <select id="banner-slide-interval" class="bs-input" style="width:auto; min-width:200px; font-weight:700; padding:9px 14px; border-radius:8px; border:2px solid #cbd5e1; background:#f8fafc;">
+                  <option value="1200">1.2 giây (Siêu nhanh)</option>
+                  <option value="1500">1.5 giây (Nhanh)</option>
+                  <option value="1800" selected>1.8 giây (Khuyên dùng - Mượt mà)</option>
+                  <option value="2000">2.0 giây (2 giây)</option>
+                  <option value="2500">2.5 giây</option>
+                  <option value="3000">3.0 giây</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danh sách Banner hiển thị dạng Card Grid -->
+          <div id="admin-banners-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:1.25rem;">
+            <!-- JS sẽ nạp danh sách banner vào đây -->
+          </div>
+        </section>
+
         <!-- FOOTER SETTINGS SECTION -->
         <section class="bestseller-section" id="footer-settings-section" hidden>
           <div class="bs-header">
@@ -6529,7 +6584,59 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       </div>
     </form>
   </dialog>
-  <div id="toast-container" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- BANNER EDIT/ADD DIALOG -->
+  <dialog id="banner-dialog" style="max-width:550px; width:90%; border-radius:16px; border:none; padding:0; box-shadow:0 25px 50px -12px rgba(0,0,0,0.25);">
+    <div class="modal-head" style="padding:1.25rem 1.5rem; background:#f8fafc; border-bottom:1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h2 id="banner-dialog-title" style="font-size:1.25rem; font-weight:800; color:#0f172a; margin:0;">Chỉnh Sửa Banner</h2>
+        <p style="font-size:0.85rem; color:#64748b; margin-top:2px; margin-bottom:0;">Cập nhật thông tin và hình ảnh hiển thị trên slider trang chủ.</p>
+      </div>
+      <button class="modal-close" type="button" id="banner-dialog-close" style="font-size:1.5rem; border:none; background:none; cursor:pointer;">×</button>
+    </div>
+    <form class="modal-form" id="banner-form" style="padding:1.5rem;">
+      <input type="hidden" id="banner-edit-id">
+      <div style="display:flex; flex-direction:column; gap:1rem;">
+        <div class="bs-field">
+          <label class="bs-label" for="banner-title" style="font-weight:700;">Tiêu đề Banner <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="banner-title" class="bs-input" required placeholder="Ví dụ: Burger Bò Nướng Phô Mai" style="width:100%;">
+        </div>
+        <div class="bs-field">
+          <label class="bs-label" for="banner-subtitle" style="font-weight:700;">Mô tả phụ (Subtitle)</label>
+          <input type="text" id="banner-subtitle" class="bs-input" placeholder="Ví dụ: Burger King Station • Nóng hổi giao 15 phút" style="width:100%;">
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="bs-field">
+            <label class="bs-label" for="banner-badge" style="font-weight:700;">Nhãn ưu đãi (Badge)</label>
+            <input type="text" id="banner-badge" class="bs-input" placeholder="Ví dụ: 🔥 ƯU ĐÃI GIẢM 50%" style="width:100%;">
+          </div>
+          <div class="bs-field">
+            <label class="bs-label" for="banner-order" style="font-weight:700;">Thứ tự (1, 2, 3...)</label>
+            <input type="number" id="banner-order" class="bs-input" value="1" min="1" style="width:100%;">
+          </div>
+        </div>
+        <div class="bs-field">
+          <label class="bs-label" for="banner-image" style="font-weight:700;">Đường dẫn ảnh Banner (16:9 Landscape) <span style="color:#ef4444;">*</span></label>
+          <input type="text" id="banner-image" class="bs-input" required placeholder="https://... hoặc assets/images/foods/..." style="width:100%;">
+          <div id="banner-image-preview-box" style="margin-top:8px; border-radius:8px; overflow:hidden; max-height:160px; background:#f1f5f9; display:flex; align-items:center; justify-content:center;">
+            <img id="banner-image-preview" src="" alt="Xem trước ảnh" style="width:100%; height:160px; object-fit:cover; display:none;">
+          </div>
+        </div>
+        <div class="bs-field">
+          <label class="bs-label" for="banner-link" style="font-weight:700;">Liên kết điều hướng khi nhấp</label>
+          <input type="text" id="banner-link" class="bs-input" placeholder="Ví dụ: foods.php?search=Burger" value="foods.php" style="width:100%;">
+        </div>
+        <div class="bs-field" style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" id="banner-active" checked style="width:18px; height:18px; cursor:pointer;">
+          <label for="banner-active" style="cursor:pointer; font-weight:600; color:#1e293b; user-select:none;">Kích hoạt hiển thị trên slider trang chủ</label>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:1.5rem; display:flex; justify-content:flex-end; gap:10px;">
+        <button class="secondary-button" type="button" id="banner-dialog-cancel">Hủy</button>
+        <button class="primary-button" type="submit" id="banner-save-btn" style="background:#ea580c; border-color:#ea580c; font-weight:700;">Lưu Banner</button>
+      </div>
+    </form>
+  </dialog>
 
   <script>
     // Global Admin Messages Nav Badge API
@@ -6990,6 +7097,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       const tablePanel = document.getElementById('table-title').closest('.table-panel');
       const reviewsSection = document.getElementById('reviews-section');
       const bestsellerSection = document.getElementById('bestseller-section');
+      const bannersSection = document.getElementById('banners-section');
       const footerSettingsSection = document.getElementById('footer-settings-section');
       const reviewsList = document.getElementById('reviews-list');
       const reviewsCount = document.getElementById('reviews-count');
@@ -8098,11 +8206,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       function renderSection() {
         const section = sections[activeSection];
         const addButton = document.getElementById('add-button');
-        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'footer-settings') {
+        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings') {
           const isMessages = activeSection === 'messages';
           const isReviews = activeSection === 'reviews';
           const isAiBot = activeSection === 'ai-bot';
           const isBestseller = activeSection === 'bestseller';
+          const isBanners = activeSection === 'banners';
           const isFooterSettings = activeSection === 'footer-settings';
           let sectionTitle = 'Tin nhắn khách hàng';
           let sectionDesc = 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.';
@@ -8115,6 +8224,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           } else if (isBestseller) {
             sectionTitle = 'Cài Đặt Best Seller & Giờ Vàng';
             sectionDesc = 'Tùy chỉnh thời gian đếm ngược Flash Deal và chọn danh sách món ăn bán chạy nhất.';
+          } else if (isBanners) {
+            sectionTitle = 'Quản Lý Banner & Hero Slider';
+            sectionDesc = 'Tùy chỉnh các hình ảnh, nội dung banner và thời gian tự động chuyển slide (1-2s).';
           } else if (isFooterSettings) {
             sectionTitle = 'Cài Đặt Chân Trang (Footer)';
             sectionDesc = 'Chỉnh sửa thông tin liên hệ, hotline, email, địa chỉ và các liên kết hiển thị ở chân trang.';
@@ -8132,6 +8244,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           reviewsSection.hidden = !isReviews;
           if (aiBotSection) aiBotSection.hidden = !isAiBot;
           if (bestsellerSection) bestsellerSection.hidden = !isBestseller;
+          if (bannersSection) bannersSection.hidden = !isBanners;
           if (footerSettingsSection) footerSettingsSection.hidden = !isFooterSettings;
           window.adminChatInbox?.setActive(isMessages);
           if (isReviews) {
@@ -8139,12 +8252,16 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             renderOrderReviews(renderedReviews);
             loadOrderReviews({ silent: renderedReviews.length > 0 });
           }
+          if (isBanners) {
+            loadAdminBanners();
+          }
           return;
         }
         chatInbox.hidden = true;
         reviewsSection.hidden = true;
         if (aiBotSection) aiBotSection.hidden = true;
         if (bestsellerSection) bestsellerSection.hidden = true;
+        if (bannersSection) bannersSection.hidden = true;
         if (footerSettingsSection) footerSettingsSection.hidden = true;
         tablePanel.hidden = false;
         window.adminChatInbox?.setActive(false);
@@ -8429,7 +8546,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'footer-settings') return;
+        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings') return;
         if (activeSection === 'reviews') {
           reviewSearchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
           renderOrderReviews(renderedReviews);
@@ -8445,7 +8562,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           renderOrderReviews(renderedReviews);
           return;
         }
-        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot' && activeSection !== 'bestseller' && activeSection !== 'footer-settings') {
+        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot' && activeSection !== 'bestseller' && activeSection !== 'banners' && activeSection !== 'footer-settings') {
           searchTerm = '';
           currentPage = 1;
           renderTable();
@@ -8633,7 +8750,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       const urlParams = new URLSearchParams(window.location.search);
       const initialSection = urlParams.get('section') || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
-      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller' || initialSection === 'footer-settings')) {
+      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller' || initialSection === 'banners' || initialSection === 'footer-settings')) {
         const targetBtn = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
         if (targetBtn) {
           activeSection = initialSection;
@@ -9171,6 +9288,226 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         } finally {
           saveBtn.disabled = false;
           saveBtn.innerHTML = '<span>💾</span> Lưu Cài Đặt Chân Trang';
+        }
+      });
+
+      // === QUẢN LÝ BANNER & HERO SLIDER LOGIC ===
+      let adminBanners = [];
+      let adminBannerInterval = 1800;
+
+      async function loadAdminBanners() {
+        try {
+          const res = await fetch('api.php?action=get_banners');
+          const result = await res.json();
+          if (result.success && result.data) {
+            adminBanners = Array.isArray(result.data.banners) ? result.data.banners : [];
+            adminBannerInterval = result.data.interval || 1800;
+            const intervalSel = document.getElementById('banner-slide-interval');
+            if (intervalSel) intervalSel.value = String(adminBannerInterval);
+            renderAdminBanners();
+          }
+        } catch (err) {
+          console.error('Lỗi khi tải banners:', err);
+        }
+      }
+
+      function renderAdminBanners() {
+        const container = document.getElementById('admin-banners-grid');
+        if (!container) return;
+
+        if (adminBanners.length === 0) {
+          container.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:3rem; background:#fff; border-radius:12px; color:#64748b;">Chưa có banner nào. Bấm "+ Thêm Banner Mới" để tạo slide đầu tiên.</div>';
+          return;
+        }
+
+        // Sắp xếp theo thứ tự hiển thị
+        adminBanners.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+
+        container.innerHTML = adminBanners.map((b, idx) => {
+          const isActive = b.active !== false;
+          return `
+            <div class="bs-panel-card" style="background:#fff; border:1px solid ${isActive ? '#e2e8f0' : '#cbd5e1'}; border-radius:12px; overflow:hidden; opacity:${isActive ? '1' : '0.65'}; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+              <div>
+                <div style="position:relative; height:160px; overflow:hidden; background:#0f172a;">
+                  <img src="${escapeHtml(b.image || '')}" alt="${escapeHtml(b.title || '')}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80';">
+                  <div style="position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">
+                    #${b.order || (idx + 1)}
+                  </div>
+                  <div style="position:absolute; top:8px; right:8px;">
+                    <span style="background:${isActive ? '#10b981' : '#64748b'}; color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">
+                      ${isActive ? '● Đang hiển thị' : '○ Tắt'}
+                    </span>
+                  </div>
+                  ${b.badge ? `
+                    <div style="position:absolute; bottom:8px; left:8px; background:#ea580c; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:4px;">
+                      ${escapeHtml(b.badge)}
+                    </div>
+                  ` : ''}
+                </div>
+                <div style="padding:1rem;">
+                  <h4 style="font-weight:800; font-size:1.05rem; color:#0f172a; margin-bottom:0.25rem;">${escapeHtml(b.title || 'Chưa đặt tiêu đề')}</h4>
+                  <p style="font-size:0.85rem; color:#64748b; margin-bottom:0.75rem; line-height:1.4;">${escapeHtml(b.subtitle || 'Không có mô tả phụ')}</p>
+                  <div style="font-size:0.8rem; color:#94a3b8; display:flex; align-items:center; gap:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                    <span>🔗</span> <span>${escapeHtml(b.link || 'foods.php')}</span>
+                  </div>
+                </div>
+              </div>
+              <div style="padding:0.75rem 1rem; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                <button type="button" class="secondary-button" onclick="window.toggleAdminBannerStatus('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700;">
+                  ${isActive ? 'Tắt hiển thị' : 'Bật hiển thị'}
+                </button>
+                <div style="display:flex; gap:6px;">
+                  <button type="button" class="secondary-button" onclick="window.openEditAdminBanner('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700; background:#eff6ff; color:#2563eb; border-color:#bfdbfe;">
+                    ✏️ Sửa
+                  </button>
+                  <button type="button" class="secondary-button" onclick="window.deleteAdminBanner('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700; background:#fef2f2; color:#ef4444; border-color:#fecaca;">
+                    🗑️ Xóa
+                  </button>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      window.openEditAdminBanner = function(id) {
+        const banner = adminBanners.find(b => b.id === id);
+        if (!banner) return;
+        document.getElementById('banner-dialog-title').textContent = 'Chỉnh Sửa Banner';
+        document.getElementById('banner-edit-id').value = banner.id;
+        document.getElementById('banner-title').value = banner.title || '';
+        document.getElementById('banner-subtitle').value = banner.subtitle || '';
+        document.getElementById('banner-badge').value = banner.badge || '';
+        document.getElementById('banner-order').value = banner.order || 1;
+        document.getElementById('banner-image').value = banner.image || '';
+        document.getElementById('banner-link').value = banner.link || 'foods.php';
+        document.getElementById('banner-active').checked = banner.active !== false;
+
+        const previewImg = document.getElementById('banner-image-preview');
+        if (banner.image) {
+          previewImg.src = banner.image;
+          previewImg.style.display = 'block';
+        } else {
+          previewImg.style.display = 'none';
+        }
+
+        document.getElementById('banner-dialog').showModal();
+      };
+
+      window.deleteAdminBanner = function(id) {
+        if (!confirm('Bạn có chắc muốn xóa banner này khỏi slider không?')) return;
+        adminBanners = adminBanners.filter(b => b.id !== id);
+        renderAdminBanners();
+        showToast('Đã xóa banner khỏi danh sách tạm. Bấm "Lưu Tất Cả Thay Đổi" để cập nhật!');
+      };
+
+      window.toggleAdminBannerStatus = function(id) {
+        const banner = adminBanners.find(b => b.id === id);
+        if (!banner) return;
+        banner.active = banner.active === false ? true : false;
+        renderAdminBanners();
+      };
+
+      document.getElementById('btn-add-banner')?.addEventListener('click', () => {
+        document.getElementById('banner-dialog-title').textContent = 'Thêm Banner Mới';
+        document.getElementById('banner-edit-id').value = '';
+        document.getElementById('banner-form').reset();
+        document.getElementById('banner-order').value = adminBanners.length + 1;
+        document.getElementById('banner-image-preview').style.display = 'none';
+        document.getElementById('banner-dialog').showModal();
+      });
+
+      document.getElementById('banner-dialog-close')?.addEventListener('click', () => {
+        document.getElementById('banner-dialog').close();
+      });
+      document.getElementById('banner-dialog-cancel')?.addEventListener('click', () => {
+        document.getElementById('banner-dialog').close();
+      });
+
+      document.getElementById('banner-image')?.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        const preview = document.getElementById('banner-image-preview');
+        if (val) {
+          preview.src = val;
+          preview.style.display = 'block';
+        } else {
+          preview.style.display = 'none';
+        }
+      });
+
+      document.getElementById('banner-form')?.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const editId = document.getElementById('banner-edit-id').value.trim();
+        const title = document.getElementById('banner-title').value.trim();
+        const subtitle = document.getElementById('banner-subtitle').value.trim();
+        const badge = document.getElementById('banner-badge').value.trim();
+        const order = parseInt(document.getElementById('banner-order').value, 10) || 1;
+        const image = document.getElementById('banner-image').value.trim();
+        const link = document.getElementById('banner-link').value.trim() || 'foods.php';
+        const active = document.getElementById('banner-active').checked;
+
+        if (!title || !image) {
+          alert('Vui lòng nhập tiêu đề và đường dẫn hình ảnh cho banner.');
+          return;
+        }
+
+        if (editId) {
+          const banner = adminBanners.find(b => b.id === editId);
+          if (banner) {
+            banner.title = title;
+            banner.subtitle = subtitle;
+            banner.badge = badge;
+            banner.order = order;
+            banner.image = image;
+            banner.link = link;
+            banner.active = active;
+          }
+        } else {
+          adminBanners.push({
+            id: 'banner-' + Date.now(),
+            title,
+            subtitle,
+            badge,
+            order,
+            image,
+            link,
+            active
+          });
+        }
+
+        renderAdminBanners();
+        document.getElementById('banner-dialog').close();
+        showToast('Đã cập nhật banner! Vui lòng bấm "Lưu Tất Cả Thay Đổi" để áp dụng lên trang chủ.');
+      });
+
+      document.getElementById('btn-save-banners')?.addEventListener('click', async () => {
+        const saveBtn = document.getElementById('btn-save-banners');
+        const interval = parseInt(document.getElementById('banner-slide-interval')?.value, 10) || 1800;
+
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳</span> Đang lưu...';
+
+        try {
+          const res = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'save_banners',
+              interval: interval,
+              banners: adminBanners
+            })
+          });
+          const result = await res.json();
+          if (result.success) {
+            showToast('✅ Đã lưu cấu hình Banner & Tốc độ chuyển ảnh 1-2s thành công!');
+          } else {
+            showToast(result.message || 'Lỗi khi lưu banners.', true);
+          }
+        } catch (err) {
+          showToast('Lỗi kết nối: ' + err.message, true);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾</span> Lưu Tất Cả Thay Đổi';
         }
       });
 

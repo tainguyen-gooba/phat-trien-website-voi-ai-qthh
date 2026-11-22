@@ -57,6 +57,67 @@ if (empty($bestSellers)) {
                                ORDER BY p.is_featured DESC, p.id ASC LIMIT 4")->fetchAll();
 }
 
+// 4. Lấy danh sách Banner động từ website_content (hoặc fallback mặc định)
+$bannerData = null;
+try {
+    $bannerRow = $db->query("SELECT content FROM website_content WHERE collection_name = 'banners' LIMIT 1")->fetchColumn();
+    if ($bannerRow) {
+        $bannerData = json_decode($bannerRow, true);
+    }
+} catch (Exception $e) {}
+
+$slideInterval = (int)($bannerData['interval'] ?? 1800); // Tốc độ 1.8s (trong khoảng 1-2s theo yêu cầu)
+if ($slideInterval < 1000) $slideInterval = 1000;
+if ($slideInterval > 5000) $slideInterval = 5000;
+
+$rawBanners = !empty($bannerData['banners']) && is_array($bannerData['banners']) ? $bannerData['banners'] : [];
+$banners = [];
+foreach ($rawBanners as $b) {
+    if (isset($b['active']) && !$b['active']) continue;
+    $banners[] = $b;
+}
+
+if (empty($banners)) {
+    $banners = [
+        [
+            'id' => 'banner-1',
+            'title' => 'Burger Bò Nướng Phô Mai',
+            'subtitle' => 'Burger King Station • Nóng hổi giao 15 phút',
+            'badge' => '🔥 ƯU ĐÃI GIẢM 50%',
+            'image' => 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=85',
+            'fallback_image' => 'assets/images/foods/bo-xao.jpg',
+            'link' => 'foods.php?search=Burger'
+        ],
+        [
+            'id' => 'banner-2',
+            'title' => 'Pizza Hải Sản Pesto Ý',
+            'subtitle' => 'Pizza Hut Italia • Phô mai kéo sợi thơm lừng',
+            'badge' => '🍕 MUA 1 TẶNG 1 HÔM NAY',
+            'image' => 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1600&auto=format&fit=crop&q=85',
+            'fallback_image' => 'assets/images/foods/calzone-pizza.jpg',
+            'link' => 'foods.php?search=Pizza'
+        ],
+        [
+            'id' => 'banner-3',
+            'title' => 'Cơm Tấm Sườn Bì Chả',
+            'subtitle' => 'Cơm Tấm Sài Gòn Xưa • Chuẩn vị truyền thống',
+            'badge' => '🍚 FREESHIP 0Đ ĐƠN TỪ 50K',
+            'image' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1600&auto=format&fit=crop&q=85',
+            'fallback_image' => 'assets/images/foods/com-tam-dac-biet.jpg',
+            'link' => 'foods.php?search=Cơm'
+        ],
+        [
+            'id' => 'banner-4',
+            'title' => 'Trà Sữa Trân Châu Hoàng Gia',
+            'subtitle' => 'GongCha Tea • Trân châu đường đen dẻo dai',
+            'badge' => '🧋 GIẢM 30K GIỜ VÀNG',
+            'image' => 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=1600&auto=format&fit=crop&q=85',
+            'fallback_image' => 'assets/images/foods/brown-sugar-boba.jpg',
+            'link' => 'foods.php?search=Trà sữa'
+        ]
+    ];
+}
+
 // 5. Lấy đánh giá khách hàng
 $reviews = $db->query("SELECT r.*, u.full_name, u.avatar_url 
                        FROM reviews r 
@@ -67,51 +128,40 @@ require_once ROOT_PATH . '/includes/header.php';
 ?>
 
 <main class="container">
-  <!-- 1. HERO SLIDER & BANNER -->
+  <!-- 1. HERO SLIDER & BANNER (TỰ ĐỘNG CHUYỂN ẢNH SAU 1-2S) -->
   <section class="hero-section">
     <div class="hero-slider-container" aria-label="Món ăn nổi bật">
       <div class="hero-slider-track" id="hero-slider-track">
-        <div class="hero-slide" onclick="window.location.href='<?= getUrl('foods.php?search=Burger') ?>'">
-          <img src="https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=1600&auto=format&fit=crop&q=85" alt="Burger Bò Nướng Phô Mai" class="hero-slide-img">
-          <div class="hero-slide-overlay">
-            <span class="hero-slide-badge">🔥 ƯU ĐÃI GIẢM 50%</span>
-            <h3 class="hero-slide-title">Burger Bò Nướng Phô Mai</h3>
-            <p class="hero-slide-sub">Burger King Station • Nóng hổi giao 15 phút</p>
+        <?php foreach ($banners as $idx => $b): ?>
+          <?php
+            $bLink = !empty($b['link']) ? (strpos($b['link'], 'http') === 0 ? $b['link'] : getUrl($b['link'])) : getUrl('foods.php');
+            $bImg = $b['image'] ?? '';
+            if ($bImg && !preg_match('#^(https?://|//)#i', $bImg)) {
+                $bImg = getAssetUrl($bImg);
+            }
+            $bFallback = !empty($b['fallback_image']) ? getAssetUrl($b['fallback_image']) : 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1600&auto=format&fit=crop&q=85';
+          ?>
+          <div class="hero-slide" onclick="window.location.href='<?= escapeHtml($bLink) ?>'">
+            <img src="<?= escapeHtml($bImg) ?>" alt="<?= escapeHtml($b['title'] ?? 'FASTFOOD') ?>" class="hero-slide-img" loading="<?= $idx === 0 ? 'eager' : 'lazy' ?>" onerror="this.onerror=null; this.src='<?= escapeHtml($bFallback) ?>';">
+            <div class="hero-slide-overlay">
+              <?php if (!empty($b['badge'])): ?>
+                <span class="hero-slide-badge"><?= escapeHtml($b['badge']) ?></span>
+              <?php endif; ?>
+              <h3 class="hero-slide-title"><?= escapeHtml($b['title'] ?? '') ?></h3>
+              <?php if (!empty($b['subtitle'])): ?>
+                <p class="hero-slide-sub"><?= escapeHtml($b['subtitle']) ?></p>
+              <?php endif; ?>
+            </div>
           </div>
-        </div>
-        <div class="hero-slide" onclick="window.location.href='<?= getUrl('foods.php?search=Pizza') ?>'">
-          <img src="https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1600&auto=format&fit=crop&q=85" alt="Pizza Hải Sản Pesto" class="hero-slide-img">
-          <div class="hero-slide-overlay">
-            <span class="hero-slide-badge">🍕 MUA 1 TẶNG 1 HÔM NAY</span>
-            <h3 class="hero-slide-title">Pizza Hải Sản Pesto Ý</h3>
-            <p class="hero-slide-sub">Pizza Hut Italia • Phô mai kéo sợi thơm lừng</p>
-          </div>
-        </div>
-        <div class="hero-slide" onclick="window.location.href='<?= getUrl('foods.php?search=Cơm') ?>'">
-          <img src="<?= getAssetUrl('assets/images/foods/com-tam-suon-bi-cha.jpg') ?>" alt="Cơm Tấm Sườn Bì Chả" class="hero-slide-img">
-          <div class="hero-slide-overlay">
-            <span class="hero-slide-badge">🍚 FREESHIP 0Đ ĐƠN TỪ 50K</span>
-            <h3 class="hero-slide-title">Cơm Tấm Sườn Bì Chả</h3>
-            <p class="hero-slide-sub">Cơm Tấm Sài Gòn Xưa • Chuẩn vị truyền thống</p>
-          </div>
-        </div>
-        <div class="hero-slide" onclick="window.location.href='<?= getUrl('foods.php?search=Trà sữa') ?>'">
-          <img src="https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=1600&auto=format&fit=crop&q=85" alt="Trà Sữa GongCha Hoàng Gia" class="hero-slide-img">
-          <div class="hero-slide-overlay">
-            <span class="hero-slide-badge">🧋 GIẢM 30K GIỜ VÀNG</span>
-            <h3 class="hero-slide-title">Trà Sữa Trân Châu Hoàng Gia</h3>
-            <p class="hero-slide-sub">GongCha Tea • Trân châu đường đen dẻo dai</p>
-          </div>
-        </div>
+        <?php endforeach; ?>
       </div>
 
       <button class="hero-slider-btn prev" id="slider-prev-btn" aria-label="Slide trước">‹</button>
       <button class="hero-slider-btn next" id="slider-next-btn" aria-label="Slide tiếp">›</button>
       <div class="hero-slider-dots" id="hero-slider-dots">
-        <span class="dot active" data-index="0"></span>
-        <span class="dot" data-index="1"></span>
-        <span class="dot" data-index="2"></span>
-        <span class="dot" data-index="3"></span>
+        <?php foreach ($banners as $idx => $b): ?>
+          <span class="dot <?= $idx === 0 ? 'active' : '' ?>" data-index="<?= $idx ?>" aria-label="Slide <?= $idx + 1 ?>"></span>
+        <?php endforeach; ?>
       </div>
     </div>
 
@@ -355,12 +405,115 @@ function copyCoupon(code) {
 }
 
 function toggleFavorite(productId, btn) {
-  const isLiked = btn.classList.toggle('is-liked');
-  btn.textContent = isLiked ? '♥' : '♡';
-  if (window.UIComponents?.showToast) {
-    window.UIComponents.showToast(isLiked ? 'Đã thêm vào danh sách yêu thích!' : 'Đã xóa khỏi danh sách yêu thích.', 'info');
+  if (window.FavoritesManager) {
+    window.FavoritesManager.toggle(productId, btn);
+  } else {
+    const isLiked = btn.classList.toggle('is-liked');
+    btn.textContent = isLiked ? '♥' : '♡';
   }
 }
+
+// =====================================================================
+// HERO BANNER SLIDER - TỰ ĐỘNG CHUYỂN ẢNH SAU 1-2 GIÂY (MẶC ĐỊNH 1.8s)
+// =====================================================================
+(function() {
+  const track = document.getElementById('hero-slider-track');
+  if (!track) return;
+
+  const slides = track.querySelectorAll('.hero-slide');
+  const dots = document.querySelectorAll('#hero-slider-dots .dot');
+  const prevBtn = document.getElementById('slider-prev-btn');
+  const nextBtn = document.getElementById('slider-next-btn');
+  const totalSlides = slides.length;
+  if (totalSlides <= 1) return;
+
+  let currentIndex = 0;
+  let slideTimer = null;
+  const INTERVAL_MS = <?= $slideInterval ?>; // Tự chuyển ảnh sau 1-2s (1800ms)
+
+  function updateSlider(index) {
+    currentIndex = (index + totalSlides) % totalSlides;
+    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+    dots.forEach((dot, idx) => {
+      dot.classList.toggle('active', idx === currentIndex);
+    });
+  }
+
+  function nextSlide() {
+    updateSlider(currentIndex + 1);
+  }
+
+  function prevSlide() {
+    updateSlider(currentIndex - 1);
+  }
+
+  function startAutoSlide() {
+    stopAutoSlide();
+    slideTimer = setInterval(nextSlide, INTERVAL_MS);
+  }
+
+  function stopAutoSlide() {
+    if (slideTimer) {
+      clearInterval(slideTimer);
+      slideTimer = null;
+    }
+  }
+
+  // Sự kiện nút Tiếp / Lùi
+  if (nextBtn) {
+    nextBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      nextSlide();
+      startAutoSlide();
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      prevSlide();
+      startAutoSlide();
+    });
+  }
+
+  // Sự kiện bấm chọn Dot chỉ số
+  dots.forEach((dot) => {
+    dot.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(dot.getAttribute('data-index'), 10) || 0;
+      updateSlider(idx);
+      startAutoSlide();
+    });
+  });
+
+  // Tạm dừng khi di chuột vào banner để người dùng đọc thông tin ưu đãi
+  const container = document.querySelector('.hero-slider-container');
+  if (container) {
+    container.addEventListener('mouseenter', stopAutoSlide);
+    container.addEventListener('mouseleave', startAutoSlide);
+
+    // Hỗ trợ vuốt tay chuyển slide trên điện thoại / tablet
+    let touchStartX = 0;
+    let touchEndX = 0;
+    container.addEventListener('touchstart', (e) => {
+      touchStartX = e.changedTouches[0].screenX;
+      stopAutoSlide();
+    }, { passive: true });
+
+    container.addEventListener('touchend', (e) => {
+      touchEndX = e.changedTouches[0].screenX;
+      if (touchStartX - touchEndX > 45) {
+        nextSlide();
+      } else if (touchEndX - touchStartX > 45) {
+        prevSlide();
+      }
+      startAutoSlide();
+    }, { passive: true });
+  }
+
+  // Kích hoạt chạy tự động
+  startAutoSlide();
+})();
 </script>
 
 <?php require_once ROOT_PATH . '/includes/footer.php'; ?>

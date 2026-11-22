@@ -193,6 +193,82 @@ switch ($action) {
         jsonSuccess('Tải ảnh thành công!', ['url' => $url]);
         break;
 
+    case 'get_banners':
+        $bannerRow = null;
+        try {
+            $bannerRow = $db->query("SELECT content FROM website_content WHERE collection_name = 'banners' LIMIT 1")->fetchColumn();
+        } catch (Exception $e) {}
+
+        $bannerData = $bannerRow ? json_decode($bannerRow, true) : null;
+        if (!$bannerData || !is_array($bannerData)) {
+            $bannerData = [
+                'interval' => 1800,
+                'banners' => [
+                    [
+                        'id' => 'banner-1',
+                        'title' => 'Burger Bò Nướng Phô Mai',
+                        'subtitle' => 'Burger King Station • Nóng hổi giao 15 phút',
+                        'badge' => '🔥 ƯU ĐÃI GIẢM 50%',
+                        'image' => 'https://images.unsplash.com/photo-1550547660-d9450f859349?w=1600&auto=format&fit=crop&q=85',
+                        'link' => 'foods.php?search=Burger',
+                        'order' => 1,
+                        'active' => true
+                    ],
+                    [
+                        'id' => 'banner-2',
+                        'title' => 'Pizza Hải Sản Pesto Ý',
+                        'subtitle' => 'Pizza Hut Italia • Phô mai kéo sợi thơm lừng',
+                        'badge' => '🍕 MUA 1 TẶNG 1 HÔM NAY',
+                        'image' => 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=1600&auto=format&fit=crop&q=85',
+                        'link' => 'foods.php?search=Pizza',
+                        'order' => 2,
+                        'active' => true
+                    ],
+                    [
+                        'id' => 'banner-3',
+                        'title' => 'Cơm Tấm Sườn Bì Chả',
+                        'subtitle' => 'Cơm Tấm Sài Gòn Xưa • Chuẩn vị truyền thống',
+                        'badge' => '🍚 FREESHIP 0Đ ĐƠN TỪ 50K',
+                        'image' => 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1600&auto=format&fit=crop&q=85',
+                        'link' => 'foods.php?search=Cơm',
+                        'order' => 3,
+                        'active' => true
+                    ],
+                    [
+                        'id' => 'banner-4',
+                        'title' => 'Trà Sữa Trân Châu Hoàng Gia',
+                        'subtitle' => 'GongCha Tea • Trân châu đường đen dẻo dai',
+                        'badge' => '🧋 GIẢM 30K GIỜ VÀNG',
+                        'image' => 'https://images.unsplash.com/photo-1541658016709-82535e94bc69?w=1600&auto=format&fit=crop&q=85',
+                        'link' => 'foods.php?search=Trà sữa',
+                        'order' => 4,
+                        'active' => true
+                    ]
+                ]
+            ];
+        }
+        jsonSuccess('Lấy danh sách banner thành công!', $bannerData);
+        break;
+
+    case 'save_banners':
+        $banners = $body['banners'] ?? [];
+        $interval = (int)($body['interval'] ?? 1800);
+        if ($interval < 1000) $interval = 1000;
+        if ($interval > 10000) $interval = 10000;
+
+        $saveData = [
+            'interval' => $interval,
+            'banners'  => $banners
+        ];
+        $jsonStr = json_encode($saveData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+
+        $stmt = $db->prepare("INSERT INTO website_content (collection_name, content, updated_at) 
+                             VALUES ('banners', ?, NOW()) 
+                             ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = NOW()");
+        $stmt->execute([$jsonStr]);
+        jsonSuccess('Đã lưu cấu hình banner và tốc độ chuyển slide thành công!');
+        break;
+
     default:
         jsonError('Hành động không hợp lệ.');
 }

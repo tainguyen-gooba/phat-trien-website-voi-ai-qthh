@@ -28,14 +28,15 @@ $isAdminContext = (
     (preg_match('#^/api/#', $requestUri) && strpos($referer, '/admin') !== false)
 );
 
-if ($isAdminContext) {
-    session_name('FF_SESS_ADMIN');
-} else {
-    session_name('FASTFOOD_SESSID');
-}
-
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
+    if ($isAdminContext) {
+        @session_name('FF_SESS_ADMIN');
+    } else {
+        @session_name('FASTFOOD_SESSID');
+    }
+    @session_start();
+} elseif (session_status() === PHP_SESSION_NONE) {
+    @session_start();
 }
 
 // Dọn dẹp phiên Khách Hàng: Nếu FASTFOOD_SESSID còn lưu tài khoản Admin/Staff từ phiên cũ,

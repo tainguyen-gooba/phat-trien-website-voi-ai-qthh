@@ -1,66 +1,177 @@
-===================================================================
-                    DANH SÁCH TÀI KHOẢN HỆ THỐNG FASTFOOD
-===================================================================
-MẬT KHẨU CHUNG CHO TẤT CẢ TÀI KHOẢN: 123456
+========================================================================================
+             DANH SÁCH TOÀN BỘ TÀI KHOẢN HỆ THỐNG FASTFOOD & PHÂN QUYỀN
+========================================================================================
+* MẬT KHẨU CHUNG CHO TẤT CẢ CÁC TÀI KHOẢN: 123456
+* ĐỊA CHỈ TRANG QUẢN TRỊ (ADMIN/STAFF): /admin (hoặc /admin/login.php)
+* ĐỊA CHỈ TRANG KHÁCH HÀNG: / (hoặc /index.php)
 
--------------------------------------------------------------------
-1. TÀI KHOẢN QUẢN TRỊ VIÊN (ADMIN) - TOÀN QUYỀN HỆ THỐNG (FULL QUYỀN):
--------------------------------------------------------------------
-- Mật khẩu: 123456
-- Vai trò: Quản trị viên (Admin)
-- Quyền hạn:
-  + Toàn quyền truy cập tất cả chức năng trên website & trang Admin
-  + Quản lý Người dùng & Phân quyền (Xem, thêm, sửa, xóa, khóa tài khoản)
-  + Cấu hình Trợ lý AI Chatbot Quản Trị & Tự động hóa hệ thống
-  + Quản lý Danh mục, Sản phẩm món ăn, Quán ăn (Thêm, sửa, xóa)
-  + Quản lý Đơn hàng & Cập nhật tiến độ đơn
-  + Hộp thư Tin nhắn khách hàng & Đánh giá nhận xét
+========================================================================================
+I. NHÓM TÀI KHOẢN QUẢN TRỊ VIÊN (ADMIN) - ROLE ID: 1
+========================================================================================
+* Mô tả vai trò: Quản trị viên tối cao, nắm toàn quyền điều hành hệ thống.
+* Quyền hạn chi tiết:
+  [+] Toàn quyền truy cập tất cả module trên trang Admin và Website.
+  [+] Quản lý Người dùng & Phân quyền: Xem danh sách, tạo mới, chỉnh sửa thông tin,
+      phân chia vai trò (Admin, Staff, Customer, Owner, Shipper), khóa/kích hoạt tài khoản.
+  [+] Quản lý Đơn hàng: Xem chi tiết đơn, cập nhật tiến độ (Chờ duyệt -> Đang nấu -> Đang giao -> Hoàn thành/Hủy).
+  [+] Quản lý Thực đơn & Món ăn: Thêm, sửa giá, chiết khấu, ảnh đại diện, danh mục, thời gian nấu, xóa món.
+  [+] Quản lý Danh mục & Quán ăn: Thêm mới, chỉnh sửa icon, cập nhật danh sách quán đối tác.
+  [+] Quản lý Banner trang chủ: Thêm/sửa/xóa slide banner, cài đặt tốc độ chuyển ảnh tự động (1-2s).
+  [+] Quản lý Khuyến mãi & Giờ vàng Best Seller: Tùy biến đồng hồ đếm ngược, danh sách món hot.
+  [+] Chăm sóc khách hàng (Live Chat): Trò chuyện, phản hồi tin nhắn trực tuyến với khách.
+  [+] Quản lý Đánh giá: Xem, duyệt, ẩn/hiện nhận xét và phản hồi ý kiến khách hàng.
+  [+] Cấu hình Trợ lý AI Chatbot & Cài đặt hệ thống nâng cao.
 
--------------------------------------------------------------------
-2. 4 TÀI KHOẢN THÀNH VIÊN BAN QUẢN TRỊ (STAFF) - QUYỀN HẠN CHẾ:
--------------------------------------------------------------------
-* Thành viên 1:
-  - Họ tên: Nguyễn Văn Thành
-  - Email: staff1@fastfood.vn
-  - Mật khẩu: 123456
-  - Số điện thoại: 0911000001
+* Danh sách tài khoản Admin:
+  --------------------------------------------------------------------------------------
+  1. Email: admin@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Hệ Thống Quản Trị
+     - Số điện thoại: 0901000001
+     - Trạng thái: Hoạt động (active)
+  --------------------------------------------------------------------------------------
 
-* Thành viên 2:
-  - Họ tên: Trần Thị Mai
-  - Email: staff2@fastfood.vn
-  - Mật khẩu: 123456
-  - Số điện thoại: 0911000002
+========================================================================================
+II. NHÓM TÀI KHOẢN THÀNH VIÊN BAN QUẢN TRỊ (STAFF) - ROLE ID: 5
+========================================================================================
+* Mô tả vai trò: Nhân viên hỗ trợ vận hành hệ thống, quyền hạn bị giới hạn để đảm bảo an toàn.
+* Quyền hạn chi tiết:
+  [+] ĐƯỢC PHÉP:
+      - Xem bảng số liệu tổng quan (Dashboard: Doanh thu, số lượng đơn, biểu đồ tăng trưởng).
+      - Quản lý Món ăn: Xem, thêm mới, sửa giá bán, cập nhật hình ảnh món.
+      - Quản lý Danh mục & Quán ăn: Cập nhật thông tin danh mục và nhà hàng.
+      - Quản lý Đơn hàng: Xem đơn, tiếp nhận và đổi trạng thái giao nhận đơn hàng.
+      - Hộp thư Chăm sóc khách hàng: Nhận và trả lời tin nhắn của khách theo thời gian thực.
+      - Xem và phản hồi Đánh giá từ khách hàng.
+  [-] BỊ GIỚI HẠN (KHÔNG ĐƯỢC PHÉP):
+      - ❌ KHÔNG được truy cập mục "Người dùng": Không được xem danh sách, không được tạo, sửa,
+        xóa hoặc phân quyền tài khoản của người khác.
+      - ❌ KHÔNG được can thiệp hoặc sửa/xóa tài khoản Quản trị viên tối cao (Admin).
+      - ❌ KHÔNG được thay đổi Cấu hình AI Chatbot và Cài đặt bảo mật hệ thống.
 
-* Thành viên 3:
-  - Họ tên: Lê Hoàng Long
-  - Email: staff3@fastfood.vn
-  - Mật khẩu: 123456
-  - Số điện thoại: 0911000003
+* Danh sách 4 tài khoản Staff:
+  --------------------------------------------------------------------------------------
+  1. Email: staff1@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Nguyễn Văn Thành (Thành viên 1) của Hiệp
+     - Số điện thoại: 0911000001
+     - Địa chỉ: Buôn Ma Thuột, Đắk Lắk
+     - Trạng thái: Hoạt động (active)
 
-* Thành viên 4:
-  - Họ tên: Phạm Thu Hương
-  - Email: staff4@fastfood.vn
-  - Mật khẩu: 123456
-  - Số điện thoại: 0911000004
+  2. Email: staff2@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Trần Thị Mai (Thành viên 2) của Hoàng
+     - Số điện thoại: 0911000002
+     - Địa chỉ: Buôn Ma Thuột, Đắk Lắk
+     - Trạng thái: Hoạt động (active)
 
-* Phân quyền & Giới hạn của Thành viên:
-  + ĐƯỢC PHÉP:
-    - Xem thống kê doanh thu, đơn hàng, biểu đồ tổng quan (Dashboard)
-    - Quản lý Sản phẩm (Xem, thêm, sửa giá, sửa ảnh, xóa món ăn)
-    - Quản lý Danh mục (Xem, thêm, sửa, xóa danh mục món)
-    - Quản lý Quán ăn (Xem, thêm, sửa thông tin, xóa quán)
-    - Quản lý Đơn hàng (Xem chi tiết đơn, cập nhật trạng thái đơn hàng)
-    - Hộp thư hỗ trợ khách hàng (Nhận và trả lời tin nhắn của khách realtime)
-    - Xem và phản hồi Đánh giá nhận xét từ khách hàng
-  + BỊ HẠN CHẾ (KHÔNG ĐƯỢC PHÉP):
-    - ❌ KHÔNG được truy cập mục "Người dùng": Không được xem danh sách, không được tạo, sửa, xóa hay phân quyền tài khoản người dùng khác.
-    - ❌ KHÔNG được cấu hình Trợ lý AI Chatbot & Cài đặt hệ thống.
-    - ❌ KHÔNG được xóa hoặc chỉnh sửa tài khoản Quản trị viên tối cao (Admin).
+  3. Email: staff3@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Lê Hoàng Long (Thành viên 3) của Tài
+     - Số điện thoại: 0911000003
+     - Địa chỉ: Buôn Ma Thuột, Đắk Lắk
+     - Trạng thái: Hoạt động (active)
 
--------------------------------------------------------------------
-3. TÀI KHOẢN KHÁCH HÀNG (CUSTOMER):
--------------------------------------------------------------------
-1. ab@gmail.com    | Mật khẩu: 123456
-2. anh@gmail.com   | Mật khẩu: 123456
-3. thin@gmail.com  | Mật khẩu: 123456
-===================================================================
+  4. Email: staff4@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Phạm Thu Hương (Thành viên 4) của Nam
+     - Số điện thoại: 0911000004
+     - Địa chỉ: Buôn Ma Thuột, Đắk Lắk
+     - Trạng thái: Hoạt động (active)
+  --------------------------------------------------------------------------------------
+
+========================================================================================
+III. NHÓM TÀI KHOẢN CHỦ QUÁN ĂN / ĐỐI TÁC (RESTAURANT OWNER) - ROLE ID: 3
+========================================================================================
+* Mô tả vai trò: Đối tác liên kết mở quán trên nền tảng FASTFOOD.
+* Quyền hạn chi tiết:
+  [+] Quản lý menu và các món ăn riêng của nhà hàng/quán mình.
+  [+] Tiếp nhận đơn hàng khách đặt của quán, bấm xác nhận đang chế biến món.
+  [+] Xem báo cáo doanh thu và lịch sử đơn hàng của quán.
+
+* Danh sách tài khoản Chủ quán:
+  --------------------------------------------------------------------------------------
+  1. Email: owner@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Nguyễn Văn Chủ Quán
+     - Số điện thoại: 0902000002
+     - Trạng thái: Hoạt động (active)
+  --------------------------------------------------------------------------------------
+
+========================================================================================
+IV. NHÓM TÀI KHOẢN TÀI XẾ GIAO HÀNG (SHIPPER) - ROLE ID: 4
+========================================================================================
+* Mô tả vai trò: Tài xế đối tác nhận đơn và vận chuyển thức ăn đến tay khách hàng.
+* Quyền hạn chi tiết:
+  [+] Xem danh sách các đơn hàng đã nấu xong đang cần tài xế giao.
+  [+] Nhận đơn giao, xem thông tin người nhận (Họ tên, SĐT, Địa chỉ giao hàng).
+  [+] Cập nhật trạng thái giao: Đang giao -> Đã giao hàng thành công.
+
+* Danh sách tài khoản Shipper:
+  --------------------------------------------------------------------------------------
+  1. Email: shipper@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Lê Tài Xế Giao Hàng
+     - Số điện thoại: 0904000004
+     - Trạng thái: Hoạt động (active)
+  --------------------------------------------------------------------------------------
+
+========================================================================================
+V. NHÓM TÀI KHOẢN KHÁCH HÀNG (CUSTOMER) - ROLE ID: 2
+========================================================================================
+* Mô tả vai trò: Người dùng đặt món trên website FASTFOOD.
+* Quyền hạn chi tiết:
+  [+] Xem menu món ăn, tìm kiếm món, lọc theo danh mục, giá cả.
+  [+] Tùy chọn size món, topping thêm và cho vào giỏ hàng.
+  [+] Đặt món trực tuyến, áp dụng mã voucher giảm giá.
+  [+] Chọn hình thức thanh toán: COD (tiền mặt khi nhận) hoặc Chuyển khoản (SePay / VietQR).
+  [+] Theo dõi tình trạng đơn hàng thời gian thực trong Lịch sử đơn hàng.
+  [+] Lưu danh sách món ăn yêu thích (Favorites).
+  [+] Đánh giá số sao (1-5 sao) và để lại bình luận nhận xét món ăn.
+  [+] Nhắn tin Live Chat trực tiếp với nhân viên hỗ trợ.
+
+* Danh sách 7 tài khoản Khách hàng trong hệ thống:
+  --------------------------------------------------------------------------------------
+  1. Email: customer@fastfood.vn
+     - Mật khẩu: 123456
+     - Họ và tên: Trần Khách Hàng
+     - Số điện thoại: 0903000003
+     - Trạng thái: Hoạt động (active)
+
+  2. Email: ab@gmail.com
+     - Mật khẩu: 123456
+     - Họ và tên: anh em
+     - Số điện thoại: 07899852655
+     - Địa chỉ: 43 nguyễn lâm
+     - Trạng thái: Hoạt động (active)
+
+  3. Email: anh@gmail.com
+     - Mật khẩu: 123456
+     - Họ và tên: thin ca
+     - Số điện thoại: 0349023478
+     - Địa chỉ: 43 nguyễn lâm
+     - Trạng thái: Hoạt động (active)
+
+  4. Email: thin@gmail.com
+     - Mật khẩu: 123456
+     - Họ và tên: Thìn ca
+     - Số điện thoại: 0783519867
+     - Địa chỉ: 72 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk
+     - Trạng thái: Hoạt động (active)
+
+  5. Email: hhhh@gmail.com
+     - Mật khẩu: 123456
+     - Họ và tên: ffgg
+     - Số điện thoại: 054727555555
+     - Trạng thái: Hoạt động (active)
+
+  6. Email: thin1@gmail.com
+     - Mật khẩu: 123456
+     - Họ và tên: nnb
+     - Trạng thái: Hoạt động (active)
+
+  7. Email: thin2@gmail.com
+     - Mật khẩu: 123456
+     - Họ và tên: fff
+     - Trạng thái: Hoạt động (active)
+========================================================================================

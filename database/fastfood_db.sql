@@ -145,6 +145,9 @@ CREATE TABLE `products` (
   `is_available` TINYINT(1) DEFAULT 1 COMMENT '1 = Còn món, 0 = Tạm hết hàng',
   `is_featured` TINYINT(1) DEFAULT 0 COMMENT '1 = Món ăn nổi bật / Best-seller',
   `prep_time_minutes` INT UNSIGNED DEFAULT 15 COMMENT 'Thời gian chuẩn bị món dự kiến (phút)',
+  `options` LONGTEXT NULL COMMENT 'JSON cấu hình size, topping, thuộc tính món',
+  `rating_avg` DECIMAL(3, 2) DEFAULT 4.90 COMMENT 'Điểm đánh giá trung bình món ăn',
+  `rating_count` INT UNSIGNED DEFAULT 15 COMMENT 'Số lượt đánh giá món ăn',
   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   KEY `fk_products_restaurant` (`restaurant_id`),
@@ -551,9 +554,9 @@ ALTER TABLE `roles` ENABLE KEYS;
 ALTER TABLE `users` DISABLE KEYS;
 INSERT INTO `users` (`id`, `role_id`, `full_name`, `email`, `phone`, `address`, `password_hash`, `avatar_url`, `status`, `created_at`, `updated_at`) VALUES
 (1, 1, 'Hệ Thống Quản Trị', 'admin@fastfood.vn', '0901000001', NULL, '$2a$10$a.B1kwGPx.2gw4ykHALXW.tztT//QdWvbawwCqvS5DJKi2yLni4Fi', NULL, 'active', '2026-11-06 17:56:33', '2026-11-13 22:21:47'),
-(2, 3, 'Nguyễn Văn Chủ Quán', 'owner@fastfood.vn', '0902000002', NULL, '$2a$10$bkietFQJeqvf5auGcaZdpeA3bauzIW68ngdzqkEYVS9T1o4j.tsXe', NULL, 'active', '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
-(3, 2, 'Trần Khách Hàng', 'customer@fastfood.vn', '0903000003', NULL, '$2a$10$bkietFQJeqvf5auGcaZdpeA3bauzIW68ngdzqkEYVS9T1o4j.tsXe', NULL, 'active', '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
-(4, 4, 'Lê Tài Xế Giao Hàng', 'shipper@fastfood.vn', '0904000004', NULL, '$2a$10$bkietFQJeqvf5auGcaZdpeA3bauzIW68ngdzqkEYVS9T1o4j.tsXe', NULL, 'active', '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
+(2, 3, 'Nguyễn Văn Chủ Quán', 'owner@fastfood.vn', '0902000002', NULL, '$2a$10$a.B1kwGPx.2gw4ykHALXW.tztT//QdWvbawwCqvS5DJKi2yLni4Fi', NULL, 'active', '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
+(3, 2, 'Trần Khách Hàng', 'customer@fastfood.vn', '0903000003', NULL, '$2a$10$a.B1kwGPx.2gw4ykHALXW.tztT//QdWvbawwCqvS5DJKi2yLni4Fi', NULL, 'active', '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
+(4, 4, 'Lê Tài Xế Giao Hàng', 'shipper@fastfood.vn', '0904000004', NULL, '$2a$10$a.B1kwGPx.2gw4ykHALXW.tztT//QdWvbawwCqvS5DJKi2yLni4Fi', NULL, 'active', '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
 (7, 2, 'thin ca', 'anh@gmail.com', '0349023478', '43 nguyễn lâm', '$2a$10$a.B1kwGPx.2gw4ykHALXW.tztT//QdWvbawwCqvS5DJKi2yLni4Fi', NULL, 'active', '2026-11-06 21:51:29', '2026-11-13 22:21:47'),
 (8, 2, 'ffgg', 'hhhh@gmail.com', '054727555555', NULL, '$2a$10$y0Y8yvyZW4Kmt3u6./3i3./rwPsdbU0fdyJbx/LGbpBa3ODIKGoQq', NULL, 'active', '2026-11-06 21:53:09', '2026-11-06 21:53:09'),
 (9, 2, 'Thìn ca', 'thin@gmail.com', '0783519867', '72 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', '$2a$10$a.B1kwGPx.2gw4ykHALXW.tztT//QdWvbawwCqvS5DJKi2yLni4Fi', NULL, 'active', '2026-11-08 19:55:49', '2026-11-13 22:21:47'),
@@ -572,11 +575,6 @@ ALTER TABLE `users` ENABLE KEYS;
 --
 ALTER TABLE `categories` DISABLE KEYS;
 INSERT INTO `categories` (`id`, `restaurant_id`, `name`, `slug`, `icon_url`, `display_order`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, NULL, 'Cơm & Món Việt', 'com-mon-viet', '/assets/images/categories/rice.svg', 1, 1, '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
-(2, NULL, 'Burger & Gà Rán', 'burger-ga-ran', '/assets/images/categories/burger.svg', 2, 1, '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
-(3, NULL, 'Trà Sữa & Đồ Uống', 'tra-sua-do-uong', '/assets/images/categories/drink.svg', 3, 1, '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
-(4, NULL, 'Pizza & Mỳ Ý', 'pizza-my-y', '/assets/images/categories/pizza.svg', 4, 1, '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
-(5, NULL, 'Ăn Vặt & Tráng Miệng', 'an-vat-trang-mieng', '/assets/images/categories/snack.svg', 5, 1, '2026-11-06 17:56:33', '2026-11-06 17:56:33'),
 (30, NULL, 'Cơm & Món Việt', 'com', 'https://images.unsplash.com/photo-1512058564366-18510be2db19?w=240&auto=format&fit=crop&q=80', 1, 1, '2026-11-12 14:53:52', '2026-11-12 14:53:52'),
 (31, NULL, 'Burger & Gà Rán', 'burger', 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=240&auto=format&fit=crop&q=80', 2, 1, '2026-11-12 14:53:52', '2026-11-12 14:53:52'),
 (32, NULL, 'Trà Sữa & Đồ Uống', 'tra-sua', 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=240&auto=format&fit=crop&q=80', 3, 1, '2026-11-12 14:53:52', '2026-11-12 14:53:52'),

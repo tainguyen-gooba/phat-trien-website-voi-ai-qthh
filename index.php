@@ -10,17 +10,7 @@ $extraCss  = ['css/home.css'];
 
 $db = getDB();
 
-// 1. Lấy danh mục món ăn
-$categories = $db->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY display_order ASC, id ASC LIMIT 8")->fetchAll();
-
-// 2. Lấy món Flash Sale (có giảm giá)
-$flashDeals = $db->query("SELECT p.*, r.name AS restaurant_name 
-                          FROM products p 
-                          LEFT JOIN restaurants r ON p.restaurant_id = r.id 
-                          WHERE p.is_available = 1 AND p.discount_price > 0 AND p.discount_price < p.base_price 
-                          ORDER BY p.id DESC LIMIT 4")->fetchAll();
-
-// 3. Lấy cấu hình Best Seller & danh sách món
+// 1. Lấy cấu hình Best Seller & danh sách món (Bảng cam duy nhất, ít nhất 5 món, thời gian 1 tiếng)
 $bsContent = $db->query("SELECT content FROM website_content WHERE collection_name = 'bestseller' LIMIT 1")->fetchColumn();
 $bsConfig = $bsContent ? json_decode($bsContent, true) : null;
 if (!$bsConfig) {
@@ -29,10 +19,15 @@ if (!$bsConfig) {
         'subtitle'      => 'Được khách hàng đặt nhiều nhất trong tuần qua - Ưu đãi giờ vàng giới hạn!',
         'badge'         => '🔥 GIỜ VÀNG BEST SELLER',
         'timer_enabled' => 1,
-        'end_time'      => date('Y-m-d H:i:s', strtotime('+2 days 23:59:59')),
+        'end_time'      => date('Y-m-d H:i:s', strtotime('+1 hour')),
         'discount_text' => 'Ưu đãi có hạn',
-        'product_ids'   => [1, 2, 3, 5]
+        'product_ids'   => [1, 2, 3, 5, 6] // Ít nhất 5 món
     ];
+} else {
+    // Đảm bảo danh sách product_ids có ít nhất 5 món
+    if (empty($bsConfig['product_ids']) || count($bsConfig['product_ids']) < 5) {
+        $bsConfig['product_ids'] = array_unique(array_merge($bsConfig['product_ids'] ?? [], [1, 2, 3, 5, 6]));
+    }
 }
 
 $bestSellers = [];
@@ -48,13 +43,44 @@ if (!empty($bsConfig['product_ids']) && is_array($bsConfig['product_ids'])) {
                                    ORDER BY FIELD(p.id, $inClause)")->fetchAll();
     }
 }
-if (empty($bestSellers)) {
-    $bestSellers = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS category_name 
-                               FROM products p 
-                               LEFT JOIN restaurants r ON p.restaurant_id = r.id 
-                               LEFT JOIN categories c ON p.category_id = c.id 
-                               WHERE p.is_available = 1 
-                               ORDER BY p.is_featured DESC, p.id ASC LIMIT 4")->fetchAll();
+if (count($bestSellers) < 5) {
+    $neededBs = 5 - count($bestSellers);
+    $existingBsIds = array_column($bestSellers, 'id');
+    $placeholdersBs = !empty($existingBsIds) ? 'AND p.id NOT IN (' . implode(',', array_map('intval', $existingBsIds)) . ')' : '';
+    $moreBs = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS category_name 
+                          FROM products p 
+                          LEFT JOIN restaurants r ON p.restaurant_id = r.id 
+                          LEFT JOIN categories c ON p.category_id = c.id 
+                          WHERE p.is_available = 1 $placeholdersBs 
+                          ORDER BY p.is_featured DESC, p.id ASC LIMIT $neededBs")->fetchAll();
+    $bestSellers = array_merge($bestSellers, $moreBs);
+}
+// Đảm bảo lấy ít nhất 5 món cho Best Sellers
+$bestSellers = array_slice($bestSellers, 0, 5);
+
+// 3. Lấy danh sách 24 món ăn trong Menu (Khoảng 20-25 món, đúng tên & đúng hình ảnh chuẩn vị)
+$menuCats = ['Burger & Gà Rán', 'Cơm & Món Việt', 'Pizza & Mỳ Ý', 'Sushi & Món Nhật', 'Trà Sữa & Đồ Uống', 'Ăn Vặt & Bánh'];
+$menuProducts = [];
+foreach ($menuCats as $mCat) {
+    $items = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS category_name, c.slug AS category_slug 
+                         FROM products p 
+                         LEFT JOIN restaurants r ON p.restaurant_id = r.id 
+                         LEFT JOIN categories c ON p.category_id = c.id 
+                         WHERE c.name = " . $db->quote($mCat) . " AND p.is_available = 1 
+                         ORDER BY p.is_featured DESC, p.id ASC LIMIT 4")->fetchAll();
+    $menuProducts = array_merge($menuProducts, $items);
+}
+if (count($menuProducts) < 24) {
+    $haveIds = array_column($menuProducts, 'id');
+    $notIn = !empty($haveIds) ? "AND p.id NOT IN (" . implode(',', array_map('intval', $haveIds)) . ")" : "";
+    $remain = 24 - count($menuProducts);
+    $more = $db->query("SELECT p.*, r.name AS restaurant_name, c.name AS category_name, c.slug AS category_slug 
+                        FROM products p 
+                        LEFT JOIN restaurants r ON p.restaurant_id = r.id 
+                        LEFT JOIN categories c ON p.category_id = c.id 
+                        WHERE p.is_available = 1 $notIn 
+                        ORDER BY p.is_featured DESC, p.id ASC LIMIT $remain")->fetchAll();
+    $menuProducts = array_merge($menuProducts, $more);
 }
 
 // 4. Lấy danh sách Banner động từ website_content (hoặc fallback mặc định)
@@ -181,65 +207,7 @@ require_once ROOT_PATH . '/includes/header.php';
     </div>
   </section>
 
-  <!-- 2. DANH MỤC MÓN ĂN -->
-  <section class="category-section">
-    <div class="section-title-wrap">
-      <div>
-        <h2 class="section-title">Danh Mục Món Ăn</h2>
-        <p class="section-subtitle">Lựa chọn món ăn theo khẩu vị yêu thích của bạn</p>
-      </div>
-      <a href="<?= getUrl('foods.php') ?>" class="section-link">Xem tất cả ➔</a>
-    </div>
-
-    <div class="category-grid" id="category-grid-container">
-      <?php foreach ($categories as $cat): ?>
-        <?php
-          $catUrl = getUrl('foods.php?category=' . urlencode($cat['slug'] ?: $cat['id']));
-          $icon = trim($cat['icon_url'] ?? '');
-          $isImgUrl = preg_match('/^(https?:\/\/|\/|\.\/)/i', $icon);
-        ?>
-        <a href="<?= $catUrl ?>" class="category-item">
-          <div class="category-icon-circle">
-            <?php if ($isImgUrl): ?>
-              <img src="<?= escapeHtml($icon) ?>" alt="<?= escapeHtml($cat['name']) ?>" class="category-icon-img" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=240&auto=format&fit=crop&q=80';">
-            <?php else: ?>
-              <span style="font-size: 2rem;"><?= !empty($icon) ? escapeHtml($icon) : '🍔' ?></span>
-            <?php endif; ?>
-          </div>
-          <span class="category-label"><?= escapeHtml($cat['name']) ?></span>
-        </a>
-      <?php endforeach; ?>
-    </div>
-  </section>
-
-  <!-- 3. FLASH DEALS / GIẢM GIÁ HÔM NAY -->
-  <?php if (!empty($flashDeals)): ?>
-  <section class="flash-deals-banner" id="flash-deals">
-    <div class="flash-deals-header">
-      <div>
-        <span style="background:rgba(255,255,255,0.25); padding:0.25rem 0.65rem; border-radius:var(--radius-sm); font-size:0.75rem; font-weight:800; text-transform:uppercase;">
-          ⚡ CHỚP MẮT LÀ HẾT
-        </span>
-        <h2 style="font-size:1.85rem; font-weight:800; margin-top:0.4rem;">Món Ăn Flash Sale</h2>
-      </div>
-
-      <div class="flash-timer-box">
-        <span>Kết thúc trong:</span>
-        <span class="timer-digit" id="timer-hours">02</span> :
-        <span class="timer-digit" id="timer-minutes">45</span> :
-        <span class="timer-digit" id="timer-seconds">30</span>
-      </div>
-    </div>
-
-    <div class="grid flash-deals-products" id="flash-deals-container">
-      <?php foreach ($flashDeals as $p): ?>
-        <?= renderProductCard($p) ?>
-      <?php endforeach; ?>
-    </div>
-  </section>
-  <?php endif; ?>
-
-  <!-- 4. MÓN ĂN BÁN CHẠY NHẤT (BẢNG CAM GIỜ VÀNG BEST SELLERS) -->
+  <!-- 2. MÓN ĂN BÁN CHẠY NHẤT (BẢNG CAM GIỜ VÀNG BEST SELLERS DUY NHẤT) -->
   <section id="best-sellers" class="bestseller-orange-board" style="
       background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
       background-image: radial-gradient(circle at 10% 20%, rgba(255,255,255,0.15) 0%, transparent 40%), radial-gradient(circle at 90% 80%, rgba(255,255,255,0.18) 0%, transparent 45%), linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
@@ -269,13 +237,13 @@ require_once ROOT_PATH . '/includes/header.php';
 
       <div style="display:flex; align-items:center; gap:0.85rem; flex-wrap:wrap;">
         <?php if (!empty($bsConfig['timer_enabled'])): ?>
-          <!-- Đồng hồ đếm ngược Giờ Vàng Best Seller trên bảng cam -->
+          <!-- Đồng hồ đếm ngược Giờ Vàng Best Seller trên bảng cam (1 tiếng) -->
           <div class="bestseller-timer-box" style="display:flex; align-items:center; gap:0.65rem; background:rgba(0,0,0,0.22); backdrop-filter:blur(8px); border:1px solid rgba(255,255,255,0.3); padding:0.55rem 1.15rem; border-radius:14px; box-shadow:0 4px 15px rgba(0,0,0,0.12);">
             <span style="font-size:0.88rem; font-weight:700; color:#ffffff; display:flex; align-items:center; gap:5px;">
               <span>⏳</span> Ưu đãi kết thúc:
             </span>
             <div class="bestseller-countdown" data-end="<?= escapeHtml($bsConfig['end_time'] ?? '') ?>" style="display:flex; align-items:center; gap:5px; font-weight:900; color:#fff; font-size:0.95rem;">
-              <span class="bs-timer-unit bs-hours" style="background:#ffffff; color:#ea580c; font-weight:900; padding:3px 8px; border-radius:7px; min-width:30px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">00</span> :
+              <span class="bs-timer-unit bs-hours" style="background:#ffffff; color:#ea580c; font-weight:900; padding:3px 8px; border-radius:7px; min-width:30px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">01</span> :
               <span class="bs-timer-unit bs-minutes" style="background:#ffffff; color:#ea580c; font-weight:900; padding:3px 8px; border-radius:7px; min-width:30px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">00</span> :
               <span class="bs-timer-unit bs-seconds" style="background:#ffffff; color:#ea580c; font-weight:900; padding:3px 8px; border-radius:7px; min-width:30px; text-align:center; box-shadow:0 2px 6px rgba(0,0,0,0.15);">00</span>
             </div>
@@ -288,43 +256,145 @@ require_once ROOT_PATH . '/includes/header.php';
       </div>
     </div>
 
-    <div class="grid grid-cols-4" id="best-sellers-container" style="gap:1.15rem;">
+    <div class="grid flash-deals-products" id="best-sellers-container" style="display:grid; grid-template-columns:repeat(5, minmax(0, 1fr)); gap:0.95rem;">
       <?php foreach ($bestSellers as $p): ?>
         <?= renderProductCard($p) ?>
       <?php endforeach; ?>
     </div>
   </section>
 
+  <!-- 4. THỰC ĐƠN MÓN ĂN TRONG MENU (24 MÓN ĐÚNG TÊN & ĐÚNG HÌNH ẢNH) -->
+  <section id="menu-section" style="margin-bottom: 4rem;">
+    <div class="section-title-wrap" style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:1.25rem; margin-bottom:1.75rem;">
+      <div>
+        <span style="display:inline-block; font-size:0.8rem; font-weight:800; color:var(--primary-color); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:0.35rem; background:var(--primary-light); padding:0.25rem 0.75rem; border-radius:9999px;">
+          🍽️ Thực đơn tuyển chọn
+        </span>
+        <h2 class="section-title" style="margin:0 0 0.4rem; font-size:1.85rem; font-weight:800;">
+          Danh Sách Món Ăn Trong Menu
+        </h2>
+        <p class="section-subtitle" style="margin:0; color:var(--text-muted); font-size:0.95rem;">
+          Khám phá <?= count($menuProducts) ?> món ăn thơm ngon chuẩn vị với hình ảnh sắc nét, đầy đủ thông tin để bạn dễ dàng lựa chọn
+        </p>
+      </div>
+      <div>
+        <a href="<?= getUrl('foods.php') ?>" class="section-link" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; color:var(--primary-color); text-decoration:none; padding:0.55rem 1.25rem; border:1.5px solid var(--primary-color); border-radius:9999px; transition:all .2s;" onmouseover="this.style.background='var(--primary-color)'; this.style.color='#fff';" onmouseout="this.style.background='transparent'; this.style.color='var(--primary-color)';">
+          Xem tất cả 260+ món ➔
+        </a>
+      </div>
+    </div>
+
+    <!-- Bộ lọc danh mục nhanh cho Menu -->
+    <div class="menu-tabs-wrap">
+      <button type="button" class="menu-tab-btn active" data-cat="all" onclick="filterMenuCat('all', this)">
+        <span>Tất cả</span>
+        <span style="font-size:0.75rem; opacity:0.85; background:rgba(0,0,0,0.1); padding:1px 6px; border-radius:9999px;"><?= count($menuProducts) ?></span>
+      </button>
+      <button type="button" class="menu-tab-btn" data-cat="Burger & Gà Rán" onclick="filterMenuCat('Burger & Gà Rán', this)">
+        🍔 Burger & Gà Rán
+      </button>
+      <button type="button" class="menu-tab-btn" data-cat="Cơm & Món Việt" onclick="filterMenuCat('Cơm & Món Việt', this)">
+        🍚 Cơm & Món Việt
+      </button>
+      <button type="button" class="menu-tab-btn" data-cat="Pizza & Mỳ Ý" onclick="filterMenuCat('Pizza & Mỳ Ý', this)">
+        🍕 Pizza & Mỳ Ý
+      </button>
+      <button type="button" class="menu-tab-btn" data-cat="Sushi & Món Nhật" onclick="filterMenuCat('Sushi & Món Nhật', this)">
+        🍣 Sushi & Món Nhật
+      </button>
+      <button type="button" class="menu-tab-btn" data-cat="Trà Sữa & Đồ Uống" onclick="filterMenuCat('Trà Sữa & Đồ Uống', this)">
+        🧋 Trà Sữa & Đồ Uống
+      </button>
+      <button type="button" class="menu-tab-btn" data-cat="Ăn Vặt & Bánh" onclick="filterMenuCat('Ăn Vặt & Bánh', this)">
+        🥐 Ăn Vặt & Bánh
+      </button>
+    </div>
+
+    <!-- Lưới 24 món ăn với hình ảnh và thông tin chi tiết -->
+    <div class="menu-products-grid" id="menu-products-grid">
+      <?php foreach ($menuProducts as $p): ?>
+        <?= renderProductCard($p) ?>
+      <?php endforeach; ?>
+    </div>
+
+    <div style="text-align:center; margin-top:2.75rem;">
+      <a href="<?= getUrl('foods.php') ?>" class="btn btn-primary" style="padding:0.85rem 2.25rem; font-size:1rem; font-weight:800; border-radius:9999px; box-shadow:0 8px 25px rgba(242,138,36,0.35); text-decoration:none; display:inline-flex; align-items:center; gap:8px;">
+        <span>🍽️ Xem toàn bộ thực đơn FASTFOOD (260+ món)</span>
+        <span>➔</span>
+      </a>
+    </div>
+  </section>
+
   <script>
-    // Xử lý bộ đếm ngược Giờ Vàng Best Seller Realtime
+    // =====================================================================
+    // 1. ĐỒNG HỒ ĐẾM NGƯỢC GIỜ VÀNG BEST SELLER (1 TIẾNG - 01:00:00)
+    // =====================================================================
     (function() {
-      const countdownEl = document.querySelector('.bestseller-countdown');
-      if (!countdownEl) return;
-      const endStr = countdownEl.dataset.end;
-      if (!endStr) return;
+      const STORAGE_KEY = 'fastfood_flash_sale_end_v1';
+      const ONE_HOUR_MS = 60 * 60 * 1000; // 1 tiếng = 3600 giây
 
-      function updateTimer() {
-        const end = new Date(endStr.replace(/-/g, '/')).getTime();
-        const now = Date.now();
-        let diff = Math.max(0, Math.floor((end - now) / 1000));
+      let endTime = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+      const now = Date.now();
 
-        const hours = Math.floor(diff / 3600);
-        diff %= 3600;
-        const minutes = Math.floor(diff / 60);
-        const seconds = diff % 60;
-
-        const elH = countdownEl.querySelector('.bs-hours');
-        const elM = countdownEl.querySelector('.bs-minutes');
-        const elS = countdownEl.querySelector('.bs-seconds');
-
-        if (elH) elH.textContent = String(hours).padStart(2, '0');
-        if (elM) elM.textContent = String(minutes).padStart(2, '0');
-        if (elS) elS.textContent = String(seconds).padStart(2, '0');
+      // Nếu chưa có mốc hoặc đã hết thời gian, khởi tạo 1 tiếng mới
+      if (!endTime || isNaN(endTime) || endTime <= now || (endTime - now > ONE_HOUR_MS + 60000)) {
+        endTime = now + ONE_HOUR_MS;
+        localStorage.setItem(STORAGE_KEY, String(endTime));
       }
 
-      updateTimer();
-      setInterval(updateTimer, 1000);
+      function updateRealtimeTimer() {
+        const current = Date.now();
+        let diff = Math.floor((endTime - current) / 1000);
+
+        if (diff <= 0) {
+          // Khi hết 1 tiếng, tự động reset thêm 1 tiếng để luôn có ưu đãi giờ vàng
+          endTime = Date.now() + ONE_HOUR_MS;
+          localStorage.setItem(STORAGE_KEY, String(endTime));
+          diff = 3600;
+        }
+
+        const hours = Math.floor(diff / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+
+        const strH = String(hours).padStart(2, '0');
+        const strM = String(minutes).padStart(2, '0');
+        const strS = String(seconds).padStart(2, '0');
+
+        // Cập nhật các ô số đếm ngược Best Seller
+        document.querySelectorAll('.bestseller-countdown').forEach((box) => {
+          const bH = box.querySelector('.bs-hours');
+          const bM = box.querySelector('.bs-minutes');
+          const bS = box.querySelector('.bs-seconds');
+          if (bH) bH.textContent = strH;
+          if (bM) bM.textContent = strM;
+          if (bS) bS.textContent = strS;
+        });
+      }
+
+      updateRealtimeTimer();
+      setInterval(updateRealtimeTimer, 1000);
     })();
+
+    // =====================================================================
+    // 2. BỘ LỌC DANH MỤC THỰC ĐƠN MENU (CHUYỂN TAB TỨC THÌ)
+    // =====================================================================
+    function filterMenuCat(catName, btn) {
+      document.querySelectorAll('.menu-tab-btn').forEach(b => {
+        b.classList.remove('active');
+      });
+      if (btn) btn.classList.add('active');
+
+      const cards = document.querySelectorAll('#menu-products-grid .product-card');
+      cards.forEach(card => {
+        const cat = card.getAttribute('data-category') || '';
+        if (catName === 'all' || cat.toLowerCase().includes(catName.toLowerCase())) {
+          card.style.display = 'flex';
+        } else {
+          card.style.display = 'none';
+        }
+      });
+    }
   </script>
 
   <!-- 6. ĐÁNH GIÁ CỦA KHÁCH HÀNG -->

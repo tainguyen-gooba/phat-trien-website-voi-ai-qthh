@@ -58,7 +58,7 @@ function renderProductCard($p) {
     $rawImg = !empty($p['image_url']) ? $p['image_url'] : (!empty($p['image']) ? $p['image'] : '');
     if (!$rawImg) {
         $rawImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
-    } elseif (strpos($rawImg, 'http') !== 0 && strpos($rawImg, '/') !== 0) {
+    } elseif (strpos($rawImg, 'http') !== 0) {
         $rawImg = getAssetUrl($rawImg);
     }
     $imgUrl = escapeHtml($rawImg);
@@ -71,7 +71,7 @@ function renderProductCard($p) {
     
     ob_start();
     ?>
-    <div class="product-card" data-product-id="<?= $id ?>">
+    <div class="product-card" data-product-id="<?= $id ?>" data-category-id="<?= (int)($p['category_id'] ?? 0) ?>" data-category="<?= escapeHtml($category) ?>">
       <div class="product-thumb-wrap">
         <a href="<?= $detailUrl ?>" style="display:block; width:100%; height:100%;">
           <img src="<?= $imgUrl ?>" alt="<?= escapeHtml($name) ?>" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';">

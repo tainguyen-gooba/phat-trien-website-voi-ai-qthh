@@ -10,8 +10,18 @@ $extraCss  = ['css/pages.css'];
 
 $db = getDB();
 
-// Lấy danh sách danh mục để hiển thị sidebar
-$categories = $db->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY display_order ASC, id ASC")->fetchAll();
+// Lấy danh sách danh mục để hiển thị sidebar (loại bỏ trùng lặp, ưu tiên id >= 30)
+$rawCategories = $db->query("SELECT * FROM categories WHERE is_active = 1 ORDER BY (id >= 30) DESC, display_order ASC, id ASC")->fetchAll();
+$categories = [];
+$seenCatNames = [];
+foreach ($rawCategories as $cat) {
+    $cleanName = mb_strtolower(trim($cat['name']), 'UTF-8');
+    if (!isset($seenCatNames[$cleanName])) {
+        $seenCatNames[$cleanName] = true;
+        $categories[] = $cat;
+    }
+}
+usort($categories, fn($a, $b) => ($a['display_order'] ?? 0) <=> ($b['display_order'] ?? 0));
 
 // Lọc tham số tìm kiếm & danh mục
 $selectedCat = trim($_GET['category'] ?? 'all');

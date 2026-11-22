@@ -56,18 +56,22 @@ class AuthService {
         if (session_status() === PHP_SESSION_ACTIVE) {
             session_write_close();
         }
-        if ($roleId === Roles::ADMIN || $roleId === Roles::STAFF) {
-            session_name('FF_SESS_ADMIN');
-        } else {
-            $tabParam = !empty($_POST['tab']) ? trim($_POST['tab']) : (!empty($_GET['tab']) ? trim($_GET['tab']) : '');
-            if ($tabParam && $tabParam !== 'admin') {
-                $cleanTab = preg_replace('/[^a-zA-Z0-9_-]/', '', $tabParam);
-                session_name('FF_SESS_' . strtoupper($cleanTab));
+        if (!headers_sent()) {
+            if ($roleId === Roles::ADMIN || $roleId === Roles::STAFF) {
+                @session_name('FF_SESS_ADMIN');
             } else {
-                session_name('FASTFOOD_SESSID');
+                $tabParam = !empty($_POST['tab']) ? trim($_POST['tab']) : (!empty($_GET['tab']) ? trim($_GET['tab']) : '');
+                if ($tabParam && $tabParam !== 'admin') {
+                    $cleanTab = preg_replace('/[^a-zA-Z0-9_-]/', '', $tabParam);
+                    @session_name('FF_SESS_' . strtoupper($cleanTab));
+                } else {
+                    @session_name('FASTFOOD_SESSID');
+                }
             }
         }
-        @session_start();
+        if (session_status() !== PHP_SESSION_ACTIVE && !headers_sent()) {
+            @session_start();
+        }
         $_SESSION['user_id']      = $user['id'];
         $_SESSION['user_name']    = $user['full_name'];
         $_SESSION['user_email']   = $user['email'];
@@ -162,7 +166,7 @@ class AuthService {
         $token = JwtConfig::encode($tokenPayload);
 
         // 7. Đồng bộ PHP Session nếu cần
-        if (session_status() === PHP_SESSION_NONE) {
+        if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
             @session_start();
         }
         if (session_status() === PHP_SESSION_ACTIVE) {

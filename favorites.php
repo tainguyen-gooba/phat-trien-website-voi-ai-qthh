@@ -15,7 +15,7 @@ $fallbackProducts = $db->query("SELECT p.*, c.name AS category_name, r.name AS r
                                 LEFT JOIN categories c ON p.category_id = c.id 
                                 LEFT JOIN restaurants r ON p.restaurant_id = r.id 
                                 WHERE p.is_available = 1 
-                                ORDER BY p.rating_avg DESC LIMIT 8")->fetchAll();
+                                ORDER BY p.is_featured DESC, p.id DESC LIMIT 8")->fetchAll();
 
 require_once ROOT_PATH . '/includes/header.php';
 ?>

@@ -81,7 +81,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db->beginTransaction();
         try {
             $paymentStatus = 'pending';
-            $orderStatus   = ($method === 'cod') ? 'pending' : 'awaiting_payment';
+            $orderStatus   = in_array($method, ['vietqr', 'banking', 'momo']) ? 'awaiting_payment' : 'pending';
             $paymentMethodDb = ($method === 'vietqr' || $method === 'banking') ? 'banking' : (($method === 'momo') ? 'momo' : 'cod');
 
             // 1. Lưu vào bảng orders
@@ -303,11 +303,7 @@ require_once ROOT_PATH . '/includes/header.php';
                     } catch (Exception $e) {}
                 }
             }
-            if (!$cImg) {
-                $cImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
-            } elseif (strpos($cImg, 'http') !== 0) {
-                $cImg = getAssetUrl($cImg);
-            }
+            $cImg = getFoodImageUrl($cImg);
           ?>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; font-size:0.9rem; gap:0.75rem;">
               <div style="display:flex; align-items:center; gap:0.75rem;">

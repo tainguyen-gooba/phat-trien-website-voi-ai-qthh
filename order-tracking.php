@@ -147,11 +147,7 @@ require_once ROOT_PATH . '/includes/header.php';
                 $itImg = $db->query("SELECT image_url FROM products WHERE id = " . (int)$it['product_id'] . " LIMIT 1")->fetchColumn() ?: '';
             } catch (Exception $e) {}
         }
-        if (!$itImg) {
-            $itImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
-        } elseif (strpos($itImg, 'http') !== 0) {
-            $itImg = getAssetUrl($itImg);
-        }
+        $itImg = getFoodImageUrl($itImg);
       ?>
         <div style="display:flex; justify-content:space-between; align-items:center; padding:0.75rem 0; border-bottom:1px dashed #f1f5f9; gap:0.75rem;">
           <div style="display:flex; align-items:center; gap:0.75rem;">
@@ -253,8 +249,13 @@ require_once ROOT_PATH . '/includes/header.php';
           el.classList.add('done');
           if (dot) dot.textContent = '✓';
         } else if (targetStep === stepNum) {
-          el.classList.add('active');
-          if (dot) dot.textContent = String(stepNum);
+          if (targetStep === 4) {
+            el.classList.add('done');
+            if (dot) dot.textContent = '✓';
+          } else {
+            el.classList.add('active');
+            if (dot) dot.textContent = String(stepNum);
+          }
         } else {
           if (dot) dot.textContent = String(stepNum);
         }
@@ -262,7 +263,7 @@ require_once ROOT_PATH . '/includes/header.php';
 
       if (window.UIComponents?.showToast) {
         const statusLabels = {
-          'preparing': '🍳 Bếp bắt đầu nấu món ăn của bạn!',
+          'preparing': '🍳 Bếp đã xác nhận và bắt đầu nấu món ăn!',
           'delivering': '🛵 Shipper đang trên đường giao hàng đến bạn!',
           'delivered': '🎉 Đơn hàng đã được giao thành công! Chúc bạn ngon miệng!'
         };
@@ -280,6 +281,8 @@ require_once ROOT_PATH . '/includes/header.php';
           if (code === window.TRACKED_ORDER_CODE) {
             applyTrackingUpdate(d.status || d.order_status);
           }
+        } else if (e.data.type === 'content:updated' && e.data.collection === 'orders') {
+          checkOrderStatus();
         }
       };
     }
@@ -292,6 +295,24 @@ require_once ROOT_PATH . '/includes/header.php';
         applyTrackingUpdate(d.status || d.order_status);
       }
     });
+
+    // 4. Polling chủ động tốc độ cao (1.5s/lần) đảm bảo cập nhật ngay cả khi khác trình duyệt/thiết bị
+    async function checkOrderStatus() {
+      if (!window.TRACKED_ORDER_CODE) return;
+      try {
+        const pollUrl = (typeof window.getApiUrl === 'function')
+          ? window.getApiUrl('api/realtime.php')
+          : ((window.BASE_URL || '').replace(/\/+$/, '') + '/api/realtime.php');
+        const res = await fetch(`${pollUrl}?action=poll&orderCode=${encodeURIComponent(window.TRACKED_ORDER_CODE)}`);
+        const json = await res.json();
+        if (json.success && json.data && json.data.trackedOrder) {
+          const ord = json.data.trackedOrder;
+          applyTrackingUpdate(ord.order_status);
+        }
+      } catch (e) {}
+    }
+
+    const trackingTimer = setInterval(checkOrderStatus, 1500);
 
   })();
 </script>

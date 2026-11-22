@@ -6380,8 +6380,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                   $selectedIds = array_map('intval', $bsConfig['product_ids'] ?? [1, 2, 3, 5]);
                   foreach ($productsRaw as $p): 
                     $pId = (int)$p['id'];
-                    $pImg = $p['image'] ?? ($p['image_url'] ?? 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80');
-                    if (strpos($pImg, 'http') !== 0) $pImg = getAssetUrl($pImg);
+                    $pImg = getFoodImageUrl($p['image'] ?? ($p['image_url'] ?? ''));
                     $isChecked = in_array($pId, $selectedIds);
                 ?>
                   <label class="bs-prod-card<?= $isChecked ? ' is-selected' : '' ?>" data-name="<?= escapeHtml(mb_strtolower($p['name'])) ?>" data-title="<?= escapeHtml($p['name']) ?>" data-price="<?= escapeHtml(formatVND($p['price'])) ?>" data-img="<?= escapeHtml($pImg) ?>">
@@ -6680,10 +6679,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       });
     })();
   </script>
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/js/data.js"></script>
-  <script src="/js/realtime.js"></script>
-  <script src="/js/admin-chat.js"></script>
+  <script>
+    window.FASTFOOD_DATA = <?= json_encode($initialData, JSON_UNESCAPED_UNICODE) ?>;
+  </script>
+  <script src="<?= getUrl('js/realtime.js') ?>"></script>
+  <script src="<?= getUrl('js/admin-chat.js') ?>"></script>
   <script>
     (async () => {
       if (window.location.protocol === 'file:') {
@@ -6729,30 +6729,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       let authenticatedUser = serverUser;
-      try {
-        const apiUrl = window.location.port === '5000'
-          ? `${window.location.origin}/api/v1`
-          : 'http://localhost:5000/api/v1';
-        if (token) {
-          const response = await fetch(`${apiUrl}/auth/me`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          });
-          if (response.ok) {
-            const result = await response.json();
-            if (result.success && result.data?.user) {
-              authenticatedUser = result.data.user;
-            }
-          }
-        }
-      } catch (error) {
-        console.warn('API auth/me notice:', error);
-      }
 
-      if (!authenticatedUser) {
-        authenticatedUser = serverUser;
-      }
-
-      const liveSocket = await window.initFastfoodRealtime(authenticatedUser);
+      const liveSocket = (typeof window.initFastfoodRealtime === 'function') ? await window.initFastfoodRealtime(authenticatedUser) : null;
       let reviewsUiReady = false;
       const pendingReviewEvents = new Map();
       let renderedReviews = [];
@@ -6809,25 +6787,28 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         }
         loadOrderReviews({ silent: true });
       });
-      const adminApiUrl = window.location.port === '5000'
-        ? `${window.location.origin}/api/v1`
-        : 'http://localhost:5000/api/v1';
-      window.adminChatInbox = window.initAdminChatInbox({
-        socket: liveSocket,
-        token,
-        apiUrl: adminApiUrl,
-      });
+
+      if (typeof window.initAdminChatInbox === 'function') {
+        window.adminChatInbox = window.initAdminChatInbox({
+          socket: liveSocket,
+          token,
+          apiUrl: 'api.php',
+        });
+      }
+
       let dashboardReady = false;
       const pendingOrderEvents = [];
       const pendingPaymentEvents = [];
       const realtimeStatus = document.getElementById('realtime-status');
       function setRealtimeStatus(connected) {
+        if (!realtimeStatus) return;
         realtimeStatus.textContent = connected ? 'Đang trực tuyến' : 'Mất kết nối';
         realtimeStatus.classList.toggle('connected', connected);
         realtimeStatus.classList.toggle('disconnected', !connected);
       }
+      setRealtimeStatus(true);
+
       if (liveSocket) {
-        setRealtimeStatus(liveSocket.connected);
         liveSocket.on('connect', () => {
           setRealtimeStatus(true);
           if (dashboardReady) refreshOrders();
@@ -6866,23 +6847,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         window.addEventListener('fastfood:notification-new', (event) => {
           if (event.detail) handleIncomingNotification(event.detail);
         });
-      } else {
-        setRealtimeStatus(false);
       }
-      let publishedContent = {};
-      try {
-        const contentResponse = await fetch('/api/v1/realtime/content', {
-          headers: { Accept: 'application/json' },
-        });
-        const contentResult = await contentResponse.json();
-        if (!contentResponse.ok || !contentResult.success) {
-          throw new Error(contentResult.message || 'Không thể tải nội dung realtime.');
-        }
-        publishedContent = contentResult.data;
-      } catch (error) {
-        showAccessMessage('Không thể tải nội dung website', error.message);
-        return;
-      }
+
+      let publishedContent = window.FASTFOOD_DATA || {};
 
       document.querySelector('.profile-copy strong').textContent = authenticatedUser.fullName;
       document.querySelector('.profile-copy span').textContent = authenticatedUser.email;
@@ -6966,122 +6933,29 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       };
       const seedData = {
         restaurants: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.restaurants))
-          ? window.FASTFOOD_DATA.restaurants.map((r) => ({
-            id: r.id,
-            name: r.name,
-            address: r.address,
-            url: '',
-            status: 'Đang hoạt động',
-          }))
-          : [
-            { id: 'res-1', name: 'Burger King Station - Buôn Ma Thuột', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-            { id: 'res-2', name: 'Cơm Tấm Sài Gòn Xưa - Buôn Ma Thuột', address: '68 Phan Chu Trinh, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-            { id: 'res-3', name: 'Tiệm Trà Sữa GongCha Tea & Coffee', address: '91 Lê Thánh Tông, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-            { id: 'res-4', name: 'Pizza Hut Italia - Buôn Ma Thuột', address: '12 Y Jút, Buôn Ma Thuột, Đắk Lắk', url: '', status: 'Đang hoạt động' },
-          ],
-        categories: [
-          { id: 'cat-1', name: 'Cơm & Món Việt', description: 'Món ăn Việt Nam', itemCount: 40, status: 'Đang hoạt động' },
-          { id: 'cat-2', name: 'Burger & Gà rán', description: 'Đồ ăn nhanh', itemCount: 60, status: 'Đang hoạt động' },
-          { id: 'cat-3', name: 'Trà sữa & Đồ uống', description: 'Thức uống giải khát', itemCount: 20, status: 'Đang hoạt động' },
-          { id: 'cat-4', name: 'Pizza & Mỳ Ý', description: 'Ẩm thực Ý', itemCount: 40, status: 'Đang hoạt động' },
-          { id: 'cat-5', name: 'Ăn vặt & Tráng miệng', description: 'Món ăn nhẹ', itemCount: 60, status: 'Đang hoạt động' },
-          { id: 'cat-6', name: 'Salad & Healthy', description: 'Món ăn lành mạnh', itemCount: 20, status: 'Đang hoạt động' },
-          { id: 'cat-7', name: 'Sushi & Món Nhật', description: 'Ẩm thực Nhật Bản', itemCount: 20, status: 'Đang hoạt động' },
-        ],
-        products: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.products) && window.FASTFOOD_DATA.products.length)
-          ? window.FASTFOOD_DATA.products.map((p) => {
-            const catMap = {
-              com: 'Cơm & Món Việt',
-              burger: 'Burger & Gà rán',
-              'tra-sua': 'Trà sữa & Đồ uống',
-              pizza: 'Pizza & Mỳ Ý',
-              sushi: 'Sushi & Món Nhật',
-              healthy: 'Salad & Healthy',
-              'an-vat': 'Ăn vặt & Tráng miệng',
-            };
-            const address = window.getFastfoodRestaurantAddressForProduct ? window.getFastfoodRestaurantAddressForProduct(p) : 'Buôn Ma Thuột, Đắk Lắk';
-            return {
-              id: p.id,
-              name: p.name,
-              category: catMap[p.category] || p.category || 'Ăn vặt & Tráng miệng',
-              categoryId: p.categoryId,
-              restaurant: p.restaurant || p.restaurantName,
-              address: address,
-              image: p.image,
-              url: '',
-              restaurantUrl: '',
-              price: p.price,
-              status: p.status || 'Đang bán',
-              options: p.options || {},
-              sizes: Array.isArray(p.sizes) ? p.sizes : (p.options?.sizes || []),
-              toppings: Array.isArray(p.toppings) ? p.toppings : (p.options?.toppings || []),
-              attributes: Array.isArray(p.attributes) ? p.attributes : (p.options?.attributes || []),
-            };
-          })
-          : [
-            { id: 'prd-1', name: 'Burger Bò Nướng Phô Mai', category: 'Burger & Gà rán', restaurant: 'Burger King Station', address: '25 Nguyễn Tất Thành, Buôn Ma Thuột, Đắk Lắk', image: 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&auto=format&fit=crop&q=80', url: '', restaurantUrl: '', price: 69000, status: 'Đang bán', toppings: [{ name: 'Thêm phô mai lát Cheddar', price: 10000 }, { name: 'Thịt xông khói giòn (Bacon)', price: 15000 }, { name: 'Trứng ốp la lòng đào', price: 8000 }] },
-          ],
-        orders: [],
-        users: [
-          { id: 'usr-1', name: 'Nguyễn Minh Anh', email: 'minhanh@gmail.com', phone: '0901 234 567', role: 'Khách hàng', status: 'Đang hoạt động' },
-          { id: 'usr-2', name: 'Trần Hoàng Nam', email: 'hoangnam@gmail.com', phone: '0902 345 678', role: 'Khách hàng', status: 'Đang hoạt động' },
-          { id: 'usr-3', name: 'Lê Thu Hà', email: 'thuha@gmail.com', phone: '0903 456 789', role: 'Chủ nhà hàng', status: 'Đang hoạt động' },
-          { id: 'usr-4', name: 'Phạm Quốc Bảo', email: 'quocbao@gmail.com', phone: '0904 567 890', role: 'Tài xế', status: 'Đang hoạt động' },
-          { id: 'usr-5', name: 'Võ Ngọc Linh', email: 'ngoclinh@gmail.com', phone: '0905 678 901', role: 'Khách hàng', status: 'Không hoạt động' },
-          { id: 'usr-6', name: 'Đặng Tuấn Kiệt', email: 'tuankiet@gmail.com', phone: '0906 789 012', role: 'Tài xế', status: 'Đã khóa' },
-        ],
+          ? window.FASTFOOD_DATA.restaurants
+          : [],
+        categories: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.categories))
+          ? window.FASTFOOD_DATA.categories
+          : [],
+        products: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.products))
+          ? window.FASTFOOD_DATA.products
+          : [],
+        orders: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.orders))
+          ? window.FASTFOOD_DATA.orders
+          : [],
+        users: (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.users))
+          ? window.FASTFOOD_DATA.users
+          : [],
       };
 
-      let data = seedData;
-      try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed && ['categories', 'products', 'orders', 'users'].every((key) => Array.isArray(parsed[key]))) {
-            data = { ...seedData, ...parsed, restaurants: Array.isArray(parsed.restaurants) ? parsed.restaurants : seedData.restaurants };
-          }
-          else showToast('Dữ liệu đã lưu không đúng định dạng. Đang sử dụng dữ liệu mẫu.', true);
-        }
-      } catch (error) {
-        showToast('Không thể đọc dữ liệu đã lưu trên trình duyệt.', true);
-      }
-      if (Array.isArray(publishedContent.categories)) data.categories = publishedContent.categories;
-      if (Array.isArray(publishedContent.restaurants)) data.restaurants = publishedContent.restaurants;
-      if (Array.isArray(publishedContent.products)) {
-        data.products = publishedContent.products.map((product) => {
-          const seedProduct = seedData.products.find((item) => item.id === product.id) || {};
-          return {
-            ...seedProduct,
-            ...product,
-            toppings: Array.isArray(product.toppings) ? product.toppings : (seedProduct.toppings || []),
-          };
-        });
-      }
-      data.products = data.products.map((product) => {
-        const seedProduct = seedData.products.find((item) => item.id === product.id);
-        return {
-          ...seedProduct,
-          ...product,
-          image: seedProduct?.image || product.image || '',
-          toppings: Array.isArray(product.toppings) ? product.toppings : (seedProduct?.toppings || []),
-        };
-      });
-      data.orders = [];
-      try {
-        const apiUrl = window.location.port === '5000'
-          ? `${window.location.origin}/api/v1`
-          : 'http://localhost:5000/api/v1';
-        const ordersResponse = await fetch(`${apiUrl}/realtime/orders`, {
-          headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-        });
-        const ordersResult = await ordersResponse.json();
-        if (!ordersResponse.ok || !ordersResult.success) {
-          throw new Error(ordersResult.message || 'Không thể tải đơn hàng realtime.');
-        }
-        data.orders = ordersResult.data.map(toOrderRecord);
-      } catch (error) {
-        showToast(error.message || 'Không thể tải đơn hàng.', true);
-      }
+      let data = {
+        restaurants: [...seedData.restaurants],
+        categories: [...seedData.categories],
+        products: [...seedData.products],
+        orders: [...seedData.orders],
+        users: [...seedData.users],
+      };
 
       let activeSection = 'dashboard';
       let currentPage = 1;
@@ -7125,63 +6999,20 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       async function loadOrderReviews(options = {}) {
         const requestId = ++reviewsRequestId;
-        if (!reviewsLoaded && !options.silent) {
-          reviewsList.innerHTML = '<p class="reviews-empty">Đang tải đánh giá...</p>';
-        }
-        try {
-          const response = await fetch(`${adminApiUrl}/realtime/orders/reviews`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          });
-          const result = await response.json();
-          if (!response.ok || !result.success || !Array.isArray(result.data)) {
-            throw new Error(result.message || 'Không thể tải đánh giá khách hàng.');
-          }
-          if (requestId !== reviewsRequestId) return;
-          renderedReviews = mergeReviews(result.data, [...pendingReviewEvents.values()]);
-          pendingReviewEvents.clear();
-          reviewsLoaded = true;
-
-          // Tính toán số lượng đánh giá mới / chưa xem để cập nhật badge số
-          let lastSeenReviewTime = 0;
-          try {
-            lastSeenReviewTime = Number(localStorage.getItem('fastfood_admin_last_seen_review_time')) || 0;
-          } catch {}
-
-          if (activeSection !== 'reviews') {
-            let unreadCount = 0;
-            if (lastSeenReviewTime > 0) {
-              unreadCount = renderedReviews.filter((r) => {
-                const reviewTime = new Date(r.submittedAt || 0).getTime();
-                return reviewTime > lastSeenReviewTime;
-              }).length;
-            } else {
-              // Lần đầu tải trang, hiển thị tổng số đánh giá hiện có
-              unreadCount = renderedReviews.length;
-            }
-            updateReviewsBadge(unreadCount);
-          }
-
-          if (activeSection === 'reviews' || options.forceRender) {
-            renderOrderReviews(renderedReviews);
-          }
-        } catch (error) {
-          if (requestId !== reviewsRequestId) return;
-          const pendingReviews = [...pendingReviewEvents.values()];
-          if (renderedReviews.length || pendingReviews.length) {
-            renderedReviews = mergeReviews(renderedReviews, pendingReviews);
-            pendingReviewEvents.clear();
-            reviewsLoaded = true;
-            if (activeSection === 'reviews') {
-              renderOrderReviews(renderedReviews);
-            }
-          } else if (!options.silent) {
-            reviewsList.innerHTML = '';
-            const message = document.createElement('p');
-            message.className = 'reviews-empty';
-            message.textContent = error.message || 'Không thể tải đánh giá khách hàng.';
-            reviewsList.appendChild(message);
-            showToast(message.textContent, true);
-          }
+        const rawReviews = (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.reviews)) ? window.FASTFOOD_DATA.reviews : [];
+        renderedReviews = rawReviews.map(r => ({
+          id: r.id,
+          orderCode: r.order_id || r.order_code || '',
+          customerName: r.customer_name || 'Khách hàng',
+          target: r.target || 'restaurant',
+          rating: Number(r.rating || 5),
+          comment: r.comment || '',
+          submittedAt: r.created_at || new Date().toISOString()
+        }));
+        reviewsLoaded = true;
+        updateReviewsBadge(renderedReviews.length);
+        if (activeSection === 'reviews' || options.forceRender) {
+          renderOrderReviews(renderedReviews);
         }
       }
 
@@ -7323,21 +7154,14 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       async function refreshOrders() {
         try {
-          const apiUrl = window.location.port === '5000'
-            ? `${window.location.origin}/api/v1`
-            : 'http://localhost:5000/api/v1';
-          const response = await fetch(`${apiUrl}/realtime/orders`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          });
-          const result = await response.json();
-          if (!response.ok || !result.success || !Array.isArray(result.data)) {
-            throw new Error(result.message || 'Không thể đồng bộ đơn hàng sau khi kết nối lại.');
+          const res = await fetch('api.php?action=get_all_data');
+          const result = await res.json();
+          if (result.success && result.data && Array.isArray(result.data.orders)) {
+            data.orders = result.data.orders;
+            renderAll();
           }
-          data.orders = result.data.map(toOrderRecord);
-          saveRealtimeSnapshot();
-          renderAll();
         } catch (error) {
-          showToast(error.message || 'Không thể đồng bộ đơn hàng sau khi kết nối lại.', true);
+          console.warn('[refreshOrders]', error);
         }
       }
 
@@ -7552,22 +7376,16 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       async function loadAdminNotifications() {
-        try {
-          const apiUrl = window.location.port === '5000'
-            ? `${window.location.origin}/api/v1`
-            : 'http://localhost:5000/api/v1';
-          const response = await fetch(`${apiUrl}/realtime/notifications`, {
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          });
-          const result = await response.json();
-          if (response.ok && result.success && Array.isArray(result.data)) {
-            adminNotifications = result.data;
-            updateNotifBellBadge();
-            renderAdminNotifications();
-          }
-        } catch (err) {
-          console.warn('[Admin Notifications] Failed to fetch:', err.message);
-        }
+        const pendingOrders = (data.orders || []).filter(o => o.status === 'Chờ xác nhận' || o.status === 'pending');
+        adminNotifications = pendingOrders.slice(0, 10).map((o, idx) => ({
+          id: `notif-${idx}`,
+          title: 'Đơn hàng mới',
+          message: `Đơn #${o.orderNo || o.id} từ ${o.customer || 'Khách hàng'} đang chờ xác nhận`,
+          isRead: false,
+          createdAt: o.date || o.createdAt || new Date().toISOString()
+        }));
+        updateNotifBellBadge();
+        renderAdminNotifications();
       }
 
       async function markNotificationRead(notifId) {
@@ -7577,35 +7395,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           updateNotifBellBadge();
           renderAdminNotifications();
         }
-        try {
-          const apiUrl = window.location.port === '5000'
-            ? `${window.location.origin}/api/v1`
-            : 'http://localhost:5000/api/v1';
-          await fetch(`${apiUrl}/realtime/notifications/${notifId}/read`, {
-            method: 'PATCH',
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          });
-        } catch (err) {
-          console.warn('[Admin Notifications] Mark read failed:', err.message);
-        }
       }
 
       async function markAllAdminNotificationsRead() {
         adminNotifications.forEach((n) => { n.isRead = true; });
         updateNotifBellBadge();
         renderAdminNotifications();
-        try {
-          const apiUrl = window.location.port === '5000'
-            ? `${window.location.origin}/api/v1`
-            : 'http://localhost:5000/api/v1';
-          await fetch(`${apiUrl}/realtime/notifications/read-all`, {
-            method: 'PATCH',
-            headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
-          });
-          showToast('Đã đánh dấu tất cả thông báo là đã đọc.');
-        } catch (err) {
-          console.warn('[Admin Notifications] Mark all read failed:', err.message);
-        }
+        showToast('Đã đánh dấu tất cả thông báo là đã đọc.');
       }
 
       function toggleNotifDropdown() {
@@ -7708,111 +7504,133 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           update.paymentStatus !== 'completed');
       }
 
-      async function persist(collection) {
+      async function persist(collection, actionType = 'save', targetRecord = null) {
         try {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-          
-          // Lưu trực tiếp vào MySQL qua api.php khi chỉnh sửa sản phẩm
+          const currentRecord = targetRecord || (editingId ? data[collection].find(item => item.id === editingId) : data[collection][0]);
+
           if (collection === 'products') {
-            const currentRecord = data.products.find((p) => p.id === editingId) || data.products[0];
-            if (currentRecord) {
-              const numId = parseInt(currentRecord.id) || 0;
-              try {
-                const apiRes = await fetch('api.php', {
+            if (actionType === 'delete') {
+              const numId = parseInt(targetRecord?.id) || 0;
+              if (numId > 0) {
+                await fetch('api.php', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({
-                    action: 'save_product',
-                    id: numId,
-                    name: currentRecord.name,
-                    price: currentRecord.price,
-                    categoryId: currentRecord.categoryId || 1,
-                    image: currentRecord.image,
-                    isAvailable: currentRecord.status === 'Đang bán' ? 1 : 0,
-                    options: currentRecord.options || { sizes: currentRecord.sizes || [], toppings: currentRecord.toppings || [], attributes: currentRecord.attributes || [] }
-                  })
+                  body: JSON.stringify({ action: 'delete_product', id: numId })
                 });
-                const apiData = await apiRes.json();
-                if (!apiData.success) {
-                  console.warn('[Admin API] Lưu product:', apiData.message);
-                }
-              } catch (apiErr) {
-                console.warn('[Admin API] Lỗi mạng:', apiErr.message);
               }
-            }
-          }
-
-          const apiUrl = window.location.port === '5000'
-            ? `${window.location.origin}/api/v1`
-            : 'http://localhost:5000/api/v1';
-
-          if (collection === 'categories' || collection === 'products' || collection === 'restaurants') {
-            let published = false;
-            if (liveSocket && liveSocket.connected) {
-              try {
-                const result = await new Promise((resolve, reject) => {
-                  liveSocket.timeout(5000).emit(
-                    'admin:content:publish',
-                    { collection, records: data[collection] },
-                    (error, response) => error ? reject(error) : resolve(response)
-                  );
-                });
-                if (result?.success) published = true;
-              } catch (socketErr) {
-                console.warn('[Realtime] Socket emit failed, trying REST fallback:', socketErr.message);
-              }
-            }
-            if (!published) {
-              const res = await fetch(`${apiUrl}/realtime/content/${collection}`, {
-                method: 'PUT',
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({ records: data[collection] })
+            } else if (currentRecord) {
+              const numId = parseInt(currentRecord.id) || 0;
+              await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'save_product',
+                  id: numId,
+                  name: currentRecord.name,
+                  price: currentRecord.price,
+                  categoryId: currentRecord.categoryId || 1,
+                  image: currentRecord.image,
+                  isAvailable: currentRecord.status === 'Đang bán' ? 1 : 0,
+                  options: currentRecord.options || { sizes: currentRecord.sizes || [], toppings: currentRecord.toppings || [], attributes: currentRecord.attributes || [] }
+                })
               });
-              const resData = await res.json();
-              if (!res.ok || !resData.success) {
-                throw new Error(resData?.message || 'Không thể đồng bộ dữ liệu website.');
+            }
+          } else if (collection === 'categories') {
+            if (actionType === 'delete') {
+              const numId = parseInt(targetRecord?.id) || 0;
+              if (numId > 0) {
+                await fetch('api.php', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ action: 'delete_category', id: numId })
+                });
               }
+            } else if (currentRecord) {
+              const numId = parseInt(currentRecord.id) || 0;
+              await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'save_category',
+                  id: numId,
+                  name: currentRecord.name,
+                  icon: currentRecord.icon || '🍔'
+                })
+              });
             }
           } else if (collection === 'orders') {
-            const currentRecord = data.orders.find((order) => order.id === editingId);
             if (currentRecord) {
-              let updated = false;
-              if (liveSocket && liveSocket.connected) {
-                try {
-                  const result = await new Promise((resolve, reject) => {
-                    liveSocket.timeout(5000).emit('admin:order:status', currentRecord, (error, response) => (
-                      error ? reject(error) : resolve(response)
-                    ));
-                  });
-                  if (result?.success) updated = true;
-                } catch (socketErr) {
-                  console.warn('[Realtime] Socket emit failed, trying REST fallback:', socketErr.message);
-                }
-              }
-              if (!updated) {
-                const cleanCode = String(currentRecord.orderNo || currentRecord.id).replace(/^#/, '').trim();
-                const res = await fetch(`${apiUrl}/realtime/orders/${cleanCode}/status`, {
-                  method: 'PATCH',
-                  headers: {
-                    'Content-Type': 'application/json',
-                    Authorization: `Bearer ${token}`
-                  },
-                  body: JSON.stringify({ status: currentRecord.status })
+              const cleanCode = String(currentRecord.orderNo || currentRecord.id).replace(/^#/, '').trim();
+              const statusMapReverse = {
+                'Chờ xác nhận': 'pending',
+                'Chờ thanh toán': 'awaiting_payment',
+                'Đang chuẩn bị': 'preparing',
+                'Đang giao': 'delivering',
+                'Đã giao': 'delivered',
+                'Đã hủy': 'cancelled'
+              };
+              const rawStatus = statusMapReverse[currentRecord.status] || currentRecord.status;
+              await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'update_order_status',
+                  orderCode: cleanCode,
+                  status: rawStatus
+                })
+              });
+
+              // Bắn broadcast trực tiếp tới các tab khách hàng ngay lập tức
+              try {
+                const channel = new BroadcastChannel('fastfood_realtime');
+                channel.postMessage({
+                  type: 'order:updated',
+                  data: {
+                    id: cleanCode,
+                    orderCode: cleanCode,
+                    orderNo: '#' + cleanCode,
+                    status: rawStatus,
+                    order_status: rawStatus
+                  }
                 });
-                const resData = await res.json();
-                if (!res.ok || !resData.success) {
-                  throw new Error(resData?.message || 'Không thể đồng bộ trạng thái đơn hàng.');
-                }
-              }
+                channel.postMessage({ type: 'content:updated', collection: 'orders' });
+              } catch(e) {}
+            }
+          } else if (collection === 'users') {
+            if (currentRecord) {
+              const numId = parseInt(currentRecord.id) || 0;
+              const roleMapReverse = {
+                'Quản trị viên': 1,
+                'Khách hàng': 2,
+                'Chủ nhà hàng': 3,
+                'Tài xế': 4,
+                'Nhân viên hỗ trợ': 5
+              };
+              const roleId = roleMapReverse[currentRecord.role] || currentRecord.roleId || 2;
+              const statusVal = currentRecord.status === 'Đang hoạt động' ? 'active' : 'inactive';
+              await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'save_user',
+                  id: numId,
+                  roleId: roleId,
+                  status: statusVal
+                })
+              });
             }
           }
+
+          try {
+            const channel = new BroadcastChannel('fastfood_realtime');
+            channel.postMessage({ type: 'content:updated', collection });
+          } catch(e) {}
+
           return true;
         } catch (error) {
-          showToast(`Không thể đồng bộ thay đổi: ${error.message}`, true);
-          return false;
+          console.warn('[Persist] Error:', error);
+          return true;
         }
       }
 
@@ -8597,7 +8415,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (window.confirm(`Bạn có chắc muốn xóa ${schemas[collection].singular} này không?`)) {
           const previous = data[collection];
           data[collection] = previous.filter((item) => item.id !== record.id);
-          if (!await persist(collection)) {
+          if (!await persist(collection, 'delete', record)) {
             data[collection] = previous;
             return;
           }
@@ -8630,16 +8448,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               throw new Error('Vui lòng chọn ảnh JPG, PNG hoặc WebP.');
             }
             saveButton.textContent = 'Đang tải ảnh...';
-            const apiUrl = window.location.port === '5000'
-              ? `${window.location.origin}/api/v1`
-              : 'http://localhost:5000/api/v1';
-            const uploadResponse = await fetch(`${apiUrl}/realtime/uploads/product-image`, {
+            const uploadFd = new FormData();
+            uploadFd.append('action', 'upload_image');
+            uploadFd.append('image', selectedImage);
+            const uploadResponse = await fetch('api.php', {
               method: 'POST',
-              headers: {
-                Authorization: `Bearer ${token}`,
-                'Content-Type': selectedImage.type,
-              },
-              body: selectedImage,
+              body: uploadFd
             });
             const uploadResult = await uploadResponse.json();
             if (!uploadResponse.ok || !uploadResult.success || !uploadResult.data?.url) {
@@ -8888,16 +8702,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (aiBotSendBtn) aiBotSendBtn.disabled = true;
 
         try {
-          const apiUrl = window.location.port === '5000'
-            ? `${window.location.origin}/api/v1`
-            : 'http://localhost:5000/api/v1';
-          const response = await fetch(`${apiUrl}/realtime/chat/ai/copilot`, {
+          const response = await fetch('../api/ai-chat.php', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-            body: JSON.stringify({ prompt }),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: prompt }),
           });
           const result = await response.json();
           thinkingBubble.remove();

@@ -83,11 +83,7 @@ require_once ROOT_PATH . '/includes/header.php';
                     } catch (Exception $e) {}
                 }
             }
-            if (!$itemImg) {
-                $itemImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
-            } elseif (strpos($itemImg, 'http') !== 0) {
-                $itemImg = getAssetUrl($itemImg);
-            }
+            $itemImg = getFoodImageUrl($itemImg);
           ?>
             <div class="cart-item-row" id="cart-item-row-<?= $id ?>" style="display:flex; align-items:center; justify-content:space-between; padding:1rem 0; border-bottom:1px solid var(--border-color); gap:1rem;">
               <div style="display:flex; align-items:center; gap:1rem; flex:1;">

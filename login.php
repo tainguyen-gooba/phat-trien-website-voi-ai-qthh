@@ -5,7 +5,7 @@
  */
 require_once __DIR__ . '/config/config.php';
 
-if (isLoggedIn()) {
+if (isLoggedIn() && empty($_POST) && !isset($_GET['switch'])) {
     if (isAdminOrStaff()) {
         header('Location: ' . BASE_URL . '/admin/index.php');
     } else {
@@ -47,21 +47,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($valid) {
             $isAdminRole = ((int)$user['role_id'] === 1 || (int)$user['role_id'] === 5);
 
-            // Phân lập Session theo quyền hạn để 2 Tab chạy độc lập không đè nhau
-            session_write_close();
-
             if ($isAdminRole) {
-                // Luôn lưu Admin vào phiên làm việc FF_SESS_ADMIN
-                session_name('FF_SESS_ADMIN');
-                session_start();
-                setUserSession($user);
+                // Luôn lưu Admin vào phiên làm việc Quản trị
+                setUserSession($user, 'admin');
                 header('Location: ' . BASE_URL . '/admin/index.php');
                 exit;
             } else {
-                // Khách hàng lưu vào phiên làm việc Frontend FASTFOOD_SESSID
-                session_name('FASTFOOD_SESSID');
-                session_start();
-                setUserSession($user);
+                // Khách hàng lưu vào phiên làm việc Khách hàng
+                setUserSession($user, 'customer');
 
                 // Đảm bảo không hiển thị popup chào mừng voucher khi đăng nhập
                 // (Chỉ hiển thị 1 lần duy nhất khi vừa đăng ký tài khoản mới bên register.php)

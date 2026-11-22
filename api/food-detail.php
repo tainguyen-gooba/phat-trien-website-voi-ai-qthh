@@ -78,10 +78,7 @@ $hasDiscount = !empty($p['discount_price']) && (float)$p['discount_price'] > 0 &
 $price = $hasDiscount ? (float)$p['discount_price'] : (float)$p['base_price'];
 $oldPrice = $hasDiscount ? (float)$p['base_price'] : 0;
 
-$rawImg = $p['image_url'] ?: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
-if (strpos($rawImg, 'http') !== 0 && strpos($rawImg, '/') !== 0) {
-    $rawImg = getAssetUrl($rawImg);
-}
+$rawImg = getFoodImageUrl($p['image_url'] ?? '');
 
 jsonSuccess('Lấy thông tin món thành công', [
     'id'             => (int)$p['id'],

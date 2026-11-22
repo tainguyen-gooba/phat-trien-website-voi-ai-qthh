@@ -16,6 +16,20 @@ function getAssetUrl($path) {
     return BASE_URL . '/' . $cleanPath;
 }
 
+function getFoodImageUrl($img) {
+    if (empty($img)) {
+        return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+    }
+    if (preg_match('#^(https?://|//)#i', $img)) {
+        return $img;
+    }
+    $clean = ltrim($img, '/');
+    if (strpos($clean, 'assets/') === 0 || strpos($clean, 'frontend/') === 0) {
+        return BASE_URL . '/' . $clean;
+    }
+    return BASE_URL . '/assets/images/foods/' . $clean;
+}
+
 function getUrl($path = '') {
     $cleanPath = ltrim($path, '/');
     $url = BASE_URL . ($cleanPath ? '/' . $cleanPath : '');
@@ -56,12 +70,7 @@ function renderProductCard($p) {
     $discountPct = $hasDiscount ? round((($basePrice - $discountPrice) / $basePrice) * 100) : 0;
     
     $rawImg = !empty($p['image_url']) ? $p['image_url'] : (!empty($p['image']) ? $p['image'] : '');
-    if (!$rawImg) {
-        $rawImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
-    } elseif (strpos($rawImg, 'http') !== 0) {
-        $rawImg = getAssetUrl($rawImg);
-    }
-    $imgUrl = escapeHtml($rawImg);
+    $imgUrl = escapeHtml(getFoodImageUrl($rawImg));
     
     $restaurant = !empty($p['restaurant_name']) ? $p['restaurant_name'] : (!empty($p['restaurant']) ? $p['restaurant'] : 'FASTFOOD Partner');
     $category = !empty($p['category_name']) ? $p['category_name'] : (!empty($p['category']) ? $p['category'] : 'FASTFOOD');

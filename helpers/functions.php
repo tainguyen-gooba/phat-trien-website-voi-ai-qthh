@@ -17,8 +17,9 @@ function getAssetUrl($path) {
 }
 
 function getFoodImageUrl($img) {
+    $placeholder = BASE_URL . '/assets/images/foods/banh-mi-chao.jpg';
     if (empty($img)) {
-        return 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';
+        return $placeholder;
     }
     if (preg_match('#^(https?://|//)#i', $img)) {
         return $img;
@@ -83,7 +84,7 @@ function renderProductCard($p) {
     <div class="product-card" data-product-id="<?= $id ?>" data-category-id="<?= (int)($p['category_id'] ?? 0) ?>" data-category="<?= escapeHtml($category) ?>">
       <div class="product-thumb-wrap">
         <a href="<?= $detailUrl ?>" style="display:block; width:100%; height:100%;">
-          <img src="<?= $imgUrl ?>" alt="<?= escapeHtml($name) ?>" class="product-thumb" loading="lazy" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';">
+          <img src="<?= $imgUrl ?>" alt="<?= escapeHtml($name) ?>" class="product-thumb" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/images/foods/banh-mi-chao.jpg';">
         </a>
         <?php if ($hasDiscount): ?>
           <span class="product-tag-discount">-<?= $discountPct ?>%</span>

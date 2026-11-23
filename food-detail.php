@@ -346,7 +346,8 @@ require_once ROOT_PATH . '/includes/header.php';
       <div class="food-gallery-main">
         <img src="<?= escapeHtml(getFoodImageUrl($product['image_url'] ?? '')) ?>" 
              alt="<?= escapeHtml($product['name']) ?>" class="food-gallery-img"
-             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';">
+             referrerpolicy="no-referrer"
+             onerror="this.onerror=null; this.src='<?= BASE_URL ?>/assets/images/foods/banh-mi-chao.jpg';">
       </div>
 
       <!-- Chi tiết thông tin & Biến thể tùy chọn -->

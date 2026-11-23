@@ -13,6 +13,15 @@
     const inbox = document.getElementById('chat-inbox');
     if (!inbox) return null;
 
+    // Chuẩn hoá API URL: nếu apiUrl là 'api.php' hoặc không hợp lệ, fallback về window.BASE_URL + '/api/v1' hoặc '/api/v1'
+    let resolvedApiUrl = (apiUrl && apiUrl !== 'api.php') ? apiUrl.replace(/\/+$/, '') : '';
+    if (!resolvedApiUrl) {
+      const siteBase = (typeof window.BASE_URL === 'string' && window.BASE_URL.trim()) ? window.BASE_URL.replace(/\/+$/, '') : '';
+      resolvedApiUrl = siteBase ? `${siteBase}/api/v1` : '/api/v1';
+    }
+
+    let activeToken = token || (typeof sessionStorage !== 'undefined' ? (sessionStorage.getItem('fastfood_auth_token') || sessionStorage.getItem('fastfood_admin_token')) : '');
+
     const conversationList = document.getElementById('chat-conversation-list');
     const messageList = document.getElementById('admin-chat-messages');
     const threadTitle = document.getElementById('chat-thread-title');
@@ -106,18 +115,19 @@
       const uploadHeaders = {
         Accept: 'application/json',
       };
-      if (token) {
-        uploadHeaders['Authorization'] = `Bearer ${token}`;
+      const currentToken = activeToken || token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fastfood_auth_token') : '');
+      if (currentToken) {
+        uploadHeaders['Authorization'] = `Bearer ${currentToken}`;
       }
 
-      let response = await fetch(`${apiUrl}/realtime/chat/upload-image`, {
+      let response = await fetch(`${resolvedApiUrl}/realtime/chat/upload-image`, {
         method: 'POST',
         headers: uploadHeaders,
         body: formData,
       });
 
       if (!response.ok && response.status === 404) {
-        response = await fetch(`${apiUrl}/chat/upload-image`, {
+        response = await fetch(`${resolvedApiUrl}/chat/upload-image`, {
           method: 'POST',
           headers: uploadHeaders,
           body: formData,
@@ -274,12 +284,14 @@
     }
 
     async function chatRequest(path, options = {}) {
-      const response = await fetch(`${apiUrl}/chat${path}`, {
+      const cleanPath = path.startsWith('/') ? path : `/${path}`;
+      const authToken = activeToken || token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fastfood_auth_token') : '');
+      const response = await fetch(`${resolvedApiUrl}/chat${cleanPath}`, {
         ...options,
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           ...(options.headers || {}),
         },
       });
@@ -291,12 +303,14 @@
     }
 
     async function realtimeRequest(path, options = {}) {
-      const response = await fetch(`${apiUrl}/realtime${path}`, {
+      const cleanPath = path.startsWith('/') ? path : `/${path}`;
+      const authToken = activeToken || token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fastfood_auth_token') : '');
+      const response = await fetch(`${resolvedApiUrl}/realtime${cleanPath}`, {
         ...options,
         headers: {
           Accept: 'application/json',
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
           ...(options.headers || {}),
         },
       });
@@ -1532,6 +1546,13 @@
     };
     backgroundUnreadPoll();
     setInterval(backgroundUnreadPoll, 5000);
+
+    // Global helper for unread badge clearing
+    window.clearMessagesBadge = function() {
+      if (typeof window.updateMessagesNavBadge === 'function') {
+        window.updateMessagesNavBadge(0);
+      }
+    };
 
     return {
       setActive(isActive) {

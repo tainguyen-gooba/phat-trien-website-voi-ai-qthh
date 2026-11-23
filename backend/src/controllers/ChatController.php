@@ -21,6 +21,11 @@ class ChatController extends BaseController {
 
         $body = $this->getJsonBody();
         $message = trim($body['message'] ?? ($body['prompt'] ?? ''));
+        // Khử mã độc XSS trong nội dung tin nhắn (<script> tags)
+        if (stripos($message, '<script') !== false) {
+            $message = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '&lt;script&gt;$1&lt;/script&gt;', $message);
+            $message = str_ireplace(['<script>', '<script', '</script>'], ['&lt;script&gt;', '&lt;script', '&lt;/script&gt;'], $message);
+        }
         $sessionId = trim($body['sessionId'] ?? '');
         $customerName = trim($body['customerName'] ?? '');
         $messageType = trim($body['messageType'] ?? 'text');

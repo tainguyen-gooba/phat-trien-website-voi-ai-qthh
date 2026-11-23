@@ -518,7 +518,9 @@
 
       quickChips?.addEventListener('click', (e) => {
         const btn = e.target.closest('.ff-chip-item');
-        if (btn && !this.isSubmitting) {
+        if (btn && !this.isSubmitting && !btn.disabled) {
+          btn.disabled = true;
+          setTimeout(() => { btn.disabled = false; }, 2000);
           const query = btn.dataset.query || btn.textContent.trim();
           // Khi khách bấm câu hỏi gợi ý, tự động chuyển sang kênh AI để nhận phân tích món ngon tức thời
           if (this.currentChannel !== 'ai') {
@@ -561,6 +563,8 @@
         const payload = event.detail;
         if (!payload || !payload.message) return;
         const msg = payload.message;
+        // Bỏ qua tin nhắn của chính khách hàng để tránh tạo bong bóng trùng lặp
+        if (msg.sender === 'user' || msg.senderRole === 'customer') return;
         if (msg.sender === 'admin' || payload.sessionId === this.adminSessionId) {
           this.renderMessage(msg, 'admin');
           if (!this.isOpen && msg.sender === 'admin') {
@@ -1127,12 +1131,14 @@
       // Chống trùng lặp tin nhắn người dùng (deduplication giữa optimistic render và sync history)
       if (isUser && targetBody) {
         const cleanText = (msgData.message || '').trim().replace(/\s+/g, ' ');
+        const normClean = cleanText.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
         const existingUserRows = targetBody.querySelectorAll('.ff-msg-row.user');
         for (let i = existingUserRows.length - 1; i >= 0; i--) {
           const r = existingUserRows[i];
           const contentEl = r.querySelector('.ff-msg-content');
           const existingText = contentEl ? contentEl.textContent.trim().replace(/\s+/g, ' ') : '';
-          const textMatch = cleanText && (existingText === cleanText);
+          const normExisting = (r.dataset.msgText || existingText).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+          const textMatch = (cleanText && existingText === cleanText) || (normClean && normClean === normExisting) || (cleanText && existingText && (existingText.includes(cleanText) || cleanText.includes(existingText)));
           const imgMatch = imageUrl && (r.dataset.imageUrl === imageUrl || (r.dataset.imageUrl && imageUrl.includes(r.dataset.imageUrl)));
           if (textMatch || imgMatch) {
             // NẾU ĐÃ CÓ BONG BÓNG TIN NHẮN TRÙNG NỘI DUNG: CẬP NHẬT ID VÀ TUYỆT ĐỐI KHÔNG TẠO BUBBLE MỚI!
@@ -1190,6 +1196,7 @@
       row.className = `ff-msg-row ${isUser ? 'user' : 'assistant'}${isAdmin ? ' admin' : ''}`;
       if (msgIdStr) row.dataset.msgId = msgIdStr;
       if (imageUrl) row.dataset.imageUrl = imageUrl;
+      if (isUser && msgData.message) row.dataset.msgText = (msgData.message || '').trim().replace(/\s+/g, ' ');
 
       let avatarHtml = '';
       let senderLabelHtml = '';
@@ -1234,9 +1241,11 @@
         cardsHtml += this.buildOrderCardHtml(msgData.metadata.order);
       }
 
+      const bubbleClasses = `ff-msg-bubble ${isUser ? 'ff-msg-user chat-msg-user message-user' : (isAdmin ? 'ff-msg-admin chat-msg-admin message-admin' : 'ff-msg-ai ff-msg-assistant chat-msg-ai')}`;
+
       row.innerHTML = `
         ${avatarHtml}
-        <div class="ff-msg-bubble">
+        <div class="${bubbleClasses}">
           ${senderLabelHtml}
           ${imageBubbleHtml}
           ${formattedText}

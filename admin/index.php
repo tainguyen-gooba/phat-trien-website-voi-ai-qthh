@@ -1663,7 +1663,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
     }
 
-    @media (max-width: 1023px) and (min-width: 768px) {
+    @media (max-width: 1023px) and (min-width: 821px) {
       .sidebar {
         width: 250px;
         transform: translateX(0);
@@ -1718,7 +1718,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
     }
 
-    @media (max-width: 767px) {
+    @media (max-width: 820px) {
       .sidebar-resizer {
         display: none !important;
       }
@@ -3824,6 +3824,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .admin-product-card-thumb {
       width: 60px;
       height: 60px;
+      aspect-ratio: 1 / 1;
       border-radius: 8px;
       object-fit: cover;
       flex-shrink: 0;
@@ -3935,6 +3936,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       max-height: 85vh;
     }
 
+    .admin-lightbox-img,
     .admin-lightbox-container img {
       max-width: 100%;
       max-height: 85vh;
@@ -7309,6 +7311,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         return;
       }
 
+      window.BASE_URL = <?= json_encode(BASE_URL) ?>;
       const serverToken = <?= json_encode($adminToken) ?>;
       const serverUser = <?= json_encode([
           'id' => (int)$currentUser['id'],
@@ -7324,9 +7327,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       const STORAGE_KEY = 'fastfood-admin-dashboard-v1';
       const pageSize = 5;
       const tokenKey = 'fastfood_auth_token';
-      let token = sessionStorage.getItem(tokenKey);
-      if (!token && serverToken) {
-        token = serverToken;
+      let token = serverToken || sessionStorage.getItem(tokenKey);
+      if (serverToken) {
         sessionStorage.setItem(tokenKey, serverToken);
       }
 
@@ -7412,8 +7414,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       if (typeof window.initAdminChatInbox === 'function') {
         window.adminChatInbox = window.initAdminChatInbox({
           socket: liveSocket,
-          token,
-          apiUrl: 'api.php',
+          token: serverToken || token,
+          apiUrl: '<?= BASE_URL ?>/api/v1',
         });
       }
 

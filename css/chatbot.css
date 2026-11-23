@@ -449,7 +449,13 @@
 .ff-msg-row {
   display: flex;
   gap: 10px;
-  max-width: 90%;
+  max-width: 85%;
+  margin-bottom: 12px;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
   animation: ffMsgIn 0.25s ease-out;
 }
 
@@ -461,10 +467,12 @@
 .ff-msg-row.user {
   align-self: flex-end;
   flex-direction: row-reverse;
+  margin-left: auto;
 }
 
 .ff-msg-row.assistant {
   align-self: flex-start;
+  margin-right: auto;
 }
 
 .ff-msg-avatar {
@@ -481,30 +489,50 @@
 }
 
 .ff-msg-bubble {
-  padding: 12px 16px;
+  max-width: 100%;
+  padding: 10px 16px;
   border-radius: 18px;
   font-size: 13.5px;
-  line-height: 1.6;
-  word-break: break-word;
+  line-height: 1.5;
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
-.ff-msg-row.user .ff-msg-bubble {
+.ff-msg-content {
+  word-break: normal;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+.ff-msg-row.user .ff-msg-bubble,
+.ff-msg-bubble.ff-msg-user,
+.ff-msg-user,
+.chat-msg-user,
+.message-user {
   background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
   color: #ffffff;
-  border-bottom-right-radius: 4px;
-  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.28);
+  border-radius: 18px 18px 4px 18px !important;
+  box-shadow: 0 4px 15px rgba(249, 115, 22, 0.22);
 }
 
-.ff-msg-row.assistant .ff-msg-bubble {
+.ff-msg-row.assistant .ff-msg-bubble,
+.ff-msg-bubble.ff-msg-ai,
+.ff-msg-bubble.ff-msg-assistant,
+.ff-msg-ai,
+.ff-msg-assistant,
+.chat-msg-ai {
   background: #ffffff;
   color: var(--ff-ai-ink);
   border: 1px solid #f1f5f9;
-  border-bottom-left-radius: 4px;
+  border-radius: 18px 18px 18px 4px !important;
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.05);
 }
 
 .ff-msg-bubble p {
   margin: 0 0 6px 0;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .ff-msg-bubble p:last-child {
@@ -534,6 +562,7 @@
   color: #94a3b8;
   margin-top: 4px;
   display: block;
+  white-space: nowrap;
 }
 
 .ff-msg-row.user .ff-msg-time {
@@ -570,7 +599,7 @@
 .ff-card-thumb-wrap {
   position: relative;
   width: 100%;
-  height: 95px;
+  aspect-ratio: 4 / 3;
   background: #f1f5f9;
   overflow: hidden;
 }
@@ -989,6 +1018,12 @@
   .ff-product-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .ff-lightbox-close {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+  }
 }
 
 /* Nhãn phân biệt tin nhắn từ Nhân viên Admin vs Trợ lý tự động */
@@ -1016,9 +1051,14 @@
   background: linear-gradient(135deg, #16a34a, #15803d);
 }
 
-.ff-msg-row.admin .ff-msg-bubble {
+.ff-msg-row.admin .ff-msg-bubble,
+.ff-msg-bubble.ff-msg-admin,
+.ff-msg-admin,
+.chat-msg-admin,
+.message-admin {
   background: linear-gradient(135deg, #fffaf5 0%, #fff7ed 100%);
-  border-color: #fed7aa;
+  border: 1px solid #fed7aa;
+  border-radius: 18px 18px 18px 4px !important;
   box-shadow: 0 3px 12px rgba(249, 115, 22, 0.08);
 }
 
@@ -1178,6 +1218,7 @@
 .ff-msg-image {
   display: block;
   width: 100%;
+  max-width: 100%;
   max-height: 280px;
   height: auto;
   object-fit: contain;
@@ -1224,8 +1265,9 @@
   justify-content: center;
 }
 
+.ff-lightbox-img,
 .ff-lightbox-content img {
-  max-width: 100%;
+  max-width: 90vw;
   max-height: 85vh;
   object-fit: contain;
   border-radius: 12px;
@@ -1285,6 +1327,7 @@
   position: relative;
   width: 76px;
   height: 76px;
+  aspect-ratio: 1 / 1;
   border-radius: 12px;
   overflow: hidden;
   background: #fff7ed;

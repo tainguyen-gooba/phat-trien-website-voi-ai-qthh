@@ -97,6 +97,12 @@ class AiChatService {
                 $messageType = (!empty($metadata['type']) && in_array($metadata['type'], $allowedTypes, true)) ? $metadata['type'] : 'text';
             }
 
+            // Khử mã độc XSS trong nội dung tin nhắn (<script> tags)
+            if (stripos($message, '<script') !== false) {
+                $message = preg_replace('/<script\b[^>]*>(.*?)<\/script>/is', '&lt;script&gt;$1&lt;/script&gt;', $message);
+                $message = str_ireplace(['<script>', '<script', '</script>'], ['&lt;script&gt;', '&lt;script', '&lt;/script&gt;'], $message);
+            }
+
             $metaJson = $metadata ? json_encode($metadata, JSON_UNESCAPED_UNICODE) : null;
             $isRead = ($sender === 'user' ? 0 : 1);
             $stmt = $db->prepare("INSERT INTO ai_chat_messages (session_id, user_id, sender, message_type, message, metadata, is_read, created_at)
@@ -583,6 +589,9 @@ class AiChatService {
                 } catch (\Exception $e2) {}
             }
         }
+
+        // Tự động đánh dấu đã đọc các tin nhắn trước đó của khách khi Admin gửi phản hồi
+        self::markSessionAsRead($sessionId);
 
         date_default_timezone_set('Asia/Ho_Chi_Minh');
         return [

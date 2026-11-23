@@ -16,6 +16,10 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
         $cartCount += (int)($item['qty'] ?? 1);
     }
 }
+$favCount = 0;
+if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])) {
+    $favCount = count($_SESSION['user_favorites']);
+}
 ?>
 <!DOCTYPE html>
 <html lang="vi">
@@ -88,7 +92,7 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
           <!-- Favorite Link -->
           <a href="<?= getUrl('favorites.php') ?>" class="favorite-nav-btn" title="Yêu thích của bạn">
             ♡
-            <span id="nav-favorite-badge" class="cart-counter" style="display:none;">0</span>
+            <span id="nav-favorite-badge" class="cart-counter" style="<?= $favCount > 0 ? '' : 'display:none;' ?>"><?= $favCount ?></span>
           </a>
         <?php endif; ?>
 
@@ -191,6 +195,29 @@ if (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) {
   </header>
   <?php endif; ?>
   <script>
+    window.BASE_URL = <?= json_encode(BASE_URL) ?>;
+    window.getApiUrl = function(path) {
+      const base = (window.BASE_URL || '').replace(/\/+$/, '');
+      const clean = String(path || '').replace(/^\/+/, '');
+      return base ? `${base}/${clean}` : `/${clean}`;
+    };
+    window.FASTFOOD_INITIAL_FAVORITES = <?= json_encode($_SESSION['user_favorites'] ?? []) ?>;
+    window.FASTFOOD_INITIAL_CART_COUNT = <?= (int)$cartCount ?>;
+
+    // Phân lập giỏ hàng theo tài khoản người dùng
+    if (typeof sessionStorage !== 'undefined') {
+      const curUser = <?= json_encode($currentUser ? (int)$currentUser['id'] : 0) ?>;
+      const lastUser = sessionStorage.getItem('fastfood_cart_user');
+      if (lastUser !== null && String(lastUser) !== String(curUser)) {
+        sessionStorage.removeItem('fastfood_cart');
+      }
+      sessionStorage.setItem('fastfood_cart_user', String(curUser));
+    }
+    // Dọn dẹp key cũ không phân quyền
+    if (typeof localStorage !== 'undefined') {
+      localStorage.removeItem('fastfood_user_favorites');
+    }
+
     window.FASTFOOD_USER = <?= json_encode($currentUser ? [
         'id'        => (int)$currentUser['id'],
         'full_name' => $currentUser['full_name'],

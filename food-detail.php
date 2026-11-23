@@ -344,8 +344,9 @@ require_once ROOT_PATH . '/includes/header.php';
     <div class="food-detail-grid">
       <!-- Ảnh món ăn -->
       <div class="food-gallery-main">
-        <img src="<?= escapeHtml($product['image_url'] ?: getAssetUrl('assets/images/logo.svg')) ?>" 
-             alt="<?= escapeHtml($product['name']) ?>" class="food-gallery-img">
+        <img src="<?= escapeHtml(getFoodImageUrl($product['image_url'] ?? '')) ?>" 
+             alt="<?= escapeHtml($product['name']) ?>" class="food-gallery-img"
+             onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=600&auto=format&fit=crop&q=80';">
       </div>
 
       <!-- Chi tiết thông tin & Biến thể tùy chọn -->

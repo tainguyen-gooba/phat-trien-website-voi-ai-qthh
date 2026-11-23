@@ -88,6 +88,7 @@ const StorageManager = {
 
 localStorage.removeItem('fastfood_auth_token');
 localStorage.removeItem(StorageManager.KEYS.USER);
+localStorage.removeItem('fastfood_user_favorites');
 
 window.StorageManager = StorageManager;
 
@@ -95,11 +96,17 @@ window.StorageManager = StorageManager;
 // FASTFOOD FAVORITES MANAGER (LƯU & ĐỒNG BỘ MÓN ĂN YÊU THÍCH)
 // =====================================================================
 const FavoritesManager = {
-  KEY: 'fastfood_user_favorites',
+  getUserKey() {
+    const uid = window.FASTFOOD_USER?.id;
+    return uid ? `fastfood_user_favorites_${uid}` : 'fastfood_user_favorites_guest';
+  },
 
   getIds() {
+    if (window.FASTFOOD_INITIAL_FAVORITES && Array.isArray(window.FASTFOOD_INITIAL_FAVORITES)) {
+      return window.FASTFOOD_INITIAL_FAVORITES.map(Number).filter(n => n > 0);
+    }
     try {
-      const data = localStorage.getItem(this.KEY);
+      const data = localStorage.getItem(this.getUserKey());
       const parsed = data ? JSON.parse(data) : [];
       return Array.isArray(parsed) ? parsed.map(Number).filter(n => n > 0) : [];
     } catch (e) {
@@ -128,10 +135,12 @@ const FavoritesManager = {
       isLiked = true;
     }
 
+    window.FASTFOOD_INITIAL_FAVORITES = ids;
+
     try {
-      localStorage.setItem(this.KEY, JSON.stringify(ids));
+      localStorage.setItem(this.getUserKey(), JSON.stringify(ids));
     } catch (e) {
-      console.error('Lỗi khi lưu yêu thích vào localStorage:', e);
+      console.error('Lỗi khi lưu yêu thích:', e);
     }
 
     // Cập nhật trạng thái tất cả các nút trái tim của sản phẩm này trên trang
@@ -160,7 +169,8 @@ const FavoritesManager = {
 
     // Gọi API lưu phiên nền
     try {
-      fetch('/api/favorites.php', {
+      const apiUrl = (typeof window.getApiUrl === 'function') ? window.getApiUrl('api/favorites.php') : 'api/favorites.php';
+      fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'toggle', productId: idNum })

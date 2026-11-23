@@ -82,7 +82,7 @@ switch ($action) {
 
         // B. Nếu đang theo dõi 1 đơn cụ thể (Khách hàng ở order-tracking.php)
         if ($orderCode) {
-            $stmt = $db->prepare("SELECT order_code, order_status, payment_status, total_amount, updated_at 
+            $stmt = $db->prepare("SELECT order_code, COALESCE(NULLIF(order_status, ''), 'pending') AS order_status, payment_status, total_amount, updated_at 
                                   FROM orders WHERE order_code = ? LIMIT 1");
             $stmt->execute([$orderCode]);
             $trackedOrder = $stmt->fetch();

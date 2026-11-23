@@ -55,6 +55,12 @@ function getCartSummary() {
         $items[] = $itemCopy;
     }
 
+    $uid = (int)($_SESSION['user_id'] ?? ($_SESSION['customer_user']['id'] ?? 0));
+    if ($uid > 0) {
+        if (!isset($_SESSION['user_carts'])) $_SESSION['user_carts'] = [];
+        $_SESSION['user_carts'][$uid] = $_SESSION['cart'] ?? [];
+    }
+
     $shippingFee = ($subtotal > 0 && $subtotal < 100000) ? 18000 : 0;
 
     // Xử lý giảm giá từ Coupon / Voucher

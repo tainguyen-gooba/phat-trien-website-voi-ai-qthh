@@ -6,7 +6,7 @@
 require_once dirname(__DIR__) . '/config/config.php';
 
 // Nếu đã đăng nhập với quyền Admin hoặc Staff thì vào thẳng dashboard
-if (isAdminOrStaff()) {
+if (isAdminOrStaff() && empty($_POST)) {
     header('Location: ' . BASE_URL . '/admin/index.php');
     exit;
 }
@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         if ($valid) {
-            setUserSession($user);
+            setUserSession($user, 'admin');
             header('Location: ' . BASE_URL . '/admin/index.php');
             exit;
         } elseif (!$error) {

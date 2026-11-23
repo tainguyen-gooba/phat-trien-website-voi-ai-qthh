@@ -34,8 +34,22 @@ if (is_array($rawIds)) {
     $ids = array_values(array_unique(array_filter(array_map('intval', explode(',', $rawIds)))));
 }
 
+$userId = (int)($_SESSION['user_id'] ?? ($_SESSION['customer_user']['id'] ?? 0));
+
 switch ($action) {
     case 'get_items':
+        if ($userId > 0) {
+            try {
+                $dbStmt = $db->prepare("SELECT product_id FROM user_favorites WHERE user_id = ?");
+                $dbStmt->execute([$userId]);
+                $userDbIds = array_map('intval', $dbStmt->fetchAll(PDO::FETCH_COLUMN));
+                if (!empty($userDbIds) || empty($ids)) {
+                    $ids = $userDbIds;
+                }
+                $_SESSION['user_favorites'] = $ids;
+            } catch (\Throwable $e) {}
+        }
+
         if (empty($ids)) {
             jsonSuccess('Danh sách yêu thích trống', ['products' => [], 'count' => 0]);
         }
@@ -54,11 +68,7 @@ switch ($action) {
             $item['current_price'] = $curPrice;
             $item['price_formatted'] = formatVND($curPrice);
             $item['original_price_formatted'] = formatVND((float)$item['base_price']);
-            $rawImg = $item['image_url'] ?? '';
-            if ($rawImg && !preg_match('#^(https?://|//)#i', $rawImg)) {
-                $rawImg = getAssetUrl($rawImg);
-            }
-            $item['image_url_full'] = $rawImg;
+            $item['image_url_full'] = getFoodImageUrl($item['image_url'] ?? '');
             $item['detail_url'] = getUrl('food-detail.php?id=' . $item['id']);
         }
         unset($item);
@@ -85,9 +95,23 @@ switch ($action) {
             unset($_SESSION['user_favorites'][$key]);
             $_SESSION['user_favorites'] = array_values($_SESSION['user_favorites']);
             $isLiked = false;
+
+            if ($userId > 0) {
+                try {
+                    $delStmt = $db->prepare("DELETE FROM user_favorites WHERE user_id = ? AND product_id = ?");
+                    $delStmt->execute([$userId, $prodId]);
+                } catch (\Throwable $e) {}
+            }
         } else {
             $_SESSION['user_favorites'][] = $prodId;
             $isLiked = true;
+
+            if ($userId > 0) {
+                try {
+                    $insStmt = $db->prepare("INSERT IGNORE INTO user_favorites (user_id, product_id, created_at) VALUES (?, ?, NOW())");
+                    $insStmt->execute([$userId, $prodId]);
+                } catch (\Throwable $e) {}
+            }
         }
 
         jsonSuccess($isLiked ? 'Đã thêm vào yêu thích' : 'Đã xóa khỏi yêu thích', [

@@ -25,7 +25,7 @@ $isAdminContext = (
     (!empty($_GET['for']) && $_GET['for'] === 'admin') ||
     (strcasecmp($reqRole, 'admin') === 0) ||
     // API gọi từ trang Admin
-    (preg_match('#^/api/#', $requestUri) && strpos($referer, '/admin') !== false)
+    (strpos($requestUri, '/api/') !== false && strpos($referer, '/admin') !== false)
 );
 
 if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
@@ -37,20 +37,6 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     @session_start();
 } elseif (session_status() === PHP_SESSION_NONE) {
     @session_start();
-}
-
-// Dọn dẹp phiên Khách Hàng: Nếu FASTFOOD_SESSID còn lưu tài khoản Admin/Staff từ phiên cũ,
-// tự động dọn dẹp để tab Khách Hàng luôn là tài khoản khách hàng hoặc khách vãng lai độc lập
-if (session_name() === 'FASTFOOD_SESSID' && !empty($_SESSION['user_role_id']) && ((int)$_SESSION['user_role_id'] === 1 || (int)$_SESSION['user_role_id'] === 5)) {
-    unset(
-        $_SESSION['user_id'],
-        $_SESSION['user_name'],
-        $_SESSION['user_email'],
-        $_SESSION['user_phone'],
-        $_SESSION['user_role_id'],
-        $_SESSION['user_role'],
-        $_SESSION['user_avatar']
-    );
 }
 
 define('ROOT_PATH', dirname(__DIR__));

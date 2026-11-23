@@ -443,7 +443,10 @@ const UIComponents = {
     overlay.classList.add('active');
 
     try {
-      const res = await fetch(`/api/food-detail.php?id=${encodeURIComponent(productId)}`);
+      const apiUrl = (typeof window.getApiUrl === 'function')
+        ? window.getApiUrl('api/food-detail.php')
+        : ((window.BASE_URL || '').replace(/\/+$/, '') + '/api/food-detail.php');
+      const res = await fetch(`${apiUrl}?id=${encodeURIComponent(productId)}`);
       const result = await res.json();
       if (!result.success || !result.data) {
         throw new Error(result.message || 'Không thể tải thông tin món.');
@@ -585,7 +588,10 @@ const UIComponents = {
     }
 
     try {
-      const res = await fetch('/api/cart.php', {
+      const cartApiUrl = (typeof window.getApiUrl === 'function')
+        ? window.getApiUrl('api/cart.php')
+        : ((window.BASE_URL || '').replace(/\/+$/, '') + '/api/cart.php');
+      const res = await fetch(cartApiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

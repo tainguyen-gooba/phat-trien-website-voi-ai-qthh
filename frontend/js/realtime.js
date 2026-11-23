@@ -192,7 +192,10 @@
         orderCode: trackedOrder
       });
 
-      const res = await fetch(`/api/realtime.php?${params.toString()}`, {
+      const pollUrl = (typeof window.getApiUrl === 'function')
+        ? window.getApiUrl('api/realtime.php')
+        : ((window.BASE_URL || '').replace(/\/+$/, '') + '/api/realtime.php');
+      const res = await fetch(`${pollUrl}?${params.toString()}`, {
         headers: { Accept: 'application/json' }
       });
       if (!res.ok) throw new Error('Poll failed');
@@ -264,8 +267,9 @@
     }
   }
 
-  // Khởi chạy vòng lặp Polling dự phòng mỗi 8s (và đồng bộ ngay khi người dùng chuyển lại tab)
-  setInterval(pollServer, 8000);
+  // Khởi chạy vòng lặp Polling: nếu đang theo dõi đơn thì poll mỗi 2s, bình thường mỗi 5s
+  const pollInterval = (typeof window !== 'undefined' && window.TRACKED_ORDER_CODE) ? 2000 : 5000;
+  setInterval(pollServer, pollInterval);
   if (typeof document !== 'undefined') {
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) pollServer();

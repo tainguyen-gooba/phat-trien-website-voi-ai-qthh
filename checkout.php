@@ -145,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->beginTransaction();
         try {
+<<<<<<< HEAD
             $total = max(0, $payableBeforePoints - $pointsDiscount);
 
             // Xác định trạng thái thanh toán nếu đơn hàng được thanh toán 100% bằng điểm (total == 0)
@@ -155,6 +156,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $paymentStatus = 'pending';
                 $orderStatus   = ($method === 'cod') ? 'pending' : 'awaiting_payment';
             }
+=======
+            $paymentStatus = 'pending';
+            $orderStatus   = in_array($method, ['vietqr', 'banking', 'momo']) ? 'awaiting_payment' : 'pending';
+>>>>>>> ed65382cf9df618cb1fe3f86c5c9acdeacb2383b
             $paymentMethodDb = ($method === 'vietqr' || $method === 'banking') ? 'banking' : (($method === 'momo') ? 'momo' : 'cod');
 
             // 1. Lưu vào bảng orders bao gồm points_used và points_discount
@@ -477,11 +482,7 @@ require_once ROOT_PATH . '/includes/header.php';
                     } catch (Exception $e) {}
                 }
             }
-            if (!$cImg) {
-                $cImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80';
-            } elseif (strpos($cImg, 'http') !== 0) {
-                $cImg = getAssetUrl($cImg);
-            }
+            $cImg = getFoodImageUrl($cImg);
           ?>
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem; font-size:0.9rem; gap:0.75rem;">
               <div style="display:flex; align-items:center; gap:0.75rem;">

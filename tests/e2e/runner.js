@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * tests/e2e/runner.js - Standalone Node.js E2E Test Runner for FASTFOOD Admin Modernization.
+ * tests/e2e/runner.js - Standalone Node.js E2E Test Runner for FASTFOOD Membership Tiers & Loyalty Reward System.
  * Powered by Node.js native `node:test` and `node:test/reporters`.
  */
 
@@ -17,18 +17,23 @@ const TIER1_DIR = path.join(E2E_ROOT, 'tier1-feature-coverage');
 const TIER2_DIR = path.join(E2E_ROOT, 'tier2-boundaries');
 const TIER3_DIR = path.join(E2E_ROOT, 'tier3-combinations');
 const TIER4_DIR = path.join(E2E_ROOT, 'tier4-workflows');
+const LEGACY_DIR = path.join(E2E_ROOT, 'legacy-chat');
 
 /**
  * Recursively collects all *.test.js files in a directory.
+ * Explicitly ignores legacy-chat and node_modules unless specified.
  */
-function collectTestFiles(dir) {
+function collectTestFiles(dir, allowLegacy = false) {
   if (!fs.existsSync(dir)) return [];
   let files = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   for (const entry of entries) {
+    if (!allowLegacy && (entry.name === 'legacy-chat' || entry.name === 'node_modules')) {
+      continue;
+    }
     const fullPath = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files = files.concat(collectTestFiles(fullPath));
+      files = files.concat(collectTestFiles(fullPath, allowLegacy));
     } else if (entry.isFile() && entry.name.endsWith('.test.js')) {
       files.push(fullPath);
     }
@@ -41,7 +46,7 @@ function collectTestFiles(dir) {
  */
 function resolveTestFiles(args) {
   if (args.length === 0) {
-    // Run all existing tests across tiers
+    // Run all loyalty tests across tiers 1-4 (ignoring legacy-chat)
     return [
       ...collectTestFiles(TIER1_DIR),
       ...collectTestFiles(TIER2_DIR),
@@ -60,17 +65,19 @@ function resolveTestFiles(args) {
       selected.push(...collectTestFiles(TIER3_DIR));
     } else if (arg === 'tier4' || arg === 't4') {
       selected.push(...collectTestFiles(TIER4_DIR));
+    } else if (arg === 'legacy' || arg === 'chat') {
+      selected.push(...collectTestFiles(LEGACY_DIR, true));
     } else if (fs.existsSync(arg)) {
       selected.push(path.resolve(arg));
     } else {
-      // Fuzzy filename search
-      const all = [
+      // Fuzzy filename search across tiers 1-4
+      const allLoyalty = [
         ...collectTestFiles(TIER1_DIR),
         ...collectTestFiles(TIER2_DIR),
         ...collectTestFiles(TIER3_DIR),
         ...collectTestFiles(TIER4_DIR)
       ];
-      const matched = all.filter(f => path.basename(f).includes(arg));
+      const matched = allLoyalty.filter(f => path.basename(f).includes(arg));
       selected.push(...matched);
     }
   }
@@ -84,8 +91,8 @@ function resolveTestFiles(args) {
  */
 async function checkServerOnline(baseUrl = 'http://127.0.0.1:5000') {
   try {
-    const res = await fetch(`${baseUrl}/api/realtime.php?action=poll`, { signal: AbortSignal.timeout(3000) });
-    return res.ok || res.status === 200 || res.status === 401;
+    const res = await fetch(`${baseUrl}/index.php`, { signal: AbortSignal.timeout(3000) });
+    return res.ok || res.status === 200 || res.status === 302 || res.status === 401;
   } catch {
     return false;
   }
@@ -99,7 +106,7 @@ async function main() {
   const files = resolveTestFiles(filteredArgs);
 
   console.log('='.repeat(70));
-  console.log(' FASTFOOD E2E TEST RUNNER (Node.js native node:test)');
+  console.log(' FASTFOOD E2E TEST RUNNER - Loyalty & Membership System');
   console.log('='.repeat(70));
 
   const baseUrl = process.env.TEST_BASE_URL || 'http://127.0.0.1:5000';
@@ -157,7 +164,7 @@ async function main() {
 
   // Pipe to reporter
   if (useTap) {
-    testStream.compose(new tap()).pipe(process.stdout);
+    testStream.compose(tap).pipe(process.stdout);
   } else {
     testStream.compose(new spec()).pipe(process.stdout);
   }

@@ -14,11 +14,24 @@ $db = getDB();
 
 // Xử lý hủy đơn nếu khách yêu cầu và đơn còn ở trạng thái chờ
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_cancel'])) {
-    $cancelStmt = $db->prepare("UPDATE orders SET order_status = 'cancelled', cancellation_reason = 'Khách hàng tự hủy trên website', cancelled_at = NOW() 
-                                WHERE order_code = ? AND order_status IN ('pending', 'awaiting_payment')");
-    $cancelStmt->execute([$orderCode]);
-    $cancelRt = $db->prepare("UPDATE realtime_orders SET status = 'cancelled' WHERE order_code = ?");
-    $cancelRt->execute([$orderCode]);
+    $chkStmt = $db->prepare("SELECT id, customer_id, order_status FROM orders WHERE order_code = ? LIMIT 1");
+    $chkStmt->execute([$orderCode]);
+    $ordRow = $chkStmt->fetch();
+
+    if ($ordRow && in_array(strtolower($ordRow['order_status']), ['placed', 'pending', 'awaiting_payment'])) {
+        $cancelStmt = $db->prepare("UPDATE orders SET order_status = 'cancelled', cancellation_reason = 'Khách hàng tự hủy trên website', cancelled_at = NOW(), updated_at = NOW() WHERE id = ?");
+        $cancelStmt->execute([$ordRow['id']]);
+
+        $cancelRt = $db->prepare("UPDATE realtime_orders SET status = 'cancelled', updated_at = NOW() WHERE order_code = ?");
+        $cancelRt->execute([$orderCode]);
+
+        // Loyalty rollback: restore redeemed points
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+        if (!empty($ordRow['customer_id']) && (int)$ordRow['customer_id'] > 0) {
+            handleOrderCancellation((int)$ordRow['id']);
+        }
+    }
+
     header('Location: ' . getUrl("order-tracking.php?id=" . urlencode($orderCode)));
     exit;
 }
@@ -166,18 +179,70 @@ require_once ROOT_PATH . '/includes/header.php';
       <?php endforeach; ?>
     </div>
 
-    <!-- Tóm tắt số tiền -->
+    <!-- Tóm tắt số tiền & Điểm thưởng Loyalty -->
     <div style="margin-top:1.25rem; border-top:1px solid #e2e8f0; padding-top:1rem;">
       <div class="summary-row"><span>Tạm tính:</span><span><?= formatVND($order['subtotal']) ?></span></div>
+
+      <?php if (!empty($order['discount_amount']) && (float)$order['discount_amount'] > 0): ?>
+        <div class="summary-row" style="color:#16a34a;">
+          <span>Giảm giá khuyến mãi / Voucher:</span>
+          <span>-<?= formatVND($order['discount_amount']) ?></span>
+        </div>
+      <?php endif; ?>
+
+      <?php if (!empty($order['points_used']) && (int)$order['points_used'] > 0): ?>
+        <div class="summary-row" style="color:#ea580c; font-weight:600;">
+          <span>Giảm giá tích điểm (<?= number_format($order['points_used']) ?> điểm):</span>
+          <span>-<?= formatVND($order['points_discount']) ?></span>
+        </div>
+      <?php endif; ?>
+
       <div class="summary-row"><span>Phí giao hàng:</span><span><?= formatVND($order['shipping_fee']) ?></span></div>
+
       <div class="summary-row total-row" style="font-size:1.3rem; font-weight:900; color:var(--primary-color); margin-top:0.5rem;">
         <span>Tổng cộng:</span>
         <span><?= formatVND($order['total_amount']) ?></span>
       </div>
+
+      <?php if (!empty($order['points_earned']) && (int)$order['points_earned'] > 0): ?>
+        <div style="margin-top:1rem; padding:0.75rem 1rem; background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; color:#065f46; display:flex; align-items:center; gap:0.6rem; font-size:0.92rem;">
+          <span style="font-size:1.3rem;">🎁</span>
+          <div>
+            Đơn hàng đã tích lũy thành công <strong>+<?= number_format($order['points_earned']) ?> điểm thưởng</strong> vào tài khoản thành viên của bạn!
+          </div>
+        </div>
+      <?php elseif ($status === 'cancelled' && !empty($order['points_used']) && (int)$order['points_used'] > 0): ?>
+        <div style="margin-top:1rem; padding:0.75rem 1rem; background:#eff6ff; border:1px solid #bfdbfe; border-radius:10px; color:#1e40af; display:flex; align-items:center; gap:0.6rem; font-size:0.92rem;">
+          <span style="font-size:1.3rem;">🔄</span>
+          <div>
+            Đã hoàn trả <strong><?= number_format($order['points_used']) ?> điểm thưởng</strong> về tài khoản thành viên của bạn.
+          </div>
+        </div>
+      <?php elseif ($status !== 'cancelled' && !empty($order['customer_id']) && (int)$order['customer_id'] > 0): ?>
+        <?php
+          require_once ROOT_PATH . '/helpers/loyalty.php';
+          $uTier = 'BRONZE';
+          try {
+              $uRow = $db->query("SELECT member_tier FROM users WHERE id = " . (int)$order['customer_id'])->fetch();
+              if ($uRow && !empty($uRow['member_tier'])) {
+                  $uTier = $uRow['member_tier'];
+              }
+          } catch (Exception $e) {}
+          $estPoints = calculateEarnPoints((float)$order['total_amount'], $uTier);
+          if ($estPoints > 0):
+        ?>
+          <div style="margin-top:1rem; padding:0.75rem 1rem; background:#fffbeb; border:1px solid #fde68a; border-radius:10px; color:#92400e; display:flex; align-items:center; gap:0.6rem; font-size:0.88rem;">
+            <span style="font-size:1.2rem;">✨</span>
+            <div>
+              Dự kiến tích lũy <strong>+<?= number_format($estPoints) ?> điểm</strong> sau khi đơn hàng giao thành công!
+            </div>
+          </div>
+        <?php endif; ?>
+      <?php endif; ?>
     </div>
 
     <!-- Nút hủy đơn nếu còn ở trạng thái chờ -->
-    <?php if (in_array($status, ['pending', 'awaiting_payment'])): ?>
+    <?php if (in_array($status, ['placed', 'pending', 'awaiting_payment'])): ?>
       <div style="margin-top:2rem; text-align:right;">
         <form action="<?= getUrl('order-tracking.php?id=' . urlencode($orderCode)) ?>" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Theo quy định, mỗi lần hủy đơn có thể tăng 3% phí ship cho đơn sau.')">
           <input type="hidden" name="action_cancel" value="1">

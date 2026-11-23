@@ -54,59 +54,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $insertStmt->execute([$fullName, $email, $phone, $hash]);
                 $newUserId = (int)$db->lastInsertId();
 
-                // 3. Tự động cấp Voucher Giảm 50% cho khách hàng mới
-                $userVoucherCode = 'NEW50-' . strtoupper(substr(md5($newUserId . uniqid((string)mt_rand(), true)), 0, 6));
-                $startDate = date('Y-m-d H:i:s');
-                $endDate = date('Y-m-d H:i:s', strtotime('+30 days'));
-
+                // 3. Đảm bảo mã mẫu NEW50K chung tồn tại trong hệ thống (nếu chưa có)
                 try {
-                    // Đảm bảo coupon mẫu NEW50 (Giảm 50%) chung tồn tại
-                    $checkGlobal = $db->prepare("SELECT id FROM coupons WHERE code = 'NEW50' LIMIT 1");
-                    $checkGlobal->execute();
-                    if (!$checkGlobal->fetch()) {
-                        $db->prepare("INSERT INTO coupons (code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
-                                      VALUES ('NEW50', 'Voucher bạn mới - Giảm ngay 50%', 'percentage', 50.00, 0.00, 50000.00, 10000, 0, '2026-01-01 00:00:00', '2027-12-31 23:59:59', 1, NOW())")->execute();
-                    }
-
-                    // Đồng thời đảm bảo mã NEW50K nếu có
                     $checkGlobal2 = $db->prepare("SELECT id FROM coupons WHERE code = 'NEW50K' LIMIT 1");
                     $checkGlobal2->execute();
                     if (!$checkGlobal2->fetch()) {
                         $db->prepare("INSERT INTO coupons (code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
                                       VALUES ('NEW50K', 'Voucher bạn mới - Giảm ngay 50.000đ', 'fixed', 50000.00, 0.00, 50000.00, 10000, 0, '2026-01-01 00:00:00', '2027-12-31 23:59:59', 1, NOW())")->execute();
                     }
-
-                    // Tạo mã voucher riêng cho user (Giảm 50%)
-                    $cpInsert = $db->prepare("INSERT INTO coupons (user_id, code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
-                                              VALUES (?, ?, 'Voucher chào mừng bạn mới - Giảm 50%', 'percentage', 50.00, 0.00, 50000.00, 1, 0, ?, ?, 1, NOW())");
-                    $cpInsert->execute([$newUserId, $userVoucherCode, $startDate, $endDate]);
-                    $couponId = (int)$db->lastInsertId();
-
-                    // Tự động kích hoạt vào giỏ hàng
-                    $_SESSION['applied_coupon'] = [
-                        'id'                  => $couponId,
-                        'code'                => $userVoucherCode,
-                        'alias'               => 'NEW50',
-                        'title'               => 'Voucher chào mừng bạn mới - Giảm 50%',
-                        'discount_type'       => 'percentage',
-                        'discount_value'      => 50.00,
-                        'min_order_value'     => 0.00,
-                        'max_discount_amount' => 50000.00
-                    ];
                 } catch (Exception $e) {}
 
-                // 4. Tạo thông báo quà tặng thành viên mới trong DB
-                try {
-                    $notifStmt = $db->prepare("INSERT INTO notifications (user_id, title, content, type, is_read, created_at)
-                                                VALUES (?, ?, ?, 'promotion', 0, NOW())");
-                    $notifStmt->execute([
-                        $newUserId,
-                        '🎉 Chào mừng bạn mới - Nhận Voucher Giảm 50%!',
-                        'Chào mừng ' . $fullName . ' đến với FASTFOOD! Bạn đã được tặng Voucher giảm trực tiếp 50% (Mã: ' . $userVoucherCode . ' hoặc NEW50) cho đơn hàng đầu tiên.'
-                    ]);
-                } catch (Exception $e) {}
-
-                // 5. Lưu phiên đăng nhập
+                // 4. Lưu phiên đăng nhập cho tài khoản mới vừa tạo
                 setUserSession([
                     'id'         => $newUserId,
                     'full_name'  => $fullName,
@@ -116,16 +74,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'avatar_url' => '',
                 ]);
 
-                // 6. Cờ hiển thị Modal Thông Báo Quà Tặng Người Mới
-                $_SESSION['welcome_discount_applied'] = true;
-                $_SESSION['show_welcome_popup'] = true;
-                $_SESSION['welcome_popup_data'] = [
-                    'user_name'      => $fullName,
-                    'voucher_code'   => 'NEW50',
-                    'user_code'      => $userVoucherCode,
-                    'discount_label' => '50%',
-                    'title'          => 'Voucher Chào Mừng Bạn Mới'
+                // 5. Kích hoạt cờ hiển thị Modal Nhập Thông Tin Khách Hàng để nhận Voucher 50.000đ
+                $_SESSION['show_voucher_claim_modal'] = true;
+                $_SESSION['pending_voucher_user'] = [
+                    'id'        => $newUserId,
+                    'full_name' => $fullName,
+                    'email'     => $email,
+                    'phone'     => $phone
                 ];
+
+                // Xóa cờ popup chào mừng cũ (không tự động cấp mà phải qua modal định danh)
+                unset($_SESSION['show_welcome_popup']);
+                unset($_SESSION['welcome_popup_data']);
+                unset($_SESSION['welcome_discount_applied']);
 
                 header('Location: ' . getUrl('index.php'));
                 exit;

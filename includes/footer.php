@@ -100,9 +100,12 @@ $fPolicyLinks  = !empty($footerData['policy_links']) && is_array($footerData['po
   <!-- Tích hợp Khung Chat Nhân Viên Hỗ Trợ AI -->
   <?php require_once __DIR__ . '/chatbot.php'; ?>
 
+  <!-- Tích hợp Modal Nhập Thông Tin Khách Hàng Nhận Voucher 50.000đ & Chống Trùng Lặp -->
+  <?php require_once __DIR__ . '/voucher-modal.php'; ?>
+
   <?php
   // ===================================================================
-  // MODAL SỔ RA THÔNG BÁO CHO NGƯỜI MỚI ĐĂNG KÝ / ĐĂNG NHẬP VOUCHER 50%
+  // MODAL SỔ RA THÔNG BÁO CHO NGƯỜI MỚI ĐĂNG KÝ / ĐĂNG NHẬP (FALLBACK)
   // ===================================================================
   $welcomePopupData = $_SESSION['welcome_popup_data'] ?? null;
   $showWelcomeModal = !empty($_SESSION['show_welcome_popup']);

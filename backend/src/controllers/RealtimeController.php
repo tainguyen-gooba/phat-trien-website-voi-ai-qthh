@@ -70,22 +70,59 @@ class RealtimeController extends BaseController {
     public function updateOrderStatus(string $orderCode): void {
         AuthMiddleware::requireAdminOrStaff();
         $body = $this->getJsonBody();
-        $newStatus = trim($body['status'] ?? '');
+        $rawStatus = trim($body['status'] ?? $body['order_status'] ?? '');
 
-        if (!$newStatus) {
+        if (!$rawStatus) {
             $this->sendError('Thiếu trạng thái mới.', HttpStatusCodes::BAD_REQUEST);
         }
 
         $cleanCode = preg_replace('/^#/', '', $orderCode);
+        $newStatus = strtolower($rawStatus);
+        $orderDbStatus = ($newStatus === 'delivered') ? 'completed' : $newStatus;
+        $rtDbStatus    = ($newStatus === 'completed') ? 'delivered' : $newStatus;
+
         $db = Database::getConnection();
 
-        $stmt = $db->prepare("UPDATE orders SET order_status = ?, updated_at = NOW() WHERE order_code = ?");
-        $stmt->execute([$newStatus, $cleanCode]);
+        // Query existing order
+        $ordStmt = $db->prepare("SELECT id, order_code, customer_id, total_amount, order_status, points_earned, points_used FROM orders WHERE order_code = ? LIMIT 1");
+        $ordStmt->execute([$cleanCode]);
+        $order = $ordStmt->fetch();
+
+        if (!$order) {
+            $this->sendError('Không tìm thấy đơn hàng.', HttpStatusCodes::NOT_FOUND);
+        }
+
+        $orderId = (int)$order['id'];
+
+        if ($orderDbStatus === 'completed') {
+            $stmt = $db->prepare("UPDATE orders SET order_status = ?, completed_at = IFNULL(completed_at, NOW()), updated_at = NOW() WHERE id = ?");
+        } elseif ($orderDbStatus === 'cancelled') {
+            $stmt = $db->prepare("UPDATE orders SET order_status = ?, cancelled_at = IFNULL(cancelled_at, NOW()), cancellation_reason = IFNULL(cancellation_reason, 'Admin cập nhật hủy đơn'), updated_at = NOW() WHERE id = ?");
+        } else {
+            $stmt = $db->prepare("UPDATE orders SET order_status = ?, updated_at = NOW() WHERE id = ?");
+        }
+        $stmt->execute([$orderDbStatus, $orderId]);
 
         $rStmt = $db->prepare("UPDATE realtime_orders SET status = ?, updated_at = NOW() WHERE order_code = ?");
-        $rStmt->execute([$newStatus, $cleanCode]);
+        $rStmt->execute([$rtDbStatus, $cleanCode]);
 
-        $this->sendSuccess('Cập nhật trạng thái đơn hàng thành công!');
+        // Loyalty Hooks
+        $helpersPath = defined('ROOT_PATH') ? ROOT_PATH . '/helpers/loyalty.php' : dirname(__DIR__, 3) . '/helpers/loyalty.php';
+        if (file_exists($helpersPath)) {
+            require_once $helpersPath;
+            if (!empty($order['customer_id']) && (int)$order['customer_id'] > 0) {
+                if ($orderDbStatus === 'completed') {
+                    \processOrderEarnPoints($orderId);
+                } elseif ($orderDbStatus === 'cancelled') {
+                    \handleOrderCancellation($orderId);
+                }
+            }
+        }
+
+        $this->sendSuccess('Cập nhật trạng thái đơn hàng thành công!', [
+            'orderCode' => $cleanCode,
+            'status'    => $orderDbStatus
+        ]);
     }
 
     public function updateContent(string $collection): void {

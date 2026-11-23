@@ -1,0 +1,1204 @@
+/* ===================================================================
+   FASTFOOD MODERN PROFILE & LOYALTY HUB STYLES
+   css/profile.css
+   =================================================================== */
+
+/* --- 1. Variables & Local Design Tokens --- */
+:root {
+  --tier-bronze-grad: linear-gradient(135deg, #451a03 0%, #78350f 40%, #9a3412 80%, #b45309 100%);
+  --tier-silver-grad: linear-gradient(135deg, #1e293b 0%, #334155 45%, #475569 75%, #64748b 100%);
+  --tier-gold-grad: linear-gradient(135deg, #422006 0%, #78350f 25%, #a16207 55%, #ca8a04 85%, #eab308 100%);
+  --tier-diamond-grad: linear-gradient(135deg, #091e3a 0%, #0c4a6e 35%, #0284c7 65%, #06b6d4 85%, #38bdf8 100%);
+  --ff-primary: #F28A24;
+  --ff-primary-dark: #ea580c;
+  --ff-primary-light: #FFF3E5;
+  --ff-dark-slate: #1e293b;
+  --ff-muted-slate: #64748b;
+  --ff-border: #e2e8f0;
+}
+
+/* --- 2. Profile Dashboard Container & Hero Grid --- */
+.profile-dashboard-wrap {
+  margin: 1.5rem auto 5rem;
+  max-width: 1200px;
+  padding: 0 1rem;
+}
+
+.profile-hero-grid {
+  display: grid;
+  grid-template-columns: 440px 1fr;
+  gap: 1.75rem;
+  margin-bottom: 2.25rem;
+  align-items: stretch;
+}
+
+/* --- 3. VIP Membership Pass Card --- */
+.vip-pass-card {
+  position: relative;
+  min-height: 260px;
+  border-radius: 20px;
+  padding: 1.75rem;
+  color: #ffffff;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  user-select: none;
+}
+
+.vip-pass-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 46px rgba(0, 0, 0, 0.25);
+}
+
+.vip-card-bronze  { background: var(--tier-bronze-grad); }
+.vip-card-silver  { background: var(--tier-silver-grad); }
+.vip-card-gold    { 
+  background: var(--tier-gold-grad); 
+  box-shadow: 0 16px 36px rgba(202, 138, 4, 0.25);
+}
+.vip-card-diamond { 
+  background: var(--tier-diamond-grad); 
+  box-shadow: 0 16px 36px rgba(6, 182, 212, 0.3);
+}
+
+/* Metallic sheen overlay */
+.vip-pass-card::after {
+  content: "";
+  position: absolute;
+  top: -60%;
+  left: -60%;
+  width: 220%;
+  height: 220%;
+  background: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.25) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+/* Crystalline sheen wave for Gold & Diamond */
+.vip-card-diamond::before,
+.vip-card-gold::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.22),
+    transparent
+  );
+  transform: skewX(-25deg);
+  animation: cardShimmer 6s infinite ease-in-out;
+  pointer-events: none;
+}
+
+@keyframes cardShimmer {
+  0% { left: -100%; }
+  30%, 100% { left: 200%; }
+}
+
+.vip-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+.vip-brand-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  font-size: 0.95rem;
+  text-transform: uppercase;
+}
+
+.vip-tier-pill {
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+
+.vip-card-middle {
+  margin: 1.25rem 0;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.vip-chip-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vip-chip-svg {
+  width: 44px;
+  height: 32px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,0.6), 0 2px 6px rgba(0,0,0,0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.vip-chip-svg::before {
+  content: "";
+  position: absolute;
+  top: 10px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: rgba(0,0,0,0.25);
+}
+
+.vip-chip-svg::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 20px;
+  width: 1px;
+  background: rgba(0,0,0,0.25);
+}
+
+.vip-nfc-icon {
+  opacity: 0.75;
+}
+
+.vip-cust-id {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  letter-spacing: 2.5px;
+  font-size: 1.05rem;
+  opacity: 0.95;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.vip-card-footer {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 0.9rem;
+}
+
+.vip-user-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.vip-avatar-img {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+}
+
+.vip-user-meta {
+  display: flex;
+  flex-direction: column;
+}
+
+.vip-user-name {
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 190px;
+}
+
+.vip-spent-label {
+  font-size: 0.75rem;
+  opacity: 0.88;
+  margin-top: 2px;
+}
+
+.vip-points-box {
+  text-align: right;
+}
+
+.vip-points-val {
+  font-size: 1.45rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.25);
+}
+
+.vip-points-unit {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+.vip-points-vnd {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.22);
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+  margin-top: 0.25rem;
+  backdrop-filter: blur(4px);
+}
+
+/* --- 4. Tier Progress Tracker Card --- */
+.tier-tracker-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  border: 1px solid var(--ff-border);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.tracker-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.tracker-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ff-dark-slate);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tracker-badge-pill {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: #FFF3E5;
+  color: var(--ff-primary);
+}
+
+.tracker-quick-stats {
+  display: flex;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  padding: 0.85rem 1.25rem;
+  background: #f8fafc;
+  border-radius: 14px;
+  border: 1px solid #f1f5f9;
+}
+
+.stat-item {
+  flex: 1;
+}
+
+.stat-item-label {
+  font-size: 0.78rem;
+  color: var(--ff-muted-slate);
+  margin-bottom: 0.2rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.stat-item-val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--ff-dark-slate);
+  white-space: nowrap;
+}
+
+.stat-item-val.text-orange {
+  color: var(--ff-primary);
+}
+
+.tier-milestones-track {
+  position: relative;
+  margin: 2.2rem 0 1.25rem;
+}
+
+.milestones-bar-bg {
+  width: 100%;
+  height: 12px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+}
+
+.milestones-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #F28A24 0%, #ea580c 50%, #f59e0b 100%);
+  border-radius: 999px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.milestones-bar-fill.diamond-max {
+  background: linear-gradient(90deg, #0284c7 0%, #06b6d4 50%, #38bdf8 100%);
+}
+
+.milestone-nodes {
+  display: flex;
+  justify-content: space-between;
+  position: relative;
+  top: -18px;
+  margin: 0 -10px;
+}
+
+.milestone-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.75rem;
+  text-align: center;
+  flex: 1;
+}
+
+.node-dot {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  border: 3px solid #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  margin-bottom: 0.35rem;
+  transition: all 0.3s ease;
+  color: #64748b;
+}
+
+.milestone-node.is-reached .node-dot {
+  border-color: var(--ff-primary);
+  background: var(--ff-primary);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(242, 138, 36, 0.2);
+}
+
+.milestone-node.is-current .node-dot {
+  border-color: #ea580c;
+  background: #ea580c;
+  color: #fff;
+  box-shadow: 0 0 0 5px rgba(234, 88, 12, 0.3);
+}
+
+.node-name {
+  font-weight: 700;
+  color: #475569;
+  line-height: 1.2;
+}
+
+.milestone-node.is-reached .node-name {
+  color: var(--ff-dark-slate);
+}
+
+.node-spent {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+.tracker-alert-box {
+  background: #fff8f1;
+  border: 1px solid #fed7aa;
+  border-radius: 12px;
+  padding: 0.85rem 1.15rem;
+  font-size: 0.9rem;
+  color: #9a3412;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.tracker-alert-box strong {
+  color: #c2410c;
+}
+
+.tracker-max-badge {
+  background: linear-gradient(135deg, #0284c7 0%, #06b6d4 100%);
+  color: #fff;
+  padding: 0.85rem 1.15rem;
+  border-radius: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.25);
+}
+
+/* --- 5. Interactive Navigation Tabs --- */
+.profile-tabs-nav {
+  display: flex;
+  gap: 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 2rem;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding-bottom: 0.5rem;
+  scrollbar-width: thin;
+}
+
+.profile-tab-btn {
+  background: transparent;
+  border: none;
+  padding: 0.75rem 1.25rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #64748b;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.profile-tab-btn:hover {
+  background: #f1f5f9;
+  color: var(--ff-dark-slate);
+}
+
+.profile-tab-btn.active {
+  background: #FFF3E5;
+  color: var(--ff-primary);
+  box-shadow: 0 2px 8px rgba(242, 138, 36, 0.12);
+}
+
+.profile-tab-pane {
+  display: none;
+}
+
+.profile-tab-pane.active {
+  display: block;
+  animation: tabFadeIn 0.3s ease;
+}
+
+@keyframes tabFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Section Headings inside Tab Panes */
+.tab-section-header {
+  margin-bottom: 1.5rem;
+}
+
+.tab-section-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--ff-dark-slate);
+  margin: 0 0 0.35rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tab-section-subtitle {
+  font-size: 0.9rem;
+  color: var(--ff-muted-slate);
+  margin: 0;
+}
+
+/* --- 6. Privileges Guide Grid --- */
+.privileges-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2.5rem;
+}
+
+.privilege-card {
+  background: #fff;
+  border: 1px solid var(--ff-border);
+  border-radius: 18px;
+  padding: 1.6rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s ease;
+}
+
+.privilege-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+}
+
+.privilege-card.is-current {
+  border: 2.5px solid var(--ff-primary);
+  box-shadow: 0 12px 30px rgba(242, 138, 36, 0.18);
+  background: linear-gradient(180deg, #fffaf5 0%, #ffffff 100%);
+}
+
+.privilege-ribbon {
+  position: absolute;
+  top: -12px;
+  right: 14px;
+  background: var(--ff-primary);
+  color: #fff;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(242, 138, 36, 0.35);
+  letter-spacing: 0.5px;
+}
+
+.privilege-card-top {
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 1.1rem;
+  margin-bottom: 1.1rem;
+  text-align: center;
+}
+
+.privilege-icon {
+  font-size: 2.4rem;
+  margin-bottom: 0.5rem;
+  line-height: 1;
+}
+
+.privilege-name {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--ff-dark-slate);
+  margin: 0 0 0.25rem;
+}
+
+.privilege-spent {
+  font-size: 0.82rem;
+  color: var(--ff-muted-slate);
+}
+
+.privilege-multiplier-badge {
+  display: inline-block;
+  padding: 0.3rem 0.75rem;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 0.85rem;
+  background: #f8fafc;
+  color: #334155;
+  margin-top: 0.65rem;
+  border: 1px solid #e2e8f0;
+}
+
+.privilege-card.is-current .privilege-multiplier-badge {
+  background: #ffedd5;
+  color: #ea580c;
+  border-color: #fed7aa;
+}
+
+.privilege-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  font-size: 0.88rem;
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.privilege-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  line-height: 1.4;
+}
+
+.privilege-check-icon {
+  color: #16a34a;
+  font-weight: 800;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+/* --- 7. Rewards Center & Voucher Hub --- */
+.reward-exchange-wrap {
+  margin-bottom: 3rem;
+}
+
+.voucher-exchange-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.voucher-pkg-card {
+  background: #ffffff;
+  border: 1.5px solid var(--ff-border);
+  border-radius: 18px;
+  padding: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  text-align: center;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.voucher-pkg-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.06);
+  transform: translateY(-3px);
+}
+
+.voucher-pkg-badge {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: #FFF3E5;
+  color: var(--ff-primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+}
+
+.voucher-pkg-val {
+  font-size: 1.9rem;
+  font-weight: 900;
+  color: var(--ff-primary);
+  margin-bottom: 0.25rem;
+  margin-top: 0.5rem;
+}
+
+.voucher-pkg-price {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #334155;
+  background: #f1f5f9;
+  padding: 0.35rem 0.85rem;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 0.75rem;
+}
+
+.voucher-pkg-desc {
+  font-size: 0.82rem;
+  color: var(--ff-muted-slate);
+  margin-bottom: 1.25rem;
+  line-height: 1.4;
+}
+
+.btn-exchange {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: var(--ff-primary);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.btn-exchange:hover {
+  background: #D87413;
+  box-shadow: 0 4px 12px rgba(242, 138, 36, 0.3);
+}
+
+.btn-exchange:disabled,
+.btn-exchange.btn-disabled {
+  background: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.voucher-pkg-card.package-locked {
+  opacity: 0.82;
+}
+
+/* Spinner */
+.profile-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Active User Vouchers Grid */
+.active-vouchers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.25rem;
+  margin-top: 1.25rem;
+}
+
+.voucher-ticket {
+  background: #ffffff;
+  border: 1px solid var(--ff-border);
+  border-radius: 16px;
+  display: flex;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.voucher-ticket:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+}
+
+.voucher-ticket-left {
+  background: linear-gradient(135deg, #FFF3E5 0%, #FFE6CB 100%);
+  padding: 1.25rem 1rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  min-width: 110px;
+  border-right: 1.5px dashed #cbd5e1;
+  position: relative;
+  text-align: center;
+}
+
+/* Perforated ticket cutouts */
+.voucher-ticket-left::before,
+.voucher-ticket-left::after {
+  content: "";
+  position: absolute;
+  right: -9px;
+  width: 16px;
+  height: 16px;
+  background: #f8fafc;
+  border-radius: 50%;
+  border: 1px solid #cbd5e1;
+  z-index: 3;
+}
+.voucher-ticket-left::before { top: -9px; }
+.voucher-ticket-left::after  { bottom: -9px; }
+
+.ticket-discount-tag {
+  font-size: 1.45rem;
+  font-weight: 900;
+  color: var(--ff-primary);
+  line-height: 1.1;
+}
+
+.ticket-discount-sub {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #9a3412;
+  margin-top: 2px;
+}
+
+.voucher-ticket-right {
+  padding: 1.15rem 1.25rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.ticket-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--ff-dark-slate);
+  margin: 0 0 0.25rem;
+}
+
+.ticket-condition {
+  font-size: 0.78rem;
+  color: var(--ff-muted-slate);
+  margin-bottom: 0.65rem;
+}
+
+.ticket-code-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  padding: 0.45rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.ticket-code-badge {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--ff-dark-slate);
+  letter-spacing: 1px;
+}
+
+.ticket-copy-btn {
+  background: var(--ff-dark-slate);
+  color: #fff;
+  border: none;
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.ticket-copy-btn:hover {
+  background: #334155;
+}
+
+.ticket-copy-btn.copied {
+  background: #10b981;
+}
+
+.ticket-expiry-row {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+}
+
+.new-item-highlight {
+  animation: highlightGlow 2.5s ease-out;
+}
+
+@keyframes highlightGlow {
+  0% { box-shadow: 0 0 0 4px rgba(242, 138, 36, 0.5); }
+  100% { box-shadow: 0 3px 12px rgba(0,0,0,0.03); }
+}
+
+.empty-vouchers-card {
+  background: #ffffff;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: 16px;
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  color: var(--ff-muted-slate);
+}
+
+.empty-vouchers-icon {
+  font-size: 3rem;
+  margin-bottom: 0.75rem;
+}
+
+/* --- 8. Points Activity History Table --- */
+.points-history-card {
+  background: #fff;
+  border: 1px solid var(--ff-border);
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 4px 18px rgba(0,0,0,0.03);
+}
+
+.points-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.points-table th {
+  background: #f8fafc;
+  padding: 0.95rem 1.25rem;
+  text-align: left;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1px solid var(--ff-border);
+}
+
+.points-table td {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.points-table tr:last-child td {
+  border-bottom: none;
+}
+
+.points-table tr:hover td {
+  background: #fafafa;
+}
+
+.points-badge {
+  display: inline-block;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.badge-earn      { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.badge-checkout  { background: #fff1f2; color: #e11d48; border: 1px solid #fecdd3; }
+.badge-voucher   { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+.badge-restore   { background: #eff6ff; color: #2563eb; border: 1px solid #bfdbfe; }
+.badge-revoke    { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.badge-adjust    { background: #eef2ff; color: #4f46e5; border: 1px solid #c7d2fe; }
+
+.pts-val-plus {
+  font-weight: 800;
+  color: #16a34a;
+  font-size: 1rem;
+}
+
+.pts-val-minus {
+  font-weight: 800;
+  color: #e11d48;
+  font-size: 1rem;
+}
+
+.pts-balance-pill {
+  font-family: monospace;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+}
+
+/* Mobile cards stream for Points History */
+.points-mobile-stream {
+  display: none;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.points-mobile-card {
+  background: #fff;
+  border: 1px solid var(--ff-border);
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+}
+
+.points-mobile-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.points-mobile-desc {
+  font-size: 0.85rem;
+  color: var(--ff-dark-slate);
+  margin-bottom: 0.5rem;
+}
+
+.points-mobile-bottom {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--ff-muted-slate);
+}
+
+/* --- 9. Profile Edit Form Modern Styling --- */
+.profile-edit-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 2.25rem;
+  border: 1px solid var(--ff-border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.04);
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.profile-avatar-row {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.profile-avatar-img {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #FFF3E5;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.profile-form-group {
+  margin-bottom: 1.35rem;
+}
+
+.profile-form-label {
+  display: block;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--ff-dark-slate);
+  margin-bottom: 0.4rem;
+}
+
+.profile-form-control {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid var(--ff-border);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: var(--ff-dark-slate);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  box-sizing: border-box;
+}
+
+.profile-form-control:focus {
+  outline: none;
+  border-color: var(--ff-primary);
+  box-shadow: 0 0 0 3px rgba(242, 138, 36, 0.15);
+}
+
+.profile-form-control[readonly] {
+  background: #f8fafc;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.profile-actions-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.75rem;
+  gap: 1rem;
+}
+
+/* Alert Boxes */
+.profile-alert-success {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #16a34a;
+  padding: 0.85rem 1.25rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-alert-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.85rem 1.25rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- 10. Responsive Media Queries --- */
+@media (max-width: 1024px) {
+  .profile-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  .privileges-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .voucher-exchange-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .vip-pass-card {
+    min-height: 240px;
+  }
+}
+
+@media (max-width: 768px) {
+  .profile-dashboard-wrap {
+    margin-top: 1rem;
+    padding: 0 0.75rem;
+  }
+  .profile-hero-grid {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+  .privileges-grid {
+    grid-template-columns: 1fr;
+  }
+  .voucher-exchange-grid {
+    grid-template-columns: 1fr;
+  }
+  .active-vouchers-grid {
+    grid-template-columns: 1fr;
+  }
+  .tracker-quick-stats {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  .milestone-nodes {
+    margin: 0;
+  }
+  .node-name {
+    font-size: 0.7rem;
+  }
+  .node-spent {
+    display: none;
+  }
+  .points-table-wrap {
+    display: none;
+  }
+  .points-mobile-stream {
+    display: flex;
+  }
+  .profile-actions-row {
+    flex-direction: column;
+  }
+  .profile-actions-row .btn {
+    width: 100%;
+    text-align: center;
+  }
+  .vip-user-name {
+    max-width: 140px;
+  }
+}

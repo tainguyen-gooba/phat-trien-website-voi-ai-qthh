@@ -62,19 +62,65 @@ switch ($action) {
         break;
 
     case 'update_order_status':
-        $orderCode = trim($body['orderCode'] ?? '');
-        $newStatus = trim($body['status'] ?? '');
-        if (!$orderCode || !$newStatus) {
+        $rawOrderCode = trim($body['orderCode'] ?? $body['order_code'] ?? $_POST['orderCode'] ?? $_POST['order_code'] ?? $_GET['orderCode'] ?? '');
+        $rawStatus = trim($body['status'] ?? $body['order_status'] ?? $_POST['status'] ?? $_POST['order_status'] ?? $_GET['status'] ?? '');
+
+        if (!$rawOrderCode || !$rawStatus) {
             jsonError('Thiếu mã đơn hàng hoặc trạng thái mới.');
         }
 
-        $stmt = $db->prepare("UPDATE orders SET order_status = ?, updated_at = NOW() WHERE order_code = ?");
-        $stmt->execute([$newStatus, $orderCode]);
+        $orderCode = preg_replace('/^#/', '', $rawOrderCode);
+        $newStatus = strtolower($rawStatus);
 
+        // Map status for orders vs realtime_orders ENUM differences
+        $orderDbStatus = ($newStatus === 'delivered') ? 'completed' : $newStatus;
+        $rtDbStatus    = ($newStatus === 'completed') ? 'delivered' : $newStatus;
+
+        // Query existing order
+        $ordStmt = $db->prepare("SELECT id, order_code, customer_id, total_amount, order_status, points_earned, points_used FROM orders WHERE order_code = ? LIMIT 1");
+        $ordStmt->execute([$orderCode]);
+        $order = $ordStmt->fetch();
+
+        if (!$order) {
+            jsonError('Không tìm thấy đơn hàng: ' . $orderCode, 404);
+        }
+
+        $orderId = (int)$order['id'];
+        $previousStatus = strtolower($order['order_status'] ?? '');
+
+        // Update orders table with timestamp fields
+        if ($orderDbStatus === 'completed') {
+            $upStmt = $db->prepare("UPDATE orders SET order_status = ?, completed_at = IFNULL(completed_at, NOW()), updated_at = NOW() WHERE id = ?");
+        } elseif ($orderDbStatus === 'cancelled') {
+            $upStmt = $db->prepare("UPDATE orders SET order_status = ?, cancelled_at = IFNULL(cancelled_at, NOW()), cancellation_reason = IFNULL(cancellation_reason, 'Quản trị viên hủy đơn hàng'), updated_at = NOW() WHERE id = ?");
+        } else {
+            $upStmt = $db->prepare("UPDATE orders SET order_status = ?, updated_at = NOW() WHERE id = ?");
+        }
+        $upStmt->execute([$orderDbStatus, $orderId]);
+
+        // Sync realtime_orders
         $rtStmt = $db->prepare("UPDATE realtime_orders SET status = ?, updated_at = NOW() WHERE order_code = ?");
-        $rtStmt->execute([$newStatus, $orderCode]);
+        $rtStmt->execute([$rtDbStatus, $orderCode]);
 
-        jsonSuccess('Cập nhật trạng thái đơn hàng thành công!');
+        // Invoke Loyalty hooks
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+        $loyaltyResult = null;
+
+        if (!empty($order['customer_id']) && (int)$order['customer_id'] > 0) {
+            if ($orderDbStatus === 'completed') {
+                $loyaltyResult = processOrderEarnPoints($orderId);
+            } elseif ($orderDbStatus === 'cancelled') {
+                $loyaltyResult = handleOrderCancellation($orderId);
+            }
+        }
+
+        jsonSuccess('Cập nhật trạng thái đơn hàng thành công!', [
+            'order_id'        => $orderId,
+            'order_code'      => $orderCode,
+            'previous_status' => $previousStatus,
+            'order_status'    => $orderDbStatus,
+            'loyalty'         => $loyaltyResult
+        ]);
         break;
 
     case 'save_product':
@@ -267,6 +313,365 @@ switch ($action) {
                              ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = NOW()");
         $stmt->execute([$jsonStr]);
         jsonSuccess('Đã lưu cấu hình banner và tốc độ chuyển slide thành công!');
+        break;
+
+    // =========================================================================
+    // MILESTONE 4: MEMBERSHIP & LOYALTY REWARD SYSTEM ADMIN API ACTIONS
+    // =========================================================================
+
+    case 'get_loyalty_members':
+        // RBAC: Admin (role 1) and Staff (role 5) allowed (guarded by requireAdminOrStaff() at line 8)
+        $tier = trim($_GET['tier'] ?? $body['tier'] ?? $_POST['tier'] ?? '');
+        $search = trim($_GET['search'] ?? $body['search'] ?? $_POST['search'] ?? '');
+        $page = max(1, (int)($_GET['page'] ?? $body['page'] ?? $_POST['page'] ?? 1));
+        $limit = max(1, min(100, (int)($_GET['limit'] ?? $body['limit'] ?? $_POST['limit'] ?? 20)));
+        $offset = ($page - 1) * $limit;
+
+        $conditions = ["1=1"];
+        $params = [];
+
+        // Tier filter
+        if ($tier !== '' && strtoupper($tier) !== 'ALL') {
+            $conditions[] = "UPPER(member_tier) = ?";
+            $params[] = strtoupper($tier);
+        }
+
+        // Search filter: keyword in full_name, email, or phone
+        if ($search !== '') {
+            $conditions[] = "(full_name LIKE ? OR email LIKE ? OR phone LIKE ?)";
+            $kw = '%' . $search . '%';
+            $params[] = $kw;
+            $params[] = $kw;
+            $params[] = $kw;
+        }
+
+        $whereSql = implode(' AND ', $conditions);
+
+        // Count total matching records
+        $countStmt = $db->prepare("SELECT COUNT(*) FROM users WHERE {$whereSql}");
+        $countStmt->execute($params);
+        $totalMembers = (int)$countStmt->fetchColumn();
+
+        // Load tiers metadata
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+        $tierMeta = getMembershipTiers();
+
+        // Fetch paginated member rows
+        $querySql = "SELECT id, full_name, email, phone, avatar_url, role_id, status, member_tier, points_balance, total_spent, created_at 
+                     FROM users 
+                     WHERE {$whereSql} 
+                     ORDER BY id ASC 
+                     LIMIT ? OFFSET ?";
+        
+        $fetchStmt = $db->prepare($querySql);
+        $execParams = $params;
+        $execParams[] = $limit;
+        $execParams[] = $offset;
+        
+        foreach ($execParams as $i => $val) {
+            $type = is_int($val) ? PDO::PARAM_INT : PDO::PARAM_STR;
+            $fetchStmt->bindValue($i + 1, $val, $type);
+        }
+        $fetchStmt->execute();
+        $rows = $fetchStmt->fetchAll();
+
+        $members = [];
+        foreach ($rows as $u) {
+            $tierCode = strtoupper($u['member_tier'] ?? 'BRONZE');
+            $t = $tierMeta[$tierCode] ?? [];
+            $members[] = [
+                'id'             => (int)$u['id'],
+                'name'           => $u['full_name'],
+                'full_name'      => $u['full_name'],
+                'email'          => $u['email'],
+                'phone'          => $u['phone'] ?? '',
+                'avatar'         => $u['avatar_url'] ?? '',
+                'avatar_url'     => $u['avatar_url'] ?? '',
+                'role_id'        => (int)$u['role_id'],
+                'status'         => $u['status'] ?? 'active',
+                'member_tier'    => $tierCode,
+                'points_balance' => (int)($u['points_balance'] ?? 0),
+                'total_spent'    => (float)($u['total_spent'] ?? 0),
+                'created_at'     => $u['created_at'],
+                'tier_name'      => $t['tier_name'] ?? $tierCode,
+                'badge_color'    => $t['badge_color'] ?? '#cd7f32',
+                'badge_icon'     => $t['badge_icon'] ?? '🥉'
+            ];
+        }
+
+        // Summary statistics across entire membership
+        $statsRows = $db->query("SELECT member_tier, COUNT(*) as cnt, SUM(points_balance) as total_pts, SUM(total_spent) as total_vnd FROM users GROUP BY member_tier")->fetchAll();
+        $tierCounts = ['BRONZE' => 0, 'SILVER' => 0, 'GOLD' => 0, 'DIAMOND' => 0];
+        $totalAll = 0;
+        $totalSystemPoints = 0;
+        $totalSystemSpent = 0.0;
+        foreach ($statsRows as $sr) {
+            $code = strtoupper($sr['member_tier'] ?? 'BRONZE');
+            $cnt = (int)$sr['cnt'];
+            $tierCounts[$code] = $cnt;
+            $totalAll += $cnt;
+            $totalSystemPoints += (int)($sr['total_pts'] ?? 0);
+            $totalSystemSpent += (float)($sr['total_vnd'] ?? 0);
+        }
+
+        $totalPages = $limit > 0 ? (int)ceil($totalMembers / $limit) : 1;
+        $vipCount = ($tierCounts['SILVER'] ?? 0) + ($tierCounts['GOLD'] ?? 0) + ($tierCounts['DIAMOND'] ?? 0);
+
+        jsonSuccess('Lấy danh sách thành viên thành công', [
+            'members'    => $members,
+            'pagination' => [
+                'page'        => $page,
+                'limit'       => $limit,
+                'total'       => $totalMembers,
+                'total_pages' => $totalPages,
+                'totalPages'  => $totalPages,
+            ],
+            'summary'    => [
+                'totalMembers' => $totalAll,
+                'totalPoints'  => $totalSystemPoints,
+                'vipCount'     => $vipCount
+            ],
+            'stats'      => [
+                'total_members'        => $totalAll,
+                'bronze_count'         => $tierCounts['BRONZE'] ?? 0,
+                'silver_count'         => $tierCounts['SILVER'] ?? 0,
+                'gold_count'           => $tierCounts['GOLD'] ?? 0,
+                'diamond_count'        => $tierCounts['DIAMOND'] ?? 0,
+                'total_system_points'  => $totalSystemPoints,
+                'total_system_spent'   => $totalSystemSpent,
+            ]
+        ]);
+        break;
+
+    case 'get_member_loyalty_history':
+        // RBAC: Admin (role 1) and Staff (role 5) allowed
+        $userId = (int)($_GET['user_id'] ?? $body['user_id'] ?? $_POST['user_id'] ?? 0);
+        if ($userId <= 0) {
+            jsonError('Thiếu ID thành viên hợp lệ.', 400);
+        }
+
+        $userStmt = $db->prepare("SELECT id, full_name, email, phone, avatar_url, role_id, status, member_tier, points_balance, total_spent, created_at FROM users WHERE id = ?");
+        $userStmt->execute([$userId]);
+        $user = $userStmt->fetch();
+
+        if (!$user) {
+            jsonError('Không tìm thấy người dùng.', 404);
+        }
+
+        // Fetch transaction ledger
+        $txStmt = $db->prepare("SELECT pt.id, pt.user_id, pt.order_id, pt.points, pt.balance_after, pt.transaction_type, pt.description, pt.created_at, o.order_code 
+                                FROM point_transactions pt 
+                                LEFT JOIN orders o ON pt.order_id = o.id 
+                                WHERE pt.user_id = ? 
+                                ORDER BY pt.created_at DESC, pt.id DESC");
+        $txStmt->execute([$userId]);
+        $rawTxs = $txStmt->fetchAll();
+
+        $history = [];
+        foreach ($rawTxs as $row) {
+            $history[] = [
+                'id'               => (int)$row['id'],
+                'user_id'          => (int)$row['user_id'],
+                'order_id'         => $row['order_id'] !== null ? (int)$row['order_id'] : null,
+                'order_code'       => $row['order_code'] ?? null,
+                'points'           => (int)$row['points'],
+                'points_change'    => (int)$row['points'], // Alias for contract compatibility
+                'balance_after'    => (int)$row['balance_after'],
+                'transaction_type' => $row['transaction_type'],
+                'description'      => $row['description'] ?? '',
+                'created_at'       => $row['created_at'],
+            ];
+        }
+
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+        $tierMeta = getMembershipTiers();
+        $tierCode = strtoupper($user['member_tier'] ?? 'BRONZE');
+        $t = $tierMeta[$tierCode] ?? [];
+
+        jsonSuccess('Lấy lịch sử giao dịch điểm thành công', [
+            'user' => [
+                'id'             => (int)$user['id'],
+                'name'           => $user['full_name'],
+                'full_name'      => $user['full_name'],
+                'email'          => $user['email'],
+                'phone'          => $user['phone'] ?? '',
+                'avatar'         => $user['avatar_url'] ?? '',
+                'tier'           => $tierCode,
+                'member_tier'    => $tierCode,
+                'tier_name'      => $t['tier_name'] ?? $tierCode,
+                'badge_color'    => $t['badge_color'] ?? '#cd7f32',
+                'badge_icon'     => $t['badge_icon'] ?? '🥉',
+                'points'         => (int)($user['points_balance'] ?? 0),
+                'points_balance' => (int)($user['points_balance'] ?? 0),
+                'total_spent'    => (float)($user['total_spent'] ?? 0),
+                'created_at'     => $user['created_at'],
+            ],
+            'history'      => $history,
+            'transactions' => $history
+        ]);
+        break;
+
+    case 'save_loyalty_config':
+        // RBAC: Strictly Admin only (role_id === 1)
+        if (!isAdmin()) {
+            jsonError('Chỉ quản trị viên cấp cao mới có quyền thay đổi cấu hình.', 403);
+        }
+
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+
+        // Extract settings (supports nested settings object or top-level keys)
+        $settingsInput = $body['settings'] ?? [];
+        if (!is_array($settingsInput)) $settingsInput = [];
+
+        foreach (['point_to_vnd_rate', 'spending_step_vnd', 'min_redeem_points', 'max_redeem_percentage'] as $key) {
+            if (isset($body[$key])) {
+                $settingsInput[$key] = $body[$key];
+            } elseif (isset($_POST[$key])) {
+                $settingsInput[$key] = $_POST[$key];
+            }
+        }
+
+        // Extract tiers (supports thresholds/ratios objects, tiers array, or flat fields)
+        $tiersInput = $body['tiers'] ?? $_POST['tiers'] ?? null;
+
+        if (empty($tiersInput) || !is_array($tiersInput)) {
+            $builtTiers = [];
+            $thresholds = $body['thresholds'] ?? $_POST['thresholds'] ?? [];
+            $ratios = $body['ratios'] ?? $_POST['ratios'] ?? [];
+
+            foreach (['BRONZE', 'SILVER', 'GOLD', 'DIAMOND'] as $tc) {
+                $lCode = strtolower($tc);
+                $spentVal = $thresholds[$tc] ?? $thresholds[$lCode] ?? $body["tier_{$lCode}_min_spent"] ?? $_POST["tier_{$lCode}_min_spent"] ?? $body["{$lCode}_min_spent"] ?? $_POST["{$lCode}_min_spent"] ?? null;
+                $ratioVal = $ratios[$tc] ?? $ratios[$lCode] ?? $body["tier_{$lCode}_point_ratio"] ?? $_POST["tier_{$lCode}_point_ratio"] ?? $body["{$lCode}_point_ratio"] ?? $_POST["{$lCode}_point_ratio"] ?? $body["{$lCode}_ratio"] ?? $_POST["{$lCode}_ratio"] ?? null;
+
+                if ($spentVal !== null || $ratioVal !== null) {
+                    $item = ['tier_code' => $tc];
+                    if ($spentVal !== null) $item['min_spent'] = $spentVal;
+                    if ($ratioVal !== null) $item['point_ratio'] = $ratioVal;
+                    $builtTiers[] = $item;
+                }
+            }
+            if (!empty($builtTiers)) {
+                $tiersInput = $builtTiers;
+            }
+        }
+
+        // Validation 1: Settings fields
+        if (isset($settingsInput['point_to_vnd_rate'])) {
+            $val = $settingsInput['point_to_vnd_rate'];
+            if ($val === '' || $val === null || !is_numeric($val) || (float)$val <= 0) {
+                jsonError('Tỷ lệ quy đổi điểm (point_to_vnd_rate) phải là số dương lớn hơn 0.', 400);
+            }
+        }
+        if (isset($settingsInput['spending_step_vnd'])) {
+            $val = $settingsInput['spending_step_vnd'];
+            if ($val === '' || $val === null || !is_numeric($val) || (float)$val <= 0) {
+                jsonError('Mốc chi tiêu cơ sở (spending_step_vnd) phải là số dương lớn hơn 0.', 400);
+            }
+        }
+        if (isset($settingsInput['min_redeem_points'])) {
+            $val = $settingsInput['min_redeem_points'];
+            if ($val === '' || $val === null || !is_numeric($val) || (int)$val < 0) {
+                jsonError('Điểm đổi tối thiểu (min_redeem_points) không được là số âm.', 400);
+            }
+        }
+
+        // Validation 2: Tiers fields & Inverted thresholds check
+        if (!empty($tiersInput) && is_array($tiersInput)) {
+            $effectiveTiers = getMembershipTiers();
+            foreach ($tiersInput as $t) {
+                $tc = strtoupper($t['tier_code'] ?? '');
+                if (!$tc || !isset($effectiveTiers[$tc])) {
+                    jsonError("Mã hạng thành viên không hợp lệ: {$tc}", 400);
+                }
+                if (isset($t['min_spent'])) {
+                    if ($t['min_spent'] === '' || $t['min_spent'] === null || !is_numeric($t['min_spent']) || (float)$t['min_spent'] < 0) {
+                        jsonError("Mốc chi tiêu hạng {$tc} không được là số âm.", 400);
+                    }
+                    $effectiveTiers[$tc]['min_spent'] = (float)$t['min_spent'];
+                }
+                if (isset($t['point_ratio'])) {
+                    if ($t['point_ratio'] === '' || $t['point_ratio'] === null || !is_numeric($t['point_ratio']) || (float)$t['point_ratio'] <= 0) {
+                        jsonError("Tỷ lệ tích điểm hạng {$tc} phải lớn hơn 0.", 400);
+                    }
+                    $effectiveTiers[$tc]['point_ratio'] = (float)$t['point_ratio'];
+                }
+            }
+
+            $silverSpent  = (float)$effectiveTiers['SILVER']['min_spent'];
+            $goldSpent    = (float)$effectiveTiers['GOLD']['min_spent'];
+            $diamondSpent = (float)$effectiveTiers['DIAMOND']['min_spent'];
+
+            if ($silverSpent <= 0) {
+                jsonError("Mốc chi tiêu hạng Bạc (Silver) phải lớn hơn 0.", 400);
+            }
+            if ($silverSpent >= $goldSpent) {
+                jsonError("Mốc chi tiêu hạng Bạc ({$silverSpent}) phải nhỏ hơn hạng Vàng ({$goldSpent}).", 400);
+            }
+            if ($goldSpent >= $diamondSpent) {
+                jsonError("Mốc chi tiêu hạng Vàng ({$goldSpent}) phải nhỏ hơn hạng Kim Cương ({$diamondSpent}).", 400);
+            }
+        }
+
+        // Atomic DB Update
+        $ownsTx = false;
+        if (!$db->inTransaction()) {
+            $db->beginTransaction();
+            $ownsTx = true;
+        }
+
+        try {
+            // Update loyalty_settings
+            if (!empty($settingsInput)) {
+                $setStmt = $db->prepare("INSERT INTO loyalty_settings (setting_key, setting_value, updated_at) 
+                                         VALUES (?, ?, NOW()) 
+                                         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value), updated_at = NOW()");
+                foreach ($settingsInput as $k => $v) {
+                    $setStmt->execute([$k, (string)$v]);
+                }
+            }
+
+            // Update membership_tiers
+            if (!empty($tiersInput) && is_array($tiersInput)) {
+                $tierStmt = $db->prepare("UPDATE membership_tiers 
+                                          SET min_spent = COALESCE(?, min_spent), 
+                                              point_ratio = COALESCE(?, point_ratio), 
+                                              updated_at = NOW() 
+                                          WHERE tier_code = ?");
+                foreach ($tiersInput as $t) {
+                    $tc = strtoupper($t['tier_code']);
+                    $minSpent = isset($t['min_spent']) ? (float)$t['min_spent'] : null;
+                    $ratio    = isset($t['point_ratio']) ? (float)$t['point_ratio'] : null;
+                    $tierStmt->execute([$minSpent, $ratio, $tc]);
+                }
+            }
+
+            if ($ownsTx) {
+                $db->commit();
+            }
+
+            // Invalidate cache immediately
+            clearLoyaltyCache();
+
+            jsonSuccess('Cập nhật cấu hình tích điểm và hạng thành viên thành công!', [
+                'settings' => getLoyaltySettings(),
+                'tiers'    => getMembershipTiers()
+            ]);
+        } catch (Exception $e) {
+            if ($ownsTx) {
+                $db->rollBack();
+            }
+            jsonError('Lỗi cập nhật cấu hình: ' . $e->getMessage(), 500);
+        }
+        break;
+
+    case 'get_loyalty_config':
+        // RBAC: Admin & Staff allowed
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+        jsonSuccess('Lấy cấu hình thành công', [
+            'settings' => getLoyaltySettings(),
+            'tiers'    => getMembershipTiers()
+        ]);
         break;
 
     default:

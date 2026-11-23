@@ -67,6 +67,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // (Chỉ hiển thị 1 lần duy nhất khi vừa đăng ký tài khoản mới bên register.php)
                 unset($_SESSION['show_welcome_popup']);
                 unset($_SESSION['welcome_popup_data']);
+                unset($_SESSION['show_voucher_claim_modal']);
+                unset($_SESSION['pending_voucher_user']);
 
                 if ($redirect && strpos($redirect, 'admin') === false) {
                     header('Location: ' . $redirect);

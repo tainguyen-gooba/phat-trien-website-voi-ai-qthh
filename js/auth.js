@@ -117,58 +117,224 @@ function initDemoAccountFill() {
 }
 
 /**
- * Khởi tạo Welcome Voucher Modal
+ * Khởi tạo Welcome Voucher Modal & Anti-Duplication Claim Form
  */
 function initWelcomeModal() {
   const modal = document.getElementById('welcome-voucher-modal');
   if (!modal) return;
 
-  // Tự động mở modal
+  const formView = document.getElementById('voucher-form-view');
+  const successView = document.getElementById('voucher-success-view');
+  const claimForm = document.getElementById('welcome-voucher-claim-form');
+  const errorAlert = document.getElementById('voucher-error-alert');
+  const errorMsg = document.getElementById('voucher-error-msg');
+  const submitBtn = document.getElementById('voucher-submit-btn');
+  const submitText = document.getElementById('voucher-submit-text');
+  const submitSpinner = document.getElementById('voucher-submit-spinner');
+
+  // Mở modal mượt mà sau khi trang đã render
   setTimeout(() => {
     modal.classList.add('active');
-    triggerConfetti();
-  }, 400);
+    // Nếu chỉ là popup chúc mừng cũ (không có form định danh) thì bắn pháo hoa ngay
+    if (!claimForm) {
+      triggerConfetti();
+    }
+  }, 350);
 
-  // Nút đóng
-  const closeBtns = modal.querySelectorAll('.js-close-welcome-modal');
+  // Xử lý gửi Form Định Danh & Nhận Voucher 50.000đ
+  if (claimForm) {
+    claimForm.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      // Reset alert
+      if (errorAlert) errorAlert.style.display = 'none';
+      const inputs = claimForm.querySelectorAll('.welcome-form-input');
+      inputs.forEach(i => i.classList.remove('is-invalid'));
+
+      const fullName = (document.getElementById('voucher-fullname')?.value || '').trim();
+      const phone = (document.getElementById('voucher-phone')?.value || '').trim();
+      const cccd = (document.getElementById('voucher-cccd')?.value || '').trim();
+      const address = (document.getElementById('voucher-address')?.value || '').trim();
+
+      // Validation phía Client
+      if (fullName.length < 2) {
+        showVoucherError('Vui lòng nhập họ và tên hợp lệ (tối thiểu 2 ký tự).', 'voucher-fullname');
+        return;
+      }
+
+      const cleanPhone = phone.replace(/[^0-9]/g, '');
+      if (cleanPhone.length < 9 || cleanPhone.length > 11) {
+        showVoucherError('Vui lòng nhập số điện thoại hợp lệ (9 - 11 chữ số).', 'voucher-phone');
+        return;
+      }
+
+      const cleanCccd = cccd.replace(/[^0-9]/g, '');
+      if (cleanCccd.length !== 9 && cleanCccd.length !== 12) {
+        showVoucherError('Số CCCD/CMND không hợp lệ. Vui lòng nhập đúng 9 hoặc 12 chữ số.', 'voucher-cccd');
+        return;
+      }
+
+      if (address.length < 5) {
+        showVoucherError('Vui lòng nhập địa chỉ giao hàng chi tiết (tối thiểu 5 ký tự).', 'voucher-address');
+        return;
+      }
+
+      // Trạng thái Loading
+      if (submitBtn) submitBtn.disabled = true;
+      if (submitText) submitText.style.display = 'none';
+      if (submitSpinner) submitSpinner.style.display = 'inline';
+
+      try {
+        const response = await fetch('api/claim-voucher.php', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+          },
+          body: JSON.stringify({
+            fullName: fullName,
+            phone: cleanPhone,
+            cccd: cleanCccd,
+            address: address
+          })
+        });
+
+        const result = await response.json().catch(() => null);
+
+        if (response.ok && result && result.success) {
+          // Thành công: chuyển sang View chúc mừng & bắn Confetti
+          if (formView) formView.style.display = 'none';
+          if (successView) {
+            successView.style.display = 'block';
+            successView.style.animation = 'fadeIn 0.4s ease';
+          }
+
+          const voucherCode = result.data?.voucher?.code || 'NEW50K';
+          const codeDisplay = document.getElementById('voucher-granted-code');
+          if (codeDisplay) codeDisplay.textContent = voucherCode;
+
+          const copyBtn = document.getElementById('voucher-copy-btn');
+          if (copyBtn) copyBtn.setAttribute('data-code', voucherCode);
+
+          triggerConfetti();
+        } else {
+          // Lỗi từ chối do trùng lặp hoặc vi phạm quy tắc
+          const message = result?.message || 'Không thể cấp voucher. Vui lòng kiểm tra lại thông tin.';
+          let highlightField = null;
+          if (message.includes('CCCD') || message.includes('Căn cước')) {
+            highlightField = 'voucher-cccd';
+          } else if (message.includes('điện thoại') || message.includes('SĐT')) {
+            highlightField = 'voucher-phone';
+          }
+          showVoucherError(message, highlightField);
+        }
+      } catch (err) {
+        showVoucherError('Có lỗi kết nối đến máy chủ. Vui lòng thử lại sau.');
+      } finally {
+        if (submitBtn) submitBtn.disabled = false;
+        if (submitText) submitText.style.display = 'inline';
+        if (submitSpinner) submitSpinner.style.display = 'none';
+      }
+    });
+  }
+
+  function showVoucherError(msg, fieldId) {
+    if (errorAlert && errorMsg) {
+      errorMsg.textContent = msg;
+      errorAlert.style.display = 'flex';
+      errorAlert.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    } else {
+      alert(msg);
+    }
+    if (fieldId) {
+      const input = document.getElementById(fieldId);
+      if (input) {
+        input.classList.add('is-invalid');
+        input.focus();
+      }
+    }
+  }
+
+  // Xử lý nút "Bỏ qua / Để sau" & Nút đóng "✕" (Không làm gián đoạn tài khoản)
+  const skipBtns = modal.querySelectorAll('.js-skip-voucher-modal');
+  skipBtns.forEach(btn => {
+    btn.addEventListener('click', function () {
+      // Gửi yêu cầu giải phóng cờ session ở background
+      fetch('api/claim-voucher.php?action=skip_welcome', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).catch(() => {});
+
+      closeWelcomeModal();
+    });
+  });
+
+  // Nút đóng ở view chúc mừng
+  const closeBtns = modal.querySelectorAll('.js-close-voucher-modal, .js-close-welcome-modal');
   closeBtns.forEach(btn => {
     btn.addEventListener('click', function () {
       closeWelcomeModal();
     });
   });
 
-  // Bấm phím Escape để đóng
+  // Bấm phím Escape để đóng/bỏ qua
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && modal.classList.contains('active')) {
+      fetch('api/claim-voucher.php?action=skip_welcome', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).catch(() => {});
       closeWelcomeModal();
     }
   });
 
-  // Nút sao chép mã voucher
-  const copyBtn = document.getElementById('welcome-copy-code-btn');
-  if (copyBtn) {
-    copyBtn.addEventListener('click', function () {
-      const code = this.getAttribute('data-code') || 'NEW50';
-      navigator.clipboard.writeText(code).then(() => {
-        const origText = this.innerHTML;
-        this.innerHTML = `✓ Đã chép`;
-        this.style.background = '#10B981';
+  // Xử lý nút sao chép mã voucher (cả ở view mới và view cũ)
+  setupCopyButtons();
+}
+
+function setupCopyButtons() {
+  const copyButtons = document.querySelectorAll('#welcome-copy-code-btn, #voucher-copy-btn, #welcome-copy-voucher-btn');
+  copyButtons.forEach(btn => {
+    btn.addEventListener('click', function () {
+      const code = this.getAttribute('data-code') || 
+                   document.getElementById('voucher-granted-code')?.textContent || 
+                   document.getElementById('welcome-voucher-display')?.textContent || 
+                   'NEW50K';
+
+      const doFeedback = () => {
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = `✓ Đã chép`;
+        btn.style.background = '#10B981';
         setTimeout(() => {
-          this.innerHTML = origText;
-          this.style.background = '';
+          btn.innerHTML = origHtml;
+          btn.style.background = '';
         }, 2500);
-      }).catch(() => {
-        // Fallback
-        const temp = document.createElement('input');
-        temp.value = code;
-        document.body.appendChild(temp);
-        temp.select();
-        document.execCommand('copy');
-        document.body.removeChild(temp);
-        this.innerHTML = `✓ Đã chép`;
-      });
+      };
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(code).then(doFeedback).catch(() => {
+          fallbackCopy(code, doFeedback);
+        });
+      } else {
+        fallbackCopy(code, doFeedback);
+      }
     });
-  }
+  });
+}
+
+function fallbackCopy(text, callback) {
+  const temp = document.createElement('textarea');
+  temp.value = text;
+  temp.style.position = 'fixed';
+  temp.style.left = '-9999px';
+  document.body.appendChild(temp);
+  temp.focus();
+  temp.select();
+  try {
+    document.execCommand('copy');
+    if (callback) callback();
+  } catch (e) {}
+  document.body.removeChild(temp);
 }
 
 function closeWelcomeModal() {

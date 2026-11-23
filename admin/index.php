@@ -251,13 +251,114 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .sidebar {
       position: fixed;
       inset: 0 auto 0 0;
-      z-index: 20;
+      z-index: 50;
       display: flex;
       flex-direction: column;
-      width: 256px;
-      padding: 27px 18px 20px;
+      width: 260px;
+      padding: 24px 16px 20px;
       background: var(--white);
       border-right: 1px solid var(--line);
+      overflow-y: auto;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(0, 0, 0, 0.18) transparent;
+    }
+
+    .sidebar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+
+    .sidebar::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.18);
+      border-radius: 999px;
+    }
+
+    .sidebar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .sidebar-resizer {
+      position: fixed;
+      top: 0;
+      bottom: 0;
+      left: 260px;
+      width: 10px;
+      margin-left: -5px;
+      cursor: col-resize;
+      background: transparent;
+      z-index: 60;
+      user-select: none;
+      touch-action: none;
+      display: block;
+      transition: background 0.15s ease;
+    }
+
+    .sidebar-resizer::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 3px;
+      height: 32px;
+      border-radius: 99px;
+      background: #cbd5e1;
+      opacity: 0.7;
+      transition: all 0.2s ease;
+    }
+
+    .sidebar-resizer:hover::after,
+    .sidebar-resizer.is-dragging::after {
+      opacity: 1;
+      height: 56px;
+      background: var(--orange);
+      box-shadow: 0 0 8px rgba(249, 115, 22, 0.5);
+    }
+
+    .sidebar-resizer:hover,
+    .sidebar-resizer.is-dragging {
+      background: rgba(249, 115, 22, 0.12);
+    }
+
+    body.is-resizing-sidebar,
+    body.is-resizing-sidebar * {
+      cursor: col-resize !important;
+      user-select: none !important;
+    }
+
+    .sidebar-header-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 4px 20px;
+    }
+
+    .sidebar-header-row .brand {
+      padding: 0;
+    }
+
+    .sidebar-close-btn {
+      display: none;
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: #f8fafc;
+      color: var(--ink);
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      padding: 0;
+      flex-shrink: 0;
+    }
+
+    .sidebar-close-btn:hover {
+      background: #fee2e2;
+      color: #dc2626;
+      border-color: #fca5a5;
     }
 
     .brand {
@@ -1562,23 +1663,50 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
     }
 
-    @media (max-width: 1080px) {
+    @media (max-width: 1023px) and (min-width: 768px) {
       .sidebar {
-        width: 224px;
+        width: 250px;
+        transform: translateX(0);
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        z-index: 50;
+        padding: 20px 14px;
+        box-shadow: 4px 0 20px rgba(0,0,0,0.03);
       }
 
       .main {
-        margin-left: 224px;
+        margin-left: 250px;
+        width: calc(100% - 250px);
+      }
+
+      .mobile-menu {
+        display: none !important;
+      }
+
+      .mobile-backdrop {
+        display: none !important;
+      }
+
+      .sidebar-close-btn {
+        display: none !important;
+      }
+
+      .nav-item {
+        padding: 9px 10px;
+        font-size: 13px;
+        gap: 9px;
       }
 
       .content {
-        padding-right: 25px;
-        padding-left: 25px;
+        padding-right: 20px;
+        padding-left: 20px;
       }
 
       .topbar {
-        padding-right: 25px;
-        padding-left: 25px;
+        padding-right: 20px;
+        padding-left: 20px;
       }
 
       .stats-grid {
@@ -1590,37 +1718,61 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
     }
 
-    @media (max-width: 820px) {
-      .sidebar {
-        width: 256px;
-        transform: translateX(-100%);
-        transition: transform .22s ease;
-        box-shadow: 15px 0 35px rgba(0, 0, 0, .08);
-      }
-
-      .sidebar.open {
-        transform: translateX(0);
-      }
-
-      .mobile-backdrop.open {
-        position: fixed;
-        inset: 0;
-        z-index: 15;
-        display: block;
-        background: rgba(20, 20, 20, .25);
+    @media (max-width: 767px) {
+      .sidebar-resizer {
+        display: none !important;
       }
 
       .main {
-        margin-left: 0;
+        margin-left: 0 !important;
+        width: 100% !important;
       }
 
       .mobile-menu {
-        display: inline-flex;
+        display: inline-flex !important;
+      }
+
+      .sidebar {
+        width: 280px !important;
+        max-width: 85vw !important;
+        position: fixed !important;
+        top: 0 !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        z-index: 1000 !important;
+        transform: translateX(-100%) !important;
+        transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        box-shadow: 15px 0 35px rgba(0, 0, 0, .15) !important;
+        background: var(--white) !important;
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
+      }
+
+      .sidebar.open {
+        transform: translateX(0) !important;
+      }
+
+      .mobile-backdrop {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 999 !important;
+        background: rgba(15, 23, 42, 0.5) !important;
+        backdrop-filter: blur(2px) !important;
+        -webkit-backdrop-filter: blur(2px) !important;
+        display: none !important;
+      }
+
+      .mobile-backdrop.open {
+        display: block !important;
+      }
+
+      .sidebar-close-btn {
+        display: inline-flex !important;
       }
 
       .topbar {
         min-height: 68px;
-        padding: 11px 20px;
+        padding: 11px 16px;
       }
 
       .top-search {
@@ -1765,11 +1917,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       outline-offset: 3px;
     }
 
-    .sidebar {
-      width: 264px;
-      padding: 29px 19px 22px;
-      border-right-color: var(--line);
-      box-shadow: 8px 0 32px rgba(65, 43, 26, .025);
+    @media (min-width: 1024px) {
+      .sidebar {
+        width: 264px;
+        padding: 29px 19px 22px;
+        border-right-color: var(--line);
+        box-shadow: 8px 0 32px rgba(65, 43, 26, .025);
+      }
     }
 
     .brand {
@@ -1845,8 +1999,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       transform: translateX(3px);
     }
 
-    .main {
-      margin-left: 264px;
+    @media (min-width: 1024px) {
+      .main {
+        margin-left: 264px;
+      }
     }
 
     .topbar {
@@ -4635,6 +4791,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       line-height: 18px;
       text-align: center;
       box-sizing: border-box;
+      flex-shrink: 0;
+      white-space: nowrap;
       animation: badge-pulse 1.8s infinite;
     }
 
@@ -4758,14 +4916,6 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
 
     @media (max-width: 1080px) {
-      .sidebar {
-        width: 232px;
-      }
-
-      .main {
-        margin-left: 232px;
-      }
-
       .content {
         padding-right: 25px;
         padding-left: 25px;
@@ -4809,18 +4959,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
     }
 
-    @media (max-width: 820px) {
-      .sidebar {
-        width: 264px;
-      }
-
-      .main {
-        margin-left: 0;
-      }
-
+    @media (max-width: 767px) {
       .topbar {
         min-height: 70px;
-        padding: 11px 20px;
+        padding: 11px 16px;
       }
 
       .content {
@@ -4828,7 +4970,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       .page-heading {
-        min-height: 150px;
+        min-height: 120px;
       }
 
       .analytics-grid {
@@ -4840,7 +4982,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       .chat-inbox {
-        grid-template-columns: minmax(180px, .8fr) minmax(0, 1.6fr);
+        grid-template-columns: 1fr;
       }
 
       .reviews-list {
@@ -5648,16 +5790,259 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         width: 100%;
       }
     }
+
+    /* === Milestone 4: Membership & Dynamic Loyalty Styles === */
+    .membership-section {
+      background: #fff;
+      border-radius: 18px;
+      padding: 24px;
+      box-shadow: var(--shadow);
+      border: 1px solid #f1f5f9;
+    }
+
+    .mem-header-stats {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .mem-stat-pill {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      padding: 6px 14px;
+      border-radius: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .mem-stat-label { color: #64748b; font-weight: 600; }
+    .mem-stat-val { color: #ea580c; font-weight: 800; }
+
+    .membership-tab-bar {
+      display: flex;
+      gap: 8px;
+      border-bottom: 2px solid #f1f5f9;
+      margin: 18px 0 20px;
+      padding-bottom: 2px;
+    }
+
+    .membership-tab-btn {
+      border: 0;
+      background: transparent;
+      padding: 10px 18px;
+      font-size: 13px;
+      font-weight: 750;
+      color: #64748b;
+      cursor: pointer;
+      border-radius: 8px 8px 0 0;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all .18s ease;
+      position: relative;
+    }
+
+    .membership-tab-btn:hover {
+      color: #ea580c;
+      background: #fff7ed;
+    }
+
+    .membership-tab-btn.active {
+      color: #ea580c;
+      font-weight: 800;
+      background: #fff7ed;
+      border-bottom: 2px solid #ea580c;
+      margin-bottom: -2px;
+    }
+
+    .mem-controls-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .mem-search-box {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 0 12px;
+      height: 38px;
+      width: min(340px, 100%);
+    }
+
+    .mem-search-box input {
+      border: 0;
+      outline: 0;
+      width: 100%;
+      font-size: 12px;
+      color: var(--ink);
+    }
+
+    .mem-filter-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Tier Badges */
+    .tier-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .25px;
+    }
+
+    .tier-badge-bronze { background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; }
+    .tier-badge-silver { background: #f8fafc; border: 1px solid #cbd5e1; color: #475569; }
+    .tier-badge-gold { background: #fef9c3; border: 1px solid #fde047; color: #a16207; }
+    .tier-badge-diamond { background: #ecfeff; border: 1px solid #a5f3fc; color: #0e7490; }
+
+    .mem-cell-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .mem-avatar {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fb923c, #ea580c);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .mem-details strong { display: block; font-size: 12px; color: #1e293b; }
+    .mem-details small { color: #64748b; font-size: 10px; }
+
+    /* Points Modal Dialog */
+    .points-modal-dialog {
+      width: min(780px, calc(100vw - 32px));
+      max-height: min(90vh, 760px);
+      padding: 0;
+      border-radius: 16px;
+      border: 0;
+      box-shadow: 0 25px 80px rgba(0,0,0,.22);
+    }
+
+    .points-modal-body {
+      padding: 16px 20px;
+    }
+
+    .mem-summary-strip {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      flex-wrap: wrap;
+    }
+
+    .mem-avatar-box {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fb923c, #ea580c);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      font-weight: 800;
+    }
+
+    .mem-info-box strong { display: block; font-size: 13.5px; color: #0f172a; }
+    .mem-info-box span { font-size: 11px; color: #64748b; }
+
+    .mem-stat-pill-sm {
+      background: #fff;
+      border: 1px solid #e2e8f0;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 11px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pts-positive { color: #16a34a; font-weight: 800; font-size: 12px; }
+    .pts-negative { color: #dc2626; font-weight: 800; font-size: 12px; }
+
+    .tx-type-tag {
+      display: inline-block;
+      padding: 2px 7px;
+      border-radius: 6px;
+      font-size: 9.5px;
+      font-weight: 750;
+    }
+    .tx-type-earn { background: #dcfce7; color: #15803d; }
+    .tx-type-redeem { background: #ffedd5; color: #c2410c; }
+    .tx-type-voucher { background: #f3e8ff; color: #7e22ce; }
+    .tx-type-restore { background: #e0f2fe; color: #0369a1; }
+    .tx-type-revoke { background: #fee2e2; color: #b91c1c; }
+    .tx-type-adjust { background: #f1f5f9; color: #475569; }
+
+    .loyalty-alert-banner {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 12.5px;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .loyalty-alert-banner.success { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .loyalty-alert-banner.error { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
+
+    .loyalty-role-notice {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 10px;
+      padding: 12px 16px;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      color: #1e40af;
+      font-size: 12px;
+    }
+    .loyalty-role-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
+    .loyalty-role-notice p { margin: 0; color: #3b82f6; }
   </style>
 </head>
 
 <body>
   <div class="admin-layout">
     <aside class="sidebar" id="sidebar" aria-label="Điều hướng quản trị">
-      <a class="brand" href="<?= getUrl('index.php') ?>" aria-label="FASTFOOD Admin, về trang chủ">
-        <span class="brand-mark" aria-hidden="true">F</span>
-        <span class="brand-name">FASTFOOD<small>ADMIN CONSOLE</small></span>
-      </a>
+      <div class="sidebar-header-row">
+        <a class="brand" href="<?= getUrl('index.php') ?>" aria-label="FASTFOOD Admin, về trang chủ">
+          <span class="brand-mark" aria-hidden="true">F</span>
+          <span class="brand-name">FASTFOOD<small>ADMIN CONSOLE</small></span>
+        </a>
+        <button type="button" class="sidebar-close-btn" id="sidebar-close-btn" aria-label="Đóng menu" title="Đóng menu">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
       <p class="nav-label">Không gian làm việc</p>
       <nav class="nav-list" id="navigation" aria-label="Điều hướng chính">
         <button class="nav-item active" type="button" data-section="dashboard" aria-current="page">
@@ -5699,6 +6084,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <path
               d="M3 20v-1.5A4.5 4.5 0 0 1 7.5 14h3a4.5 4.5 0 0 1 4.5 4.5V20M16 5a3.5 3.5 0 0 1 0 6.8M18 14a4.5 4.5 0 0 1 3 4.2V20" />
           </svg>Người dùng
+        </button>
+        <button class="nav-item" type="button" data-section="membership" id="nav-btn-membership">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <circle cx="12" cy="8" r="6" />
+            <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
+          </svg><span>Hạng TV &amp; Điểm thưởng</span>
+          <span class="nav-badge" id="membership-nav-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: 800; font-size: 10px; padding: 2px 6px;">LOYALTY</span>
         </button>
         <button class="nav-item" type="button" data-section="messages">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -5757,6 +6149,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         </a>
       </div>
     </aside>
+    <div class="sidebar-resizer" id="sidebar-resizer" role="separator" aria-orientation="vertical" title="Kéo ngang để thay đổi độ rộng menu (Nhấp đúp chuột để đặt lại mặc định)"></div>
     <div class="mobile-backdrop" id="mobile-backdrop" aria-hidden="true"></div>
 
     <main class="main">
@@ -6564,6 +6957,173 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             </div>
           </div>
         </section>
+
+        <!-- MEMBERSHIP & DYNAMIC LOYALTY CONFIGURATION SECTION -->
+        <section class="membership-section" id="membership-section" hidden>
+          <div class="bs-header">
+            <div>
+              <h2 class="bs-header-title">
+                <span class="bs-header-icon" style="background: linear-gradient(135deg, #f59e0b, #d97706);">👑</span>
+                <span>Quản Lý Hạng Thành Viên &amp; Điểm Thưởng</span>
+              </h2>
+              <p class="bs-header-desc">Theo dõi sổ cái thành viên, lịch sử biến động điểm và cấu hình linh hoạt điều kiện nâng hạng / quy đổi điểm thưởng.</p>
+            </div>
+            <div class="mem-header-stats">
+              <div class="mem-stat-pill">
+                <span class="mem-stat-label">Tổng thành viên:</span>
+                <strong class="mem-stat-val" id="mem-stat-total">0</strong>
+              </div>
+              <div class="mem-stat-pill">
+                <span class="mem-stat-label">Điểm lưu hành:</span>
+                <strong class="mem-stat-val" id="mem-stat-points">0 🪙</strong>
+              </div>
+              <div class="mem-stat-pill">
+                <span class="mem-stat-label">Thành viên VIP:</span>
+                <strong class="mem-stat-val" id="mem-stat-vip">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sub-navigation Tabs -->
+          <div class="membership-tab-bar" role="tablist">
+            <button type="button" class="membership-tab-btn active" id="tab-btn-members" data-tab="members">
+              <span>👥</span> Danh Sách Thành Viên (Ledger)
+            </button>
+            <button type="button" class="membership-tab-btn" id="tab-btn-config" data-tab="config">
+              <span>⚙️</span> Cấu Hình Điểm &amp; Hạng
+            </button>
+          </div>
+
+          <!-- TAB 1: MEMBERS LEDGER -->
+          <div class="membership-tab-content active" id="membership-tab-ledger">
+            <div class="mem-controls-bar">
+              <div class="mem-search-box">
+                <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="member-search-input" placeholder="Tìm tên khách hàng, email, SĐT..." autocomplete="off">
+              </div>
+              <div class="mem-filter-group">
+                <label for="member-tier-filter" class="sr-only">Lọc theo hạng</label>
+                <select id="member-tier-filter" class="filter-select">
+                  <option value="">Tất cả các hạng</option>
+                  <option value="BRONZE">🥉 Hạng Đồng (Bronze)</option>
+                  <option value="SILVER">🥈 Hạng Bạc (Silver)</option>
+                  <option value="GOLD">🥇 Hạng Vàng (Gold)</option>
+                  <option value="DIAMOND">💎 Hạng Kim Cương (Diamond)</option>
+                </select>
+                <button type="button" class="secondary-button" id="btn-refresh-members" title="Tải lại danh sách">
+                  <span>🔄</span> Làm mới
+                </button>
+              </div>
+            </div>
+
+            <div class="table-panel" style="margin-top: 14px;">
+              <div class="table-wrap">
+                <table class="membership-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 50px;">ID</th>
+                      <th>Khách hàng</th>
+                      <th>Hạng TV</th>
+                      <th>Điểm khả dụng</th>
+                      <th>Tổng chi tiêu</th>
+                      <th>Ngày tham gia</th>
+                      <th style="text-align: right; width: 140px;">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody id="membership-table-body">
+                    <tr><td colspan="7" class="empty-state">Đang tải danh sách thành viên...</td></tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="table-footer">
+                <span class="result-count" id="member-result-count">Hiển thị 0 thành viên</span>
+                <nav class="pagination" id="member-pagination" aria-label="Phân trang thành viên"></nav>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: DYNAMIC LOYALTY CONFIGURATION -->
+          <div class="membership-tab-content" id="membership-tab-config" hidden>
+            <div id="loyalty-role-notice-container"></div>
+            <div id="loyalty-config-alert" class="loyalty-alert-banner" hidden></div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+              <div>
+                <h3 style="margin: 0; font-size: 16px; font-weight: 800; color: #1e293b;">Bảng Điều Khiển Cấu Hình Điểm &amp; Nâng Hạng</h3>
+                <p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">Mọi thay đổi sẽ có hiệu lực ngay lập tức cho các giao dịch và đơn hàng tiếp theo.</p>
+              </div>
+              <button type="button" class="primary-button" id="btn-save-loyalty-config" style="background:#ea580c; border-color:#ea580c; padding:10px 22px; font-size:14px; font-weight:700; border-radius:10px; display:inline-flex; align-items:center; gap:7px; box-shadow:0 6px 16px rgba(234,88,12,.22);">
+                <span>💾</span> Lưu Cấu Hình
+              </button>
+            </div>
+
+            <form id="form-loyalty-config">
+              <div class="bs-top-grid" style="grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));">
+                <!-- Card 1: Hạn mức nâng hạng (min_spent) -->
+                <div class="bs-panel-card">
+                  <h4 class="bs-panel-title"><span class="bs-step-num">1</span> Điều kiện Nâng Hạng (Tổng chi tiêu VNĐ)</h4>
+                  <div class="bs-field">
+                    <label class="bs-label">🥉 Hạng Đồng (Bronze)</label>
+                    <input type="text" class="bs-input" value="0 đ (Mặc định khi đăng ký)" disabled style="background:#f1f5f9; color:#64748b;">
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-silver-min-spent">🥈 Hạng Bạc (Silver) - Chi tiêu từ (VNĐ)</label>
+                    <input type="number" id="cfg-silver-min-spent" class="bs-input loyalty-cfg-input" min="0" step="50000" required>
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-gold-min-spent">🥇 Hạng Vàng (Gold) - Chi tiêu từ (VNĐ)</label>
+                    <input type="number" id="cfg-gold-min-spent" class="bs-input loyalty-cfg-input" min="0" step="50000" required>
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-diamond-min-spent">💎 Hạng Kim Cương (Diamond) - Chi tiêu từ (VNĐ)</label>
+                    <input type="number" id="cfg-diamond-min-spent" class="bs-input loyalty-cfg-input" min="0" step="50000" required>
+                  </div>
+                </div>
+
+                <!-- Card 2: Tỷ lệ tích điểm (ratios) -->
+                <div class="bs-panel-card">
+                  <h4 class="bs-panel-title"><span class="bs-step-num">2</span> Tỷ Lệ Tích Điểm (Điểm / 10.000 VNĐ chi tiêu)</h4>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-bronze-ratio">🥉 Hạng Đồng (Mặc định 1.0)</label>
+                    <input type="number" id="cfg-bronze-ratio" class="bs-input loyalty-cfg-input" min="0.1" step="0.1" required>
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-silver-ratio">🥈 Hạng Bạc (Mặc định 1.5)</label>
+                    <input type="number" id="cfg-silver-ratio" class="bs-input loyalty-cfg-input" min="0.1" step="0.1" required>
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-gold-ratio">🥇 Hạng Vàng (Mặc định 2.0)</label>
+                    <input type="number" id="cfg-gold-ratio" class="bs-input loyalty-cfg-input" min="0.1" step="0.1" required>
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-diamond-ratio">💎 Hạng Kim Cương (Mặc định 3.0)</label>
+                    <input type="number" id="cfg-diamond-ratio" class="bs-input loyalty-cfg-input" min="0.1" step="0.1" required>
+                  </div>
+                </div>
+
+                <!-- Card 3: Quy đổi điểm & Thanh toán -->
+                <div class="bs-panel-card">
+                  <h4 class="bs-panel-title"><span class="bs-step-num">3</span> Tỷ Lệ Quy Đổi Điểm Thưởng &amp; Thanh Toán</h4>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-point-to-vnd">Tỷ lệ quy đổi: 1 điểm = ? VNĐ</label>
+                    <input type="number" id="cfg-point-to-vnd" class="bs-input loyalty-cfg-input" min="1" step="1" required>
+                    <small style="color:#64748b; font-size:11px; margin-top:3px; display:block;">Chuẩn hệ thống: 100 VNĐ/điểm (100 điểm = 10.000 VNĐ giảm giá)</small>
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-spending-step">Bước tính điểm theo chi tiêu (VNĐ)</label>
+                    <input type="number" id="cfg-spending-step" class="bs-input loyalty-cfg-input" min="1000" step="1000" required>
+                    <small style="color:#64748b; font-size:11px; margin-top:3px; display:block;">Mặc định: 10.000 VNĐ cho mỗi bước tích điểm</small>
+                  </div>
+                  <div class="bs-field">
+                    <label class="bs-label" for="cfg-min-redeem-points">Số điểm tối thiểu để quy đổi tại Checkout</label>
+                    <input type="number" id="cfg-min-redeem-points" class="bs-input loyalty-cfg-input" min="0" step="10" required>
+                    <small style="color:#64748b; font-size:11px; margin-top:3px; display:block;">Mặc định: 100 điểm</small>
+                  </div>
+                </div>
+              </div>
+            </form>
+          </div>
+        </section>
       </div>
     </main>
   </div>
@@ -6638,6 +7198,64 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     </form>
   </dialog>
 
+  <!-- POINTS HISTORY AUDIT MODAL -->
+  <dialog id="points-history-dialog" class="points-modal-dialog">
+    <div class="modal-head">
+      <div>
+        <h2 id="points-dialog-title" style="margin:0; font-size:1.15rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+          <span>📜</span> Lịch Sử Điểm Thưởng
+        </h2>
+        <p id="points-dialog-subtitle" style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">Chi tiết biến động điểm tích lũy và sử dụng của thành viên.</p>
+      </div>
+      <button class="modal-close" type="button" id="btn-close-points-dialog" aria-label="Đóng">×</button>
+    </div>
+
+    <div class="points-modal-body">
+      <!-- Member Summary Strip -->
+      <div class="mem-summary-strip" id="points-mem-summary">
+        <div class="mem-avatar-box" id="pts-avatar">--</div>
+        <div class="mem-info-box">
+          <strong class="mem-name" id="pts-name">Khách hàng</strong>
+          <span class="mem-email" id="pts-email">email@example.com</span>
+        </div>
+        <div class="mem-stat-pill-sm">
+          <span>Hạng:</span>
+          <span id="pts-tier-badge" class="tier-badge">--</span>
+        </div>
+        <div class="mem-stat-pill-sm">
+          <span>Điểm khả dụng:</span>
+          <strong id="pts-balance" style="color:#ea580c; font-size:14px;">0 🪙</strong>
+        </div>
+        <div class="mem-stat-pill-sm">
+          <span>Tổng chi tiêu:</span>
+          <strong id="pts-spent" style="color:#0f172a;">0 đ</strong>
+        </div>
+      </div>
+
+      <!-- Transaction Table -->
+      <div class="table-wrap" style="max-height: 380px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 10px; margin-top: 14px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+          <thead style="position: sticky; top: 0; background: #f8fafc; z-index: 2;">
+            <tr>
+              <th style="padding: 10px 14px;">Thời gian</th>
+              <th style="padding: 10px 14px;">Loại giao dịch</th>
+              <th style="padding: 10px 14px;">Biến động điểm</th>
+              <th style="padding: 10px 14px;">Mô tả / Đơn hàng</th>
+              <th style="padding: 10px 14px; text-align: right;">Số dư sau GD</th>
+            </tr>
+          </thead>
+          <tbody id="points-history-table-body">
+            <tr><td colspan="5" class="empty-state">Đang tải lịch sử giao dịch...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal-actions" style="padding: 14px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end;">
+      <button class="secondary-button" type="button" id="btn-cancel-points-dialog">Đóng</button>
+    </div>
+  </dialog>
+
   <script>
     // Global Admin Messages Nav Badge API
     (function () {
@@ -6699,6 +7317,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           'role' => $isAdmin ? 'admin' : 'staff',
           'roleId' => (int)$currentUser['role_id']
       ]) ?>;
+      const isAdminUser = <?= $isAdmin ? 'true' : 'false' ?>;
+      const isSuperAdmin = isAdminUser;
+      const isStaffUser = <?= $isStaff ? 'true' : 'false' ?>;
 
       const STORAGE_KEY = 'fastfood-admin-dashboard-v1';
       const pageSize = 5;
@@ -8206,13 +8827,14 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       function renderSection() {
         const section = sections[activeSection];
         const addButton = document.getElementById('add-button');
-        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings') {
+        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings' || activeSection === 'membership') {
           const isMessages = activeSection === 'messages';
           const isReviews = activeSection === 'reviews';
           const isAiBot = activeSection === 'ai-bot';
           const isBestseller = activeSection === 'bestseller';
           const isBanners = activeSection === 'banners';
           const isFooterSettings = activeSection === 'footer-settings';
+          const isMembership = activeSection === 'membership';
           let sectionTitle = 'Tin nhắn khách hàng';
           let sectionDesc = 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.';
           if (isReviews) {
@@ -8230,6 +8852,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           } else if (isFooterSettings) {
             sectionTitle = 'Cài Đặt Chân Trang (Footer)';
             sectionDesc = 'Chỉnh sửa thông tin liên hệ, hotline, email, địa chỉ và các liên kết hiển thị ở chân trang.';
+          } else if (isMembership) {
+            sectionTitle = 'Hạng Thành Viên & Điểm Thưởng';
+            sectionDesc = 'Quản lý danh sách thành viên, xem lịch sử giao dịch và cấu hình tỷ lệ quy đổi điểm.';
           }
           document.getElementById('breadcrumb').textContent = isAiBot ? 'Trợ lý AI Chatbot' : sectionTitle;
           document.getElementById('page-title').textContent = sectionTitle;
@@ -8246,6 +8871,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (bestsellerSection) bestsellerSection.hidden = !isBestseller;
           if (bannersSection) bannersSection.hidden = !isBanners;
           if (footerSettingsSection) footerSettingsSection.hidden = !isFooterSettings;
+          if (membershipSection) membershipSection.hidden = !isMembership;
           window.adminChatInbox?.setActive(isMessages);
           if (isReviews) {
             clearReviewsBadge();
@@ -8255,6 +8881,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (isBanners) {
             loadAdminBanners();
           }
+          if (isMembership && !membershipLoaded) {
+            loadMembershipData();
+          }
           return;
         }
         chatInbox.hidden = true;
@@ -8263,6 +8892,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (bestsellerSection) bestsellerSection.hidden = true;
         if (bannersSection) bannersSection.hidden = true;
         if (footerSettingsSection) footerSettingsSection.hidden = true;
+        if (membershipSection) membershipSection.hidden = true;
         tablePanel.hidden = false;
         window.adminChatInbox?.setActive(false);
         const collection = section.collection;
@@ -8546,7 +9176,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings') return;
+        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings' || activeSection === 'membership') return;
         if (activeSection === 'reviews') {
           reviewSearchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
           renderOrderReviews(renderedReviews);
@@ -8562,7 +9192,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           renderOrderReviews(renderedReviews);
           return;
         }
-        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot' && activeSection !== 'bestseller' && activeSection !== 'banners' && activeSection !== 'footer-settings') {
+        if (!event.target.value && activeSection !== 'messages' && activeSection !== 'ai-bot' && activeSection !== 'bestseller' && activeSection !== 'banners' && activeSection !== 'footer-settings' && activeSection !== 'membership') {
           searchTerm = '';
           currentPage = 1;
           renderTable();
@@ -8736,6 +9366,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       const sidebar = document.getElementById('sidebar');
       const backdrop = document.getElementById('mobile-backdrop');
       const mobileMenuButton = document.getElementById('mobile-menu');
+      const sidebarCloseBtn = document.getElementById('sidebar-close-btn');
+
       function closeMobileMenu() {
         sidebar.classList.remove('open');
         backdrop.classList.remove('open');
@@ -8747,10 +9379,96 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         mobileMenuButton.setAttribute('aria-expanded', String(isOpen));
       });
       backdrop.addEventListener('click', closeMobileMenu);
+      sidebarCloseBtn?.addEventListener('click', closeMobileMenu);
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && sidebar.classList.contains('open')) {
+          closeMobileMenu();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if (window.innerWidth >= 768) {
+          closeMobileMenu();
+        }
+      });
+
+      // === Draggable Horizontal Sidebar Resizer ===
+      const resizer = document.getElementById('sidebar-resizer');
+      const mainContent = document.querySelector('.main');
+      const DEFAULT_SIDEBAR_WIDTH = 260;
+      const MIN_SIDEBAR_WIDTH = 200;
+      const MAX_SIDEBAR_WIDTH = 460;
+
+      function applySidebarWidth(width) {
+        if (window.innerWidth < 768) {
+          sidebar.style.width = '';
+          if (mainContent) {
+            mainContent.style.marginLeft = '';
+            mainContent.style.width = '';
+          }
+          if (resizer) resizer.style.left = '';
+          return;
+        }
+        sidebar.style.width = width + 'px';
+        if (resizer) resizer.style.left = width + 'px';
+        if (mainContent) {
+          mainContent.style.marginLeft = width + 'px';
+          mainContent.style.width = `calc(100% - ${width}px)`;
+        }
+      }
+
+      // Restore saved width from localStorage on load
+      const savedSidebarWidth = localStorage.getItem('fastfood_admin_sidebar_width');
+      if (savedSidebarWidth && window.innerWidth >= 768) {
+        const parsed = parseInt(savedSidebarWidth, 10);
+        if (!isNaN(parsed) && parsed >= MIN_SIDEBAR_WIDTH && parsed <= MAX_SIDEBAR_WIDTH) {
+          applySidebarWidth(parsed);
+        }
+      }
+
+      if (resizer) {
+        let isDragging = false;
+        let startX = 0;
+        let startWidth = 0;
+
+        resizer.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return;
+          isDragging = true;
+          startX = e.clientX;
+          startWidth = sidebar.getBoundingClientRect().width;
+          resizer.classList.add('is-dragging');
+          document.body.classList.add('is-resizing-sidebar');
+          e.preventDefault();
+        });
+
+        document.addEventListener('mousemove', (e) => {
+          if (!isDragging) return;
+          const deltaX = e.clientX - startX;
+          let newWidth = Math.round(startWidth + deltaX);
+          if (newWidth < MIN_SIDEBAR_WIDTH) newWidth = MIN_SIDEBAR_WIDTH;
+          if (newWidth > MAX_SIDEBAR_WIDTH) newWidth = MAX_SIDEBAR_WIDTH;
+          applySidebarWidth(newWidth);
+        });
+
+        document.addEventListener('mouseup', () => {
+          if (!isDragging) return;
+          isDragging = false;
+          resizer.classList.remove('is-dragging');
+          document.body.classList.remove('is-resizing-sidebar');
+          const finalWidth = sidebar.getBoundingClientRect().width;
+          localStorage.setItem('fastfood_admin_sidebar_width', Math.round(finalWidth));
+        });
+
+        resizer.addEventListener('dblclick', () => {
+          applySidebarWidth(DEFAULT_SIDEBAR_WIDTH);
+          localStorage.setItem('fastfood_admin_sidebar_width', DEFAULT_SIDEBAR_WIDTH);
+        });
+      }
 
       const urlParams = new URLSearchParams(window.location.search);
       const initialSection = urlParams.get('section') || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
-      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller' || initialSection === 'banners' || initialSection === 'footer-settings')) {
+      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller' || initialSection === 'banners' || initialSection === 'footer-settings' || initialSection === 'membership')) {
         const targetBtn = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
         if (targetBtn) {
           activeSection = initialSection;
@@ -9510,6 +10228,374 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           saveBtn.innerHTML = '<span>💾</span> Lưu Tất Cả Thay Đổi';
         }
       });
+
+      // === Milestone 4: Membership Management & Dynamic Configuration Logic ===
+      const membershipSection = document.getElementById('membership-section');
+      let membershipLoaded = false;
+      let membershipPage = 1;
+      let membershipSearchTerm = '';
+      let membershipTierFilter = '';
+      let membershipMembers = [];
+      let loyaltyConfigLoaded = false;
+
+      function getTierBadgeHtml(tierCode) {
+        const code = String(tierCode || 'BRONZE').toUpperCase();
+        const map = {
+          BRONZE: { label: 'Đồng', icon: '🥉', cls: 'tier-badge-bronze' },
+          SILVER: { label: 'Bạc', icon: '🥈', cls: 'tier-badge-silver' },
+          GOLD: { label: 'Vàng', icon: '🥇', cls: 'tier-badge-gold' },
+          DIAMOND: { label: 'Kim Cương', icon: '💎', cls: 'tier-badge-diamond' }
+        };
+        const t = map[code] || map.BRONZE;
+        return `<span class="tier-badge ${t.cls}">${t.icon} ${t.label}</span>`;
+      }
+
+      window.loadMembershipData = async function(page = 1) {
+        membershipPage = page;
+        const tbody = document.getElementById('membership-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Đang tải dữ liệu thành viên...</td></tr>';
+
+        try {
+          const params = new URLSearchParams({
+            action: 'get_loyalty_members',
+            page: String(membershipPage),
+            tier: membershipTierFilter,
+            search: membershipSearchTerm
+          });
+          const res = await fetch(`api.php?${params.toString()}`);
+          const result = await res.json();
+
+          if (result.success && result.data) {
+            membershipMembers = result.data.members || [];
+            const pagination = result.data.pagination || { page: 1, limit: 10, total: 0, totalPages: 1 };
+            const summary = result.data.summary || { totalMembers: 0, totalPoints: 0, vipCount: 0 };
+
+            // Update header summary pills
+            const totalEl = document.getElementById('mem-stat-total');
+            const ptsEl = document.getElementById('mem-stat-points');
+            const vipEl = document.getElementById('mem-stat-vip');
+            if (totalEl) totalEl.textContent = new Intl.NumberFormat('vi-VN').format(summary.totalMembers || 0);
+            if (ptsEl) ptsEl.textContent = `${new Intl.NumberFormat('vi-VN').format(summary.totalPoints || 0)} 🪙`;
+            if (vipEl) vipEl.textContent = new Intl.NumberFormat('vi-VN').format(summary.vipCount || 0);
+
+            renderMembershipTable(membershipMembers);
+            renderMembershipPagination(pagination);
+            membershipLoaded = true;
+          } else {
+            tbody.innerHTML = `<tr><td colspan="7" class="empty-state">${escapeHtml(result.message || 'Không thể tải danh sách thành viên.')}</td></tr>`;
+          }
+        } catch (err) {
+          tbody.innerHTML = `<tr><td colspan="7" class="empty-state">Lỗi kết nối: ${escapeHtml(err.message)}</td></tr>`;
+        }
+      };
+
+      function renderMembershipTable(members) {
+        const tbody = document.getElementById('membership-table-body');
+        if (!tbody) return;
+
+        if (!members.length) {
+          tbody.innerHTML = '<tr><td colspan="7" class="empty-state">Không tìm thấy thành viên nào phù hợp với bộ lọc.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = members.map((m) => {
+          const initial = (m.full_name || 'U').trim().charAt(0).toUpperCase();
+          return `
+            <tr>
+              <td style="font-weight:700; color:#64748b;">#${escapeHtml(m.id)}</td>
+              <td>
+                <div class="mem-cell-user">
+                  <div class="mem-avatar">${escapeHtml(initial)}</div>
+                  <div class="mem-details">
+                    <strong>${escapeHtml(m.full_name || 'Chưa đặt tên')}</strong>
+                    <small>${escapeHtml(m.phone || 'Chưa có SĐT')} • ${escapeHtml(m.email || '')}</small>
+                  </div>
+                </div>
+              </td>
+              <td>${getTierBadgeHtml(m.member_tier)}</td>
+              <td><strong style="color:#ea580c; font-size:12.5px;">${new Intl.NumberFormat('vi-VN').format(m.points_balance || 0)} 🪙</strong></td>
+              <td><strong>${money(m.total_spent || 0)}</strong></td>
+              <td style="color:#64748b; font-size:11px;">${m.created_at ? formatVietnamDateTime(m.created_at) : '—'}</td>
+              <td style="text-align: right;">
+                <button type="button" class="action-button" onclick="window.openPointsHistoryModal(${m.id})">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Lịch sử điểm
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function renderMembershipPagination(pagination) {
+        const resCount = document.getElementById('member-result-count');
+        const container = document.getElementById('member-pagination');
+        if (!resCount || !container) return;
+
+        const total = Number(pagination.total) || 0;
+        const page = Number(pagination.page) || 1;
+        const limit = Number(pagination.limit) || 10;
+        const totalPages = Number(pagination.totalPages || pagination.total_pages) || 1;
+
+        const from = total > 0 ? (page - 1) * limit + 1 : 0;
+        const to = Math.min(page * limit, total);
+        resCount.textContent = `Hiển thị ${from}–${to} trong tổng số ${total} thành viên`;
+
+        const buttons = [
+          `<button class="page-button" type="button" ${page <= 1 ? 'disabled' : ''} onclick="window.loadMembershipData(${page - 1})">‹</button>`
+        ];
+
+        for (let p = 1; p <= totalPages; p++) {
+          if (totalPages > 5 && p > 2 && p < totalPages - 1 && Math.abs(p - page) > 1) {
+            if (p === 3 || p === totalPages - 2) buttons.push('<span class="pagination-ellipsis">…</span>');
+            continue;
+          }
+          buttons.push(`<button class="page-button${p === page ? ' current' : ''}" type="button" onclick="window.loadMembershipData(${p})">${p}</button>`);
+        }
+
+        buttons.push(`<button class="page-button" type="button" ${page >= totalPages ? 'disabled' : ''} onclick="window.loadMembershipData(${page + 1})">›</button>`);
+        container.innerHTML = buttons.join('');
+      }
+
+      window.openPointsHistoryModal = async function(userId) {
+        const dialog = document.getElementById('points-history-dialog');
+        const tbody = document.getElementById('points-history-table-body');
+        if (!dialog || !tbody) return;
+
+        dialog.showModal();
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Đang tải lịch sử giao dịch...</td></tr>';
+
+        try {
+          const res = await fetch(`api.php?action=get_member_loyalty_history&user_id=${userId}`);
+          const result = await res.json();
+
+          if (result.success && result.data) {
+            const u = result.data.user || {};
+            const txs = result.data.history || result.data.transactions || [];
+
+            document.getElementById('points-dialog-title').innerHTML = `<span>📜</span> Lịch Sử Điểm Thưởng - ${escapeHtml(u.name || u.full_name || 'Thành viên')}`;
+            document.getElementById('pts-avatar').textContent = (u.name || u.full_name || 'U').trim().charAt(0).toUpperCase();
+            document.getElementById('pts-name').textContent = u.name || u.full_name || 'Chưa đặt tên';
+            document.getElementById('pts-email').textContent = `${u.phone || ''} • ${u.email || ''}`;
+            const tierBadgeEl = document.getElementById('pts-tier-badge');
+            if (tierBadgeEl) tierBadgeEl.outerHTML = `<span id="pts-tier-badge">${getTierBadgeHtml(u.tier || u.member_tier)}</span>`;
+            document.getElementById('pts-balance').textContent = `${new Intl.NumberFormat('vi-VN').format(u.points || u.points_balance || 0)} 🪙`;
+            document.getElementById('pts-spent').textContent = money(u.total_spent || 0);
+
+            if (!txs.length) {
+              tbody.innerHTML = '<tr><td colspan="5" class="empty-state">Thành viên chưa có giao dịch điểm nào.</td></tr>';
+              return;
+            }
+
+            const txTypeMap = {
+              EARN: { label: 'Tích điểm đơn', cls: 'tx-type-earn' },
+              REDEEM_CHECKOUT: { label: 'Giảm giá đơn', cls: 'tx-type-redeem' },
+              REDEEM_VOUCHER: { label: 'Đổi voucher', cls: 'tx-type-voucher' },
+              REFUND_RESTORE: { label: 'Hoàn điểm hủy', cls: 'tx-type-restore' },
+              REFUND_REVOKE: { label: 'Thu hồi điểm', cls: 'tx-type-revoke' },
+              ADMIN_ADJUST: { label: 'Điều chỉnh', cls: 'tx-type-adjust' }
+            };
+
+            tbody.innerHTML = txs.map((tx) => {
+              const typeInfo = txTypeMap[tx.transaction_type] || { label: tx.transaction_type, cls: 'tx-type-adjust' };
+              const pts = Number(tx.points) || 0;
+              const ptsDisplay = pts > 0 ? `<span class="pts-positive">+${pts}</span>` : `<span class="pts-negative">${pts}</span>`;
+
+              return `
+                <tr>
+                  <td style="color:#64748b;">${tx.created_at ? formatVietnamDateTime(tx.created_at) : '—'}</td>
+                  <td><span class="tx-type-tag ${typeInfo.cls}">${typeInfo.label}</span></td>
+                  <td>${ptsDisplay}</td>
+                  <td>${escapeHtml(tx.description || (tx.order_code ? `Đơn hàng #${tx.order_code}` : 'Giao dịch điểm'))}</td>
+                  <td style="text-align: right; font-weight:700;">${new Intl.NumberFormat('vi-VN').format(tx.balance_after)} 🪙</td>
+                </tr>
+              `;
+            }).join('');
+          } else {
+            tbody.innerHTML = `<tr><td colspan="5" class="empty-state">${escapeHtml(result.message || 'Lỗi khi tải lịch sử điểm.')}</td></tr>`;
+          }
+        } catch (err) {
+          tbody.innerHTML = `<tr><td colspan="5" class="empty-state">Lỗi kết nối: ${escapeHtml(err.message)}</td></tr>`;
+        }
+      };
+
+      async function loadLoyaltyConfig() {
+        try {
+          const res = await fetch('api.php?action=get_loyalty_config');
+          const result = await res.json();
+          if (result.success && result.data) {
+            const tiers = result.data.tiers || {};
+            const settings = result.data.settings || {};
+
+            // Populate thresholds
+            if (tiers.SILVER && document.getElementById('cfg-silver-min-spent')) {
+              document.getElementById('cfg-silver-min-spent').value = tiers.SILVER.min_spent || 1000000;
+            }
+            if (tiers.GOLD && document.getElementById('cfg-gold-min-spent')) {
+              document.getElementById('cfg-gold-min-spent').value = tiers.GOLD.min_spent || 3000000;
+            }
+            if (tiers.DIAMOND && document.getElementById('cfg-diamond-min-spent')) {
+              document.getElementById('cfg-diamond-min-spent').value = tiers.DIAMOND.min_spent || 5000000;
+            }
+
+            // Populate ratios
+            if (tiers.BRONZE && document.getElementById('cfg-bronze-ratio')) {
+              document.getElementById('cfg-bronze-ratio').value = tiers.BRONZE.point_ratio ?? tiers.BRONZE.points_ratio ?? 1.0;
+            }
+            if (tiers.SILVER && document.getElementById('cfg-silver-ratio')) {
+              document.getElementById('cfg-silver-ratio').value = tiers.SILVER.point_ratio ?? tiers.SILVER.points_ratio ?? 1.5;
+            }
+            if (tiers.GOLD && document.getElementById('cfg-gold-ratio')) {
+              document.getElementById('cfg-gold-ratio').value = tiers.GOLD.point_ratio ?? tiers.GOLD.points_ratio ?? 2.0;
+            }
+            if (tiers.DIAMOND && document.getElementById('cfg-diamond-ratio')) {
+              document.getElementById('cfg-diamond-ratio').value = tiers.DIAMOND.point_ratio ?? tiers.DIAMOND.points_ratio ?? 3.0;
+            }
+
+            // Populate settings
+            if (document.getElementById('cfg-point-to-vnd')) {
+              document.getElementById('cfg-point-to-vnd').value = settings.point_to_vnd_rate || 100;
+            }
+            if (document.getElementById('cfg-spending-step')) {
+              document.getElementById('cfg-spending-step').value = settings.spending_step_vnd || 10000;
+            }
+            if (document.getElementById('cfg-min-redeem-points')) {
+              document.getElementById('cfg-min-redeem-points').value = settings.min_redeem_points || 100;
+            }
+
+            // RBAC UI Enforcement
+            const noticeContainer = document.getElementById('loyalty-role-notice-container');
+            const saveBtn = document.getElementById('btn-save-loyalty-config');
+            if (!isAdminUser) {
+              // Staff view-only mode
+              document.querySelectorAll('.loyalty-cfg-input').forEach((input) => input.disabled = true);
+              if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.style.opacity = '0.5';
+                saveBtn.style.cursor = 'not-allowed';
+                saveBtn.title = 'Chỉ Quản trị viên mới có quyền cập nhật cấu hình';
+              }
+              if (noticeContainer) {
+                noticeContainer.innerHTML = `
+                  <div class="loyalty-role-notice">
+                    <span style="font-size:20px;">🛡️</span>
+                    <div>
+                      <strong>Chế độ Xem (Nhân viên hỗ trợ - Staff)</strong>
+                      <p>Bạn có quyền xem thông tin cấp bậc và tỷ lệ tích điểm. Chỉ Quản Trị Viên (Admin) mới có quyền thay đổi cấu hình hệ thống.</p>
+                    </div>
+                  </div>
+                `;
+              }
+            }
+            loyaltyConfigLoaded = true;
+          }
+        } catch (err) {
+          console.error('Lỗi khi tải cấu hình loyalty:', err);
+        }
+      }
+
+      async function saveLoyaltyConfig() {
+        if (!isAdminUser) {
+          showToast('Từ chối quyền: Chỉ Quản trị viên mới có thể cập nhật cấu hình.', true);
+          return;
+        }
+
+        const saveBtn = document.getElementById('btn-save-loyalty-config');
+        const alertBanner = document.getElementById('loyalty-config-alert');
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span>⏳</span> Đang lưu...';
+
+        const payload = {
+          action: 'save_loyalty_config',
+          thresholds: {
+            SILVER: parseFloat(document.getElementById('cfg-silver-min-spent').value) || 1000000,
+            GOLD: parseFloat(document.getElementById('cfg-gold-min-spent').value) || 3000000,
+            DIAMOND: parseFloat(document.getElementById('cfg-diamond-min-spent').value) || 5000000
+          },
+          ratios: {
+            BRONZE: parseFloat(document.getElementById('cfg-bronze-ratio').value) || 1.0,
+            SILVER: parseFloat(document.getElementById('cfg-silver-ratio').value) || 1.5,
+            GOLD: parseFloat(document.getElementById('cfg-gold-ratio').value) || 2.0,
+            DIAMOND: parseFloat(document.getElementById('cfg-diamond-ratio').value) || 3.0
+          },
+          settings: {
+            point_to_vnd_rate: parseFloat(document.getElementById('cfg-point-to-vnd').value) || 100,
+            spending_step_vnd: parseFloat(document.getElementById('cfg-spending-step').value) || 10000,
+            min_redeem_points: parseInt(document.getElementById('cfg-min-redeem-points').value, 10) || 100
+          }
+        };
+
+        try {
+          const res = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            showToast('✅ Đã lưu cấu hình Hạng & Điểm thưởng thành công!');
+            if (alertBanner) {
+              alertBanner.className = 'loyalty-alert-banner success';
+              alertBanner.innerHTML = '<span>✅</span> <strong>Thành công!</strong> Cấu hình đã được lưu vào hệ thống và áp dụng ngay lập tức.';
+              alertBanner.hidden = false;
+            }
+          } else {
+            showToast(result.message || 'Lỗi khi lưu cấu hình.', true);
+            if (alertBanner) {
+              alertBanner.className = 'loyalty-alert-banner error';
+              alertBanner.innerHTML = `<span>⚠️</span> <strong>Lỗi:</strong> ${escapeHtml(result.message || 'Không thể lưu.')}`;
+              alertBanner.hidden = false;
+            }
+          }
+        } catch (err) {
+          showToast('Lỗi kết nối: ' + err.message, true);
+        } finally {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = '<span>💾</span> Lưu Cấu Hình';
+        }
+      }
+
+      // Membership Tab switching
+      document.getElementById('tab-btn-members')?.addEventListener('click', () => {
+        document.getElementById('tab-btn-members').classList.add('active');
+        document.getElementById('tab-btn-config').classList.remove('active');
+        document.getElementById('membership-tab-ledger').hidden = false;
+        document.getElementById('membership-tab-config').hidden = true;
+      });
+      document.getElementById('tab-btn-config')?.addEventListener('click', () => {
+        document.getElementById('tab-btn-config').classList.add('active');
+        document.getElementById('tab-btn-members').classList.remove('active');
+        document.getElementById('membership-tab-config').hidden = false;
+        document.getElementById('membership-tab-ledger').hidden = true;
+        if (!loyaltyConfigLoaded) loadLoyaltyConfig();
+      });
+
+      // Member Search & Tier Filter
+      let memberSearchTimeout = null;
+      document.getElementById('member-search-input')?.addEventListener('input', (e) => {
+        clearTimeout(memberSearchTimeout);
+        memberSearchTimeout = setTimeout(() => {
+          membershipSearchTerm = e.target.value.trim().toLocaleLowerCase('vi');
+          loadMembershipData(1);
+        }, 300);
+      });
+      document.getElementById('member-tier-filter')?.addEventListener('change', (e) => {
+        membershipTierFilter = e.target.value;
+        loadMembershipData(1);
+      });
+      document.getElementById('btn-refresh-members')?.addEventListener('click', () => {
+        loadMembershipData(1);
+      });
+
+      // Modal Dialog close events
+      const ptsDialog = document.getElementById('points-history-dialog');
+      document.getElementById('btn-close-points-dialog')?.addEventListener('click', () => ptsDialog?.close());
+      document.getElementById('btn-cancel-points-dialog')?.addEventListener('click', () => ptsDialog?.close());
+      ptsDialog?.addEventListener('click', (e) => { if (e.target === ptsDialog) ptsDialog.close(); });
+
+      // Save loyalty config button
+      document.getElementById('btn-save-loyalty-config')?.addEventListener('click', saveLoyaltyConfig);
 
       document.getElementById('today-label').textContent = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
       renderAll();

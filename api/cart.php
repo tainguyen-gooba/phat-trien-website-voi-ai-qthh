@@ -262,8 +262,12 @@ if ($method === 'POST') {
                 }
             }
 
-            if (!empty($cp['user_id']) && $cUser && (int)$cp['user_id'] !== (int)$cUser['id']) {
-                jsonError('Mã giảm giá này chỉ dành riêng cho chủ sở hữu tài khoản được cấp.');
+            if (!empty($cp['user_id'])) {
+                if (!$cUser) {
+                    jsonError('Mã giảm giá này dành riêng cho tài khoản được cấp. Vui lòng đăng nhập để sử dụng.');
+                } elseif ((int)$cp['user_id'] !== (int)$cUser['id']) {
+                    jsonError('Mã giảm giá này chỉ dành riêng cho chủ sở hữu tài khoản được cấp.');
+                }
             }
             $_SESSION['applied_coupon'] = [
                 'id'                  => (int)$cp['id'],

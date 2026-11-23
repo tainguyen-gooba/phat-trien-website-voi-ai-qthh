@@ -14,6 +14,34 @@ if (empty($cart)) {
 }
 
 $db = getDB();
+require_once ROOT_PATH . '/helpers/loyalty.php';
+
+// Lấy thông tin điểm thưởng và hạng thành viên mới nhất
+$userLoyalty = null;
+$userPoints = 0;
+$userTier = 'BRONZE';
+$userId = (int)($currentUser['id'] ?? 0);
+
+if ($userId > 0) {
+    $uStmt = $db->prepare("SELECT points_balance, member_tier, total_spent FROM users WHERE id = ? LIMIT 1");
+    $uStmt->execute([$userId]);
+    $userLoyalty = $uStmt->fetch(PDO::FETCH_ASSOC);
+    if ($userLoyalty) {
+        $userPoints = (int)$userLoyalty['points_balance'];
+        $userTier = strtoupper($userLoyalty['member_tier'] ?? 'BRONZE');
+    }
+}
+
+$loyaltySettings = getLoyaltySettings();
+$pointRate = !empty($loyaltySettings['point_to_vnd_rate']) ? (float)$loyaltySettings['point_to_vnd_rate'] : 100.0;
+$minRedeem = !empty($loyaltySettings['min_redeem_points']) ? (int)$loyaltySettings['min_redeem_points'] : 100;
+$tiers = getMembershipTiers();
+$currentTierData = $tiers[$userTier] ?? ($tiers['BRONZE'] ?? [
+    'tier_name' => 'Đồng',
+    'badge_icon' => '🥉',
+    'badge_color' => '#cd7f32'
+]);
+
 $error = '';
 $subtotal = 0;
 foreach ($cart as $item) {
@@ -34,7 +62,13 @@ if ($appliedCoupon && $subtotal > 0) {
         $discount = min($subtotal, (float)($appliedCoupon['discount_value'] ?? 0));
     }
 }
-$total = max(0, $subtotal + $shippingFee - $discount);
+$payableBeforePoints = max(0, $subtotal + $shippingFee - $discount);
+$maxPointsForOrder = (int)floor($payableBeforePoints / $pointRate);
+$maxUsablePoints = min($userPoints, $maxPointsForOrder);
+if ($maxUsablePoints < $minRedeem) {
+    $maxUsablePoints = 0;
+}
+$total = $payableBeforePoints;
 
 // Xử lý gửi Form Đặt Hàng
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -51,6 +85,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif (mb_strlen($address) < 6) {
         $error = 'Vui lòng nhập địa chỉ giao hàng cụ thể.';
     } else {
+        // Xử lý điểm thưởng muốn sử dụng
+        $pointsToUse = 0;
+        $pointsDiscount = 0.0;
+        if (isset($_POST['points_to_use'])) {
+            $rawPoints = trim((string)$_POST['points_to_use']);
+            if ($rawPoints !== '') {
+                if (!ctype_digit($rawPoints)) {
+                    $error = 'Số điểm thưởng phải là một số nguyên không âm.';
+                } else {
+                    $pointsToUse = (int)$rawPoints;
+                }
+            }
+        }
+
+        if (!$error && $pointsToUse > 0) {
+            if (!$currentUser || $userId <= 0) {
+                $error = 'Bạn cần đăng nhập để sử dụng điểm thưởng.';
+            } elseif ($pointsToUse < $minRedeem) {
+                $error = "Số điểm tối thiểu để sử dụng là {$minRedeem} điểm.";
+            } elseif ($pointsToUse > $userPoints) {
+                $error = "Số điểm sử dụng ({$pointsToUse}) vượt quá số dư hiện tại của bạn (" . number_format($userPoints) . " điểm).";
+            } else {
+                $pointsDiscount = $pointsToUse * $pointRate;
+                if ($pointsDiscount > $payableBeforePoints) {
+                    $error = "Số tiền giảm giá từ điểm (" . formatVND($pointsDiscount) . ") không được vượt quá số tiền cần thanh toán (" . formatVND($payableBeforePoints) . ").";
+                }
+            }
+        }
+    }
+
+    if (!$error) {
         // Sinh mã đơn hàng ngẫu nhiên FFxxxx
         $orderCode = 'FF' . rand(1000, 9999);
         
@@ -80,16 +145,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->beginTransaction();
         try {
-            $paymentStatus = 'pending';
-            $orderStatus   = ($method === 'cod') ? 'pending' : 'awaiting_payment';
+            $total = max(0, $payableBeforePoints - $pointsDiscount);
+
+            // Xác định trạng thái thanh toán nếu đơn hàng được thanh toán 100% bằng điểm (total == 0)
+            if ($total == 0) {
+                $paymentStatus = 'paid';
+                $orderStatus   = 'pending';
+            } else {
+                $paymentStatus = 'pending';
+                $orderStatus   = ($method === 'cod') ? 'pending' : 'awaiting_payment';
+            }
             $paymentMethodDb = ($method === 'vietqr' || $method === 'banking') ? 'banking' : (($method === 'momo') ? 'momo' : 'cod');
 
-            // 1. Lưu vào bảng orders
+            // 1. Lưu vào bảng orders bao gồm points_used và points_discount
             $couponId = !empty($appliedCoupon['id']) ? (int)$appliedCoupon['id'] : null;
             $stmt = $db->prepare("INSERT INTO orders 
                 (order_code, customer_id, restaurant_id, coupon_id, recipient_name, recipient_phone, delivery_address, note_for_restaurant, 
-                 subtotal, shipping_fee, discount_amount, total_amount, payment_method, payment_status, order_status, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+                 subtotal, shipping_fee, discount_amount, points_used, points_discount, total_amount, payment_method, payment_status, order_status, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->execute([
                 $orderCode,
                 $userId,
@@ -102,12 +175,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $subtotal,
                 $shippingFee,
                 $discount,
+                $pointsToUse,
+                $pointsDiscount,
                 $total,
                 $paymentMethodDb,
                 $paymentStatus,
                 $orderStatus
             ]);
-            $orderId = $db->lastInsertId();
+            $orderId = (int)$db->lastInsertId();
+
+            // Áp dụng trừ điểm thưởng qua helpers/loyalty.php
+            if ($pointsToUse > 0) {
+                $redeemRes = redeemPointsAtCheckout($userId, $orderId, $pointsToUse, $orderCode);
+                if (empty($redeemRes['success'])) {
+                    throw new Exception($redeemRes['error'] ?? 'Không thể áp dụng trừ điểm thưởng.');
+                }
+            }
 
             if ($couponId) {
                 try {
@@ -149,6 +232,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'phone'           => $phone,
                 'subtotal'        => $subtotal,
                 'shippingFee'     => $shippingFee,
+                'discount'        => $discount,
+                'pointsUsed'      => $pointsToUse,
+                'pointsDiscount'  => $pointsDiscount,
                 'total'           => $total,
                 'paymentMethod'   => $paymentMethodDb,
                 'paymentStatus'   => $paymentStatus,
@@ -163,8 +249,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     VALUES (?, ?, ?, ?, NOW())");
             $rtStmt->execute([$orderCode, $userId, json_encode($orderData, JSON_UNESCAPED_UNICODE), $orderStatus]);
 
-            // 4. Nếu thanh toán Online (VietQR / MoMo / SePay), tạo realtime_payments
-            if ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo') {
+            // 4. Nếu thanh toán Online (VietQR / MoMo / SePay), tạo realtime_payments (nếu còn số tiền cần trả)
+            if ($total > 0 && ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo')) {
                 $qrUrl = "https://qr.sepay.vn/img?acc=" . SEPAY_ACCOUNT_NUMBER . "&bank=" . SEPAY_BANK_CODE . "&amount=" . $total . "&des=" . $orderCode . "&template=compact";
                 $rpStmt = $db->prepare("INSERT INTO realtime_payments 
                     (order_code, payment_method, amount, status, qr_url, expires_at, created_at)
@@ -179,7 +265,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unset($_SESSION['applied_coupon']);
 
             // Điều hướng
-            if ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo') {
+            if ($total > 0 && ($paymentMethodDb === 'banking' || $paymentMethodDb === 'momo')) {
                 header('Location: ' . getUrl("payment.php?orderCode=" . urlencode($orderCode) . "&just_ordered=1"));
             } else {
                 header('Location: ' . getUrl("order-tracking.php?id=" . urlencode($orderCode) . "&just_ordered=1"));
@@ -254,10 +340,98 @@ require_once ROOT_PATH . '/includes/header.php';
         </div>
       </div>
 
-      <!-- 2. Phương thức thanh toán -->
+      <!-- 2. Sử Dụng Điểm Thưởng FASTFOOD Rewards -->
+      <?php if ($userId > 0): ?>
+        <div class="card" style="margin-bottom:2rem; padding:1.5rem; background:#fff; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.04); border-left:4px solid #ea580c;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+            <h3 style="font-size:1.2rem; font-weight:800; color:var(--text-main); margin:0;">
+              🎁 2. Điểm Thưởng FASTFOOD Rewards
+            </h3>
+            <span style="display:inline-flex; align-items:center; gap:0.4rem; padding:0.25rem 0.75rem; border-radius:20px; font-size:0.8rem; font-weight:700; background:<?= escapeHtml($currentTierData['badge_color'] ?? '#cd7f32') ?>18; color:<?= escapeHtml($currentTierData['badge_color'] ?? '#cd7f32') ?>; border:1px solid <?= escapeHtml($currentTierData['badge_color'] ?? '#cd7f32') ?>44;">
+              <?= escapeHtml($currentTierData['badge_icon'] ?? '🥉') ?> Hạng <?= escapeHtml($currentTierData['tier_name'] ?? 'Đồng') ?>
+            </span>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#fff7ed; border:1px solid #fed7aa; border-radius:10px; padding:0.85rem 1rem; margin-bottom:1.25rem;">
+            <div>
+              <span style="font-size:0.85rem; color:#9a3412;">Số dư điểm khả dụng:</span>
+              <div style="font-size:1.25rem; font-weight:900; color:#ea580c;">
+                <?= number_format($userPoints) ?> <span style="font-size:0.85rem; font-weight:600;">điểm</span>
+              </div>
+            </div>
+            <div style="text-align:right;">
+              <span style="font-size:0.8rem; color:#9a3412;">Quy đổi tương đương:</span>
+              <div style="font-size:1.05rem; font-weight:800; color:#c2410c;">
+                ≈ <?= formatVND($userPoints * $pointRate) ?>
+              </div>
+            </div>
+          </div>
+
+          <?php if ($maxUsablePoints >= $minRedeem): ?>
+            <div class="form-group" style="margin-bottom:0.75rem;">
+              <label class="form-label" for="points-to-use" style="display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:0.9rem;">
+                <span>Số điểm bạn muốn sử dụng:</span>
+                <span style="font-size:0.8rem; color:var(--text-muted);">
+                  Tối đa: <strong style="color:#ea580c;"><?= number_format($maxUsablePoints) ?></strong> điểm
+                </span>
+              </label>
+              <div style="display:flex; gap:0.5rem; align-items:center;">
+                <input type="number" 
+                       name="points_to_use" 
+                       id="points-to-use" 
+                       class="form-control" 
+                       min="0" 
+                       max="<?= $maxUsablePoints ?>" 
+                       step="10" 
+                       placeholder="Nhập số điểm (VD: 100, 200...)" 
+                       value="<?= escapeHtml($_POST['points_to_use'] ?? '') ?>"
+                       style="font-weight:700; font-size:1.05rem; color:#ea580c;">
+                <button type="button" id="btn-clear-points" class="btn" style="padding:0.6rem 0.9rem; white-space:nowrap; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; font-weight:600; font-size:0.85rem; color:#64748b; cursor:pointer;">
+                  ✕ Bỏ chọn
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick selection chips -->
+            <div style="display:flex; flex-wrap:wrap; gap:0.5rem; margin-bottom:0.85rem;">
+              <?php if ($maxUsablePoints >= 100): ?>
+                <button type="button" class="btn-quick-points" data-points="100" style="padding:0.35rem 0.75rem; border-radius:6px; border:1px solid #fdba74; background:#fffaf0; font-size:0.82rem; font-weight:700; color:#c2410c; cursor:pointer;">
+                  +100 điểm (-10K)
+                </button>
+              <?php endif; ?>
+              <?php if ($maxUsablePoints >= 200): ?>
+                <button type="button" class="btn-quick-points" data-points="200" style="padding:0.35rem 0.75rem; border-radius:6px; border:1px solid #fdba74; background:#fffaf0; font-size:0.82rem; font-weight:700; color:#c2410c; cursor:pointer;">
+                  +200 điểm (-20K)
+                </button>
+              <?php endif; ?>
+              <?php if ($maxUsablePoints >= 500): ?>
+                <button type="button" class="btn-quick-points" data-points="500" style="padding:0.35rem 0.75rem; border-radius:6px; border:1px solid #fdba74; background:#fffaf0; font-size:0.82rem; font-weight:700; color:#c2410c; cursor:pointer;">
+                  +500 điểm (-50K)
+                </button>
+              <?php endif; ?>
+              <button type="button" class="btn-quick-points" data-points="<?= $maxUsablePoints ?>" style="padding:0.35rem 0.75rem; border-radius:6px; border:1px solid #ea580c; background:#ea580c; font-size:0.82rem; font-weight:700; color:#fff; cursor:pointer;">
+                ⭐ Dùng tối đa (<?= number_format($maxUsablePoints) ?> điểm)
+              </button>
+            </div>
+
+            <div id="points-feedback-msg" style="font-size:0.85rem; font-weight:600; min-height:1.25rem; margin-bottom:0.5rem;"></div>
+
+            <p style="font-size:0.78rem; color:var(--text-muted); margin:0; line-height:1.4;">
+              💡 <strong>Tỷ lệ quy đổi:</strong> 100 điểm = 10.000 VNĐ. Điểm sẽ được trừ trực tiếp vào giá trị thanh toán của đơn hàng.
+            </p>
+          <?php else: ?>
+            <p style="font-size:0.85rem; color:#64748b; margin:0; line-height:1.5;">
+              ℹ️ Bạn cần tối thiểu <strong><?= $minRedeem ?> điểm</strong> (tương đương <?= formatVND($minRedeem * $pointRate) ?>) để áp dụng giảm giá. Hãy tích lũy thêm điểm từ các đơn hàng tiếp theo nhé!
+            </p>
+            <input type="hidden" name="points_to_use" value="0">
+          <?php endif; ?>
+        </div>
+      <?php endif; ?>
+
+      <!-- 3. Phương thức thanh toán -->
       <div class="card" style="padding:1.5rem; background:#fff; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.04);">
         <h3 style="font-size:1.2rem; font-weight:800; color:var(--text-main); margin-bottom:1.25rem;">
-          💳 2. Phương Thức Thanh Toán
+          💳 3. Phương Thức Thanh Toán
         </h3>
 
         <label class="payment-method-card" style="display:flex; align-items:center; gap:1rem; padding:1rem; border:2px solid var(--border-color); border-radius:10px; margin-bottom:1rem; cursor:pointer;">
@@ -371,9 +545,14 @@ require_once ROOT_PATH . '/includes/header.php';
           </div>
         <?php endif; ?>
 
+        <div id="points-discount-row" class="summary-row" style="color:#ea580c; display:none;">
+          <span>Giảm giá từ điểm (<span id="points-used-text">0</span> điểm):</span>
+          <span style="font-weight:700;" id="points-discount-display">-0đ</span>
+        </div>
+
         <div class="summary-row total-row" style="border-top:1px solid var(--border-color); padding-top:1rem; margin-top:0.75rem;">
           <span style="font-size:1.1rem; font-weight:800;">Tổng thanh toán:</span>
-          <span style="color:var(--primary-color); font-size:1.4rem; font-weight:800;"><?= formatVND($total) ?></span>
+          <span id="order-total-display" style="color:var(--primary-color); font-size:1.4rem; font-weight:800;"><?= formatVND($total) ?></span>
         </div>
 
         <button type="submit" class="btn btn-primary btn-lg" style="width:100%; margin-top:1.5rem; font-size:1.05rem;">
@@ -387,6 +566,134 @@ require_once ROOT_PATH . '/includes/header.php';
     </div>
   </form>
 </main>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const cfg = {
+    pointRate: <?= (float)$pointRate ?>,
+    minRedeem: <?= (int)$minRedeem ?>,
+    maxUsablePoints: <?= (int)$maxUsablePoints ?>,
+    payableBeforePoints: <?= (float)$payableBeforePoints ?>
+  };
+
+  const pointsInput = document.getElementById('points-to-use');
+  const clearBtn = document.getElementById('btn-clear-points');
+  const quickBtns = document.querySelectorAll('.btn-quick-points');
+  const discountRow = document.getElementById('points-discount-row');
+  const pointsUsedText = document.getElementById('points-used-text');
+  const discountDisplay = document.getElementById('points-discount-display');
+  const totalDisplay = document.getElementById('order-total-display');
+  const feedbackMsg = document.getElementById('points-feedback-msg');
+
+  function formatVND(val) {
+    return new Intl.NumberFormat('vi-VN').format(Math.round(val)) + 'đ';
+  }
+
+  function updatePreview() {
+    if (!pointsInput) return;
+    let valStr = pointsInput.value.trim();
+    if (valStr === '') {
+      resetPreview();
+      return;
+    }
+    let pts = parseInt(valStr, 10);
+    if (isNaN(pts) || pts <= 0) {
+      resetPreview();
+      return;
+    }
+
+    if (pts < cfg.minRedeem) {
+      if (discountRow) discountRow.style.display = 'none';
+      if (totalDisplay) totalDisplay.textContent = formatVND(cfg.payableBeforePoints);
+      if (feedbackMsg) {
+        feedbackMsg.style.color = '#dc2626';
+        feedbackMsg.textContent = '⚠️ Tối thiểu cần ' + cfg.minRedeem + ' điểm để đổi giảm giá.';
+      }
+      return;
+    }
+
+    if (pts > cfg.maxUsablePoints) {
+      if (discountRow) discountRow.style.display = 'none';
+      if (totalDisplay) totalDisplay.textContent = formatVND(cfg.payableBeforePoints);
+      if (feedbackMsg) {
+        feedbackMsg.style.color = '#dc2626';
+        feedbackMsg.textContent = '⚠️ Số điểm không được vượt quá ' + cfg.maxUsablePoints.toLocaleString('vi-VN') + ' điểm.';
+      }
+      return;
+    }
+
+    // Valid points
+    let discountVnd = pts * cfg.pointRate;
+    let netTotal = Math.max(0, cfg.payableBeforePoints - discountVnd);
+
+    if (discountRow) discountRow.style.display = 'flex';
+    if (pointsUsedText) pointsUsedText.textContent = pts.toLocaleString('vi-VN');
+    if (discountDisplay) discountDisplay.textContent = '-' + formatVND(discountVnd);
+    if (totalDisplay) totalDisplay.textContent = formatVND(netTotal);
+    if (feedbackMsg) {
+      feedbackMsg.style.color = '#16a34a';
+      feedbackMsg.textContent = '✅ Áp dụng giảm ' + formatVND(discountVnd) + ' thành công!';
+    }
+  }
+
+  function resetPreview() {
+    if (discountRow) discountRow.style.display = 'none';
+    if (totalDisplay) totalDisplay.textContent = formatVND(cfg.payableBeforePoints);
+    if (feedbackMsg) {
+      feedbackMsg.textContent = '';
+    }
+  }
+
+  if (pointsInput) {
+    pointsInput.addEventListener('input', updatePreview);
+    pointsInput.addEventListener('change', updatePreview);
+  }
+
+  if (clearBtn) {
+    clearBtn.addEventListener('click', function() {
+      if (pointsInput) {
+        pointsInput.value = '';
+        updatePreview();
+      }
+    });
+  }
+
+  quickBtns.forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      let pts = parseInt(this.getAttribute('data-points'), 10);
+      if (pointsInput && !isNaN(pts)) {
+        pointsInput.value = pts;
+        updatePreview();
+      }
+    });
+  });
+
+  // Initial trigger if POST validation previously returned with points_to_use
+  if (pointsInput && pointsInput.value) {
+    updatePreview();
+  }
+
+  // Intercept form submit if invalid points entered
+  const form = document.querySelector('.checkout-layout');
+  if (form && pointsInput) {
+    form.addEventListener('submit', function(e) {
+      let pts = parseInt(pointsInput.value.trim(), 10) || 0;
+      if (pts > 0 && pts < cfg.minRedeem) {
+        e.preventDefault();
+        alert('Số điểm tối thiểu để sử dụng là ' + cfg.minRedeem + ' điểm. Vui lòng kiểm tra lại.');
+        pointsInput.focus();
+        return false;
+      }
+      if (pts > cfg.maxUsablePoints) {
+        e.preventDefault();
+        alert('Số điểm không được vượt quá mức tối đa ' + cfg.maxUsablePoints.toLocaleString('vi-VN') + ' điểm.');
+        pointsInput.focus();
+        return false;
+      }
+    });
+  }
+});
+</script>
 
 <?php require_once ROOT_PATH . '/includes/footer.php'; ?>
 

@@ -674,6 +674,100 @@ switch ($action) {
         ]);
         break;
 
+    // =========================================================================
+    // VOUCHER MANAGEMENT ACTIONS (ADMIN & STAFF)
+    // =========================================================================
+    case 'get_admin_vouchers':
+        require_once ROOT_PATH . '/helpers/voucher.php';
+        $filters = [
+            'search'          => trim($body['search'] ?? $_GET['search'] ?? ''),
+            'voucher_type'    => trim($body['voucher_type'] ?? $_GET['voucher_type'] ?? ''),
+            'min_member_tier' => trim($body['min_member_tier'] ?? $_GET['min_member_tier'] ?? ''),
+            'is_active'       => isset($body['is_active']) ? $body['is_active'] : ($_GET['is_active'] ?? '')
+        ];
+        $vouchers = getAdminVouchers($filters);
+        $stats = getVoucherStats();
+        jsonSuccess('Lấy danh sách voucher thành công!', [
+            'vouchers' => $vouchers,
+            'stats'    => $stats
+        ]);
+        break;
+
+    case 'save_admin_voucher':
+        require_once ROOT_PATH . '/helpers/voucher.php';
+        $vData = is_array($body['voucher'] ?? null) ? $body['voucher'] : $_POST;
+        $vId = !empty($vData['id']) ? (int)$vData['id'] : null;
+        $res = saveAdminVoucher($vData, $vId);
+        if (!$res['success']) {
+            jsonError($res['error'] ?? 'Không thể lưu voucher.');
+        }
+        jsonSuccess($res['message'], ['voucher_id' => $res['voucher_id']]);
+        break;
+
+    case 'delete_admin_voucher':
+        require_once ROOT_PATH . '/helpers/voucher.php';
+        $vId = (int)($body['id'] ?? $_POST['id'] ?? 0);
+        if ($vId <= 0) {
+            jsonError('ID voucher không hợp lệ.');
+        }
+        // Kiểm tra xem đã phát sinh đơn hàng chưa
+        $uCount = (int)$db->query("SELECT COUNT(*) FROM voucher_usages WHERE voucher_id = " . $vId)->fetchColumn();
+        if ($uCount > 0) {
+            // Khóa voucher thay vì xóa cứng để bảo toàn lịch sử hóa đơn
+            $db->prepare("UPDATE vouchers SET is_active = 0 WHERE id = ?")->execute([$vId]);
+            jsonSuccess('Voucher đã phát sinh đơn hàng nên đã được chuyển sang trạng thái KHÓA để bảo toàn dữ liệu.');
+        } else {
+            $db->prepare("DELETE FROM user_vouchers WHERE voucher_id = ?")->execute([$vId]);
+            $db->prepare("DELETE FROM vouchers WHERE id = ?")->execute([$vId]);
+            try { $db->prepare("DELETE FROM coupons WHERE id = ?")->execute([$vId]); } catch (Exception $e) {}
+            jsonSuccess('Xóa voucher thành công!');
+        }
+        break;
+
+    case 'toggle_voucher_status':
+        $vId = (int)($body['id'] ?? $_POST['id'] ?? 0);
+        if ($vId <= 0) {
+            jsonError('ID voucher không hợp lệ.');
+        }
+        $curr = (int)$db->query("SELECT is_active FROM vouchers WHERE id = " . $vId)->fetchColumn();
+        $newStatus = $curr ? 0 : 1;
+        $db->prepare("UPDATE vouchers SET is_active = ? WHERE id = ?")->execute([$newStatus, $vId]);
+        try { $db->prepare("UPDATE coupons SET is_active = ? WHERE id = ?")->execute([$newStatus, $vId]); } catch (Exception $e) {}
+        jsonSuccess($newStatus ? 'Đã kích hoạt voucher.' : 'Đã khóa voucher.', ['is_active' => $newStatus]);
+        break;
+
+    case 'trigger_birthday_cron':
+        require_once ROOT_PATH . '/helpers/voucher.php';
+        $cronRes = runDailyBirthdayVouchers();
+        jsonSuccess("Đã quét và tặng thành công {$cronRes['total_gifted']}/{$cronRes['total_candidates']} voucher sinh nhật.", $cronRes);
+        break;
+
+    case 'get_conversations':
+    case 'admin_conversations':
+        // Fallback an toàn cho hệ thống chat admin
+        try {
+            spl_autoload_register(function ($class) {
+                $prefix = 'FastFood\\';
+                $baseDir = ROOT_PATH . '/backend/src/';
+                $len = strlen($prefix);
+                if (strncmp($prefix, $class, $len) !== 0) return;
+                $file = $baseDir . str_replace('\\', '/', substr($class, $len)) . '.php';
+                if (file_exists($file)) require_once $file;
+            });
+            $convData = \FastFood\Services\AiChatService::getAdminConversations();
+            $settings = \FastFood\Services\AiChatService::getChatSettings();
+            $conversations = $convData['conversations'] ?? $convData;
+            $totalUnread = isset($convData['totalUnread']) ? (int)$convData['totalUnread'] : \FastFood\Services\AiChatService::getTotalUnreadCount();
+            jsonSuccess('Lấy danh sách hội thoại thành công!', [
+                'conversations' => $conversations,
+                'totalUnread'   => $totalUnread,
+                'supportStatus' => $settings
+            ]);
+        } catch (Exception $e) {
+            jsonSuccess('Danh sách hội thoại trống', ['conversations' => [], 'totalUnread' => 0]);
+        }
+        break;
+
     default:
         jsonError('Hành động không hợp lệ.');
 }

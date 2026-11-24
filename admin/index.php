@@ -5794,12 +5794,476 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
 
     /* === Milestone 4: Membership & Dynamic Loyalty Styles === */
-    .membership-section {
+    .membership-section,
+    .vouchers-section {
       background: #fff;
       border-radius: 18px;
       padding: 24px;
       box-shadow: var(--shadow);
       border: 1px solid #f1f5f9;
+    }
+
+    /* Voucher Admin Bento KPI Cards */
+    .vc-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 14px;
+      margin: 18px 0 22px;
+    }
+    .vc-kpi-card {
+      background: #ffffff;
+      border: 1px solid #f1f5f9;
+      border-radius: 16px;
+      padding: 16px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+      overflow: hidden;
+    }
+    .vc-kpi-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 24px rgba(234, 88, 12, 0.09);
+      border-color: #fed7aa;
+    }
+    .vc-kpi-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: #ea580c;
+    }
+    .vc-kpi-card.kpi-active::after { background: #16a34a; }
+    .vc-kpi-card.kpi-usage::after { background: #0284c7; }
+    .vc-kpi-card.kpi-disc::after { background: #ea580c; }
+    .vc-kpi-card.kpi-bday::after { background: #d97706; }
+    .vc-kpi-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+      background: #fff7ed;
+    }
+    .vc-kpi-card.kpi-active .vc-kpi-icon { background: #dcfce7; }
+    .vc-kpi-card.kpi-usage .vc-kpi-icon { background: #e0f2fe; }
+    .vc-kpi-card.kpi-disc .vc-kpi-icon { background: #fff7ed; }
+    .vc-kpi-card.kpi-bday .vc-kpi-icon { background: #fef3c7; }
+    .vc-kpi-content {
+      flex: 1;
+      min-width: 0;
+    }
+    .vc-kpi-label {
+      font-size: 11.5px;
+      font-weight: 700;
+      color: #64748b;
+      margin-bottom: 2px;
+    }
+    .vc-kpi-val {
+      font-size: 1.35rem;
+      font-weight: 900;
+      color: #1e293b;
+      line-height: 1.2;
+    }
+    .vc-kpi-sub {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    /* Modal Visual Type Selector */
+    .vc-type-selector {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .vc-type-card {
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 10px 8px;
+      text-align: center;
+      cursor: pointer;
+      background: #ffffff;
+      transition: all 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .vc-type-card:hover {
+      border-color: #fb923c;
+      background: #fff7ed;
+    }
+    .vc-type-card.active {
+      border-color: #ea580c;
+      background: #fff7ed;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.14);
+    }
+    .vc-type-card .vc-type-icon { font-size: 20px; line-height: 1; }
+    .vc-type-card .vc-type-title { font-size: 12px; font-weight: 800; color: #1e293b; }
+    .vc-type-card.active .vc-type-title { color: #ea580c; }
+    .vc-type-card .vc-type-desc { font-size: 10px; color: #64748b; }
+
+    /* Modal Live Ticket Preview */
+    .vc-live-preview-box {
+      background: #f8fafc;
+      border: 1.5px dashed #fed7aa;
+      border-radius: 16px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .vc-live-preview-head {
+      font-size: 11px;
+      font-weight: 800;
+      color: #9a3412;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .vc-preview-ticket {
+      display: flex;
+      background: #ffffff;
+      border: 1.5px solid #fed7aa;
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+    }
+    .vc-prev-stub {
+      width: 95px;
+      flex-shrink: 0;
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 8px;
+      text-align: center;
+      border-right: 2px dashed #fed7aa;
+    }
+    .vc-prev-body {
+      flex: 1;
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .vc-copy-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 850;
+      color: #ea580c;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      padding: 3px 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      letter-spacing: 0.5px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+    .vc-copy-pill:hover {
+      background: #ffedd5;
+      border-color: #f97316;
+      transform: translateY(-1px);
+    }
+    .vc-copy-pill:active {
+      transform: scale(0.97);
+    }
+    .status-pulse-dot {
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+    .status-pulse-dot.dot-active {
+      background: #16a34a;
+      box-shadow: 0 0 0 2px rgba(22, 163, 74, 0.25);
+      animation: vcPulse 2s infinite;
+    }
+    .status-pulse-dot.dot-locked {
+      background: #ef4444;
+    }
+    @keyframes vcPulse {
+      0% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+      70% { box-shadow: 0 0 0 5px rgba(22, 163, 74, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+    }
+
+    /* =========================================================================
+       MILSTONE VOUCHER TOOLBAR (MODERN ORANGE - WHITE SAAS SUITE)
+       ========================================================================= */
+    .vc-toolbar-card {
+      background: #ffffff;
+      border: 1px solid #f1f5f9;
+      border-radius: 16px;
+      padding: 14px 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 18px -2px rgba(15, 23, 42, 0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .vc-toolbar-main {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .vc-toolbar-filters {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      flex: 1;
+      min-width: 300px;
+    }
+    .vc-toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    /* Custom Search Box */
+    .vc-search-box-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+      min-width: 220px;
+      flex: 1;
+      max-width: 280px;
+    }
+    .vc-search-icon {
+      position: absolute;
+      left: 12px;
+      color: #94a3b8;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .vc-search-input {
+      width: 100%;
+      height: 40px;
+      padding: 0 32px 0 36px;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1e293b;
+      outline: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .vc-search-input::placeholder {
+      color: #94a3b8;
+      font-weight: 450;
+    }
+    .vc-search-input:focus {
+      background: #ffffff;
+      border-color: #f97316;
+      box-shadow: 0 0 0 3.5px rgba(249, 115, 22, 0.12);
+    }
+    .vc-search-clear {
+      position: absolute;
+      right: 8px;
+      background: #e2e8f0;
+      border: none;
+      cursor: pointer;
+      color: #64748b;
+      width: 18px;
+      height: 18px;
+      font-size: 10px;
+      font-weight: 900;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.15s ease;
+    }
+    .vc-search-clear:hover {
+      color: #ffffff;
+      background: #ef4444;
+    }
+
+    /* Custom Select Dropdowns */
+    .vc-select-wrap {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+    }
+    .vc-select-icon {
+      position: absolute;
+      left: 11px;
+      pointer-events: none;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      z-index: 1;
+    }
+    .vc-select-chevron {
+      position: absolute;
+      right: 11px;
+      color: #64748b;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
+    }
+    .vc-custom-select {
+      height: 40px;
+      padding: 0 32px 0 32px;
+      background: #f8fafc;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #334155;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+    .vc-custom-select:hover {
+      background: #ffffff;
+      border-color: #cbd5e1;
+    }
+    .vc-custom-select:focus {
+      background: #ffffff;
+      border-color: #f97316;
+      box-shadow: 0 0 0 3.5px rgba(249, 115, 22, 0.12);
+    }
+    .vc-custom-select.is-active-filter {
+      border-color: #f97316;
+      background: #fff7ed;
+      color: #ea580c;
+      font-weight: 700;
+    }
+    .vc-custom-select option {
+      font-weight: 500;
+      color: #1e293b;
+      background: #ffffff;
+      padding: 6px 10px;
+    }
+
+    /* Reset Filters Pill Button */
+    .vc-btn-reset-filters {
+      height: 40px;
+      padding: 0 12px;
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      color: #64748b;
+      font-size: 12px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      white-space: nowrap;
+    }
+    .vc-btn-reset-filters:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+    }
+
+    /* Action Buttons */
+    .vc-btn-bday {
+      height: 40px;
+      padding: 0 16px;
+      background: #fff7ed;
+      border: 1.5px solid #fed7aa;
+      border-radius: 10px;
+      color: #c2410c;
+      font-size: 12.5px;
+      font-weight: 750;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(234, 88, 12, 0.04);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+    .vc-btn-bday:hover {
+      background: #ffedd5;
+      border-color: #f97316;
+      color: #9a3412;
+      transform: translateY(-1.5px);
+      box-shadow: 0 6px 14px rgba(234, 88, 12, 0.12);
+    }
+    .vc-btn-bday:active {
+      transform: scale(0.98);
+    }
+    .vc-btn-bday:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .vc-btn-create {
+      height: 40px;
+      padding: 0 18px;
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+      border: none;
+      border-radius: 10px;
+      color: #ffffff;
+      font-size: 13px;
+      font-weight: 800;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(234, 88, 12, 0.28);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      white-space: nowrap;
+    }
+    .vc-btn-create:hover {
+      background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(234, 88, 12, 0.38);
+    }
+    .vc-btn-create:active {
+      transform: scale(0.98);
+      box-shadow: 0 2px 6px rgba(234, 88, 12, 0.25);
+    }
+    .vc-btn-create .vc-plus-badge {
+      width: 18px;
+      height: 18px;
+      background: rgba(255, 255, 255, 0.25);
+      border-radius: 5px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 900;
+      line-height: 1;
     }
 
     .mem-header-stats {
@@ -6093,6 +6557,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
           </svg><span>Hạng TV &amp; Điểm thưởng</span>
           <span class="nav-badge" id="membership-nav-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: 800; font-size: 10px; padding: 2px 6px;">LOYALTY</span>
+        </button>
+        <button class="nav-item" type="button" data-section="vouchers" id="nav-btn-vouchers">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+            <line x1="7" y1="7" x2="7.01" y2="7"></line>
+          </svg><span>Quản lý Voucher</span>
+          <span class="nav-badge" id="vouchers-nav-badge" style="background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; font-weight: 800; font-size: 10px; padding: 2px 6px;">VOUCHER</span>
         </button>
         <button class="nav-item" type="button" data-section="messages">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -7125,9 +7596,354 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             </form>
           </div>
         </section>
+
+        <!-- VOUCHER MANAGEMENT SECTION -->
+        <section class="vouchers-section" id="vouchers-section" hidden>
+          <div class="bs-header" style="margin-bottom: 8px;">
+            <div>
+              <h2 class="bs-header-title">
+                <span class="bs-header-icon" style="background: linear-gradient(135deg, #f97316, #ea580c);">🎟️</span>
+                <span>Quản Lý Voucher &amp; Mã Khuyến Mãi</span>
+              </h2>
+              <p class="bs-header-desc">Tạo mới, phân loại 4 hình thức ưu đãi (%, Tiền mặt, Freeship, Mua 1 tặng 1), thiết lập điều kiện hạng TV và theo dõi hiệu quả sử dụng.</p>
+            </div>
+          </div>
+
+          <!-- Bento KPI Cards Overview -->
+          <div class="vc-kpi-grid">
+            <div class="vc-kpi-card">
+              <div class="vc-kpi-icon">🎟️</div>
+              <div class="vc-kpi-content">
+                <div class="vc-kpi-label">Tổng Số Voucher</div>
+                <div class="vc-kpi-val" id="vc-stat-total">0</div>
+                <div class="vc-kpi-sub">Đang chạy: <strong id="vc-stat-active-sub" style="color:#16a34a;">0</strong></div>
+              </div>
+            </div>
+            <div class="vc-kpi-card kpi-active">
+              <div class="vc-kpi-icon">🟢</div>
+              <div class="vc-kpi-content">
+                <div class="vc-kpi-label">Đang Áp Dụng</div>
+                <div class="vc-kpi-val" id="vc-stat-active" style="color:#16a34a;">0</div>
+                <div class="vc-kpi-sub">Sẵn sàng phát hành</div>
+              </div>
+            </div>
+            <div class="vc-kpi-card kpi-usage">
+              <div class="vc-kpi-icon">📈</div>
+              <div class="vc-kpi-content">
+                <div class="vc-kpi-label">Lượt Đổi Voucher</div>
+                <div class="vc-kpi-val" id="vc-stat-usages" style="color:#0284c7;">0</div>
+                <div class="vc-kpi-sub">Lượt dùng thành công</div>
+              </div>
+            </div>
+            <div class="vc-kpi-card kpi-disc">
+              <div class="vc-kpi-icon">💸</div>
+              <div class="vc-kpi-content">
+                <div class="vc-kpi-label">Tổng Tiền Đã Giảm</div>
+                <div class="vc-kpi-val" id="vc-stat-discount" style="color:#ea580c;">0đ</div>
+                <div class="vc-kpi-sub">Ngân sách trợ giá ưu đãi</div>
+              </div>
+            </div>
+            <div class="vc-kpi-card kpi-bday">
+              <div class="vc-kpi-icon">🎂</div>
+              <div class="vc-kpi-content">
+                <div class="vc-kpi-label">Quà Tặng Sinh Nhật</div>
+                <div class="vc-kpi-val" id="vc-stat-birthday" style="color:#d97706;">0 🎂</div>
+                <div class="vc-kpi-sub">Tự động trao theo hạng</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Controls Toolbar (Redesigned Modern SaaS Suite) -->
+          <div class="vc-toolbar-card">
+            <div class="vc-toolbar-main">
+              <!-- Left: Search & Filter Controls -->
+              <div class="vc-toolbar-filters">
+                <!-- Search Box with Vector SVG Icon & Clear Button -->
+                <div class="vc-search-box-wrap">
+                  <span class="vc-search-icon">
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="11" cy="11" r="8"></circle>
+                      <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                  </span>
+                  <input type="text" id="vc-search-input" class="vc-search-input" placeholder="Tìm theo mã hoặc tiêu đề..." autocomplete="off">
+                  <button type="button" class="vc-search-clear" id="vc-search-clear" title="Xóa tìm kiếm">✕</button>
+                </div>
+
+                <!-- Filter: Voucher Type -->
+                <div class="vc-select-wrap">
+                  <span class="vc-select-icon">🏷️</span>
+                  <select id="vc-filter-type" class="vc-custom-select" title="Lọc theo loại voucher">
+                    <option value="">Tất cả loại voucher</option>
+                    <option value="percentage">🔥 Giảm %</option>
+                    <option value="fixed">💰 Giảm tiền mặt</option>
+                    <option value="free_shipping">🚚 Freeship</option>
+                    <option value="bogo">🍔 Mua 1 Tặng 1</option>
+                  </select>
+                  <span class="vc-select-chevron">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </span>
+                </div>
+
+                <!-- Filter: Member Tier -->
+                <div class="vc-select-wrap">
+                  <span class="vc-select-icon">👑</span>
+                  <select id="vc-filter-tier" class="vc-custom-select" title="Lọc theo hạng thành viên">
+                    <option value="">Tất cả hạng TV</option>
+                    <option value="ALL">Khách hàng chung (ALL)</option>
+                    <option value="BRONZE">👑 Hạng Đồng (Bronze)</option>
+                    <option value="SILVER">👑 Hạng Bạc (Silver)</option>
+                    <option value="GOLD">👑 Hạng Vàng (Gold)</option>
+                    <option value="DIAMOND">👑 Kim Cương (Diamond)</option>
+                  </select>
+                  <span class="vc-select-chevron">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </span>
+                </div>
+
+                <!-- Filter: Status -->
+                <div class="vc-select-wrap">
+                  <span class="vc-select-icon">🔘</span>
+                  <select id="vc-filter-status" class="vc-custom-select" title="Lọc theo trạng thái">
+                    <option value="">Tất cả trạng thái</option>
+                    <option value="1">🟢 Đang hoạt động</option>
+                    <option value="0">🔒 Đã khóa</option>
+                  </select>
+                  <span class="vc-select-chevron">
+                    <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
+                  </span>
+                </div>
+
+                <!-- Reset Filters Button -->
+                <button type="button" class="vc-btn-reset-filters" id="vc-btn-reset-filters" title="Đặt lại bộ lọc về mặc định" style="display:none;">
+                  <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                    <path d="M3 3v5h5"></path>
+                  </svg>
+                  <span>Đặt lại</span>
+                </button>
+              </div>
+
+              <!-- Right: Action Buttons -->
+              <div class="vc-toolbar-actions">
+                <button type="button" class="vc-btn-bday" id="btn-trigger-bday-cron" title="Quét tự động và tặng voucher cho khách hàng có sinh nhật hôm nay">
+                  <span style="font-size:16px;">🎂</span>
+                  <span>Quét Tặng Sinh Nhật Hôm Nay</span>
+                </button>
+                <button type="button" class="vc-btn-create" id="btn-open-create-voucher" title="Tạo mới chương trình ưu đãi hoặc mã voucher">
+                  <span class="vc-plus-badge">＋</span>
+                  <span>Tạo Voucher Mới</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Table Card -->
+          <div class="table-card">
+            <div class="table-wrap">
+              <table id="vouchers-table" class="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã Voucher</th>
+                    <th>Tiêu Đề</th>
+                    <th>Hình Thức</th>
+                    <th>Mức Giảm</th>
+                    <th>Đơn Tối Thiểu</th>
+                    <th>Giảm Tối Đa</th>
+                    <th>Lượt Dùng</th>
+                    <th>Hạng TV</th>
+                    <th>Hạn Dùng</th>
+                    <th>Trạng Thái</th>
+                    <th style="text-align:right;">Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody id="vouchers-table-body">
+                  <tr><td colspan="11" class="empty-state">Đang tải danh sách voucher...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
       </div>
     </main>
   </div>
+
+  <!-- VOUCHER CREATE / EDIT MODAL DIALOG -->
+  <dialog id="voucher-admin-dialog" class="record-dialog" aria-labelledby="voucher-dialog-title" style="max-width:680px; width:92%; border-radius:18px; border:none; box-shadow:0 24px 50px rgba(0,0,0,0.22); padding:0; overflow:hidden;">
+    <div class="modal-head" style="background:#fff7ed; padding:18px 22px; border-bottom:1px solid #fed7aa; display:flex; justify-content:space-between; align-items:center;">
+      <div>
+        <h2 id="voucher-dialog-title" style="font-size:1.15rem; font-weight:850; color:#9a3412; margin:0;">Tạo Voucher Mới</h2>
+        <p style="font-size:0.8rem; color:#c2410c; margin:2px 0 0;">Thiết lập thông tin, hình thức giảm và điều kiện áp dụng.</p>
+      </div>
+      <button class="modal-close" type="button" onclick="closeVoucherAdminModal()" aria-label="Đóng" style="background:none; border:none; font-size:1.4rem; cursor:pointer; color:#9a3412;">×</button>
+    </div>
+
+    <form id="voucher-admin-form" onsubmit="saveVoucherAdminForm(event)" style="padding:22px; display:flex; flex-direction:column; gap:16px; max-height:80vh; overflow-y:auto;">
+      <input type="hidden" id="v-field-id" value="">
+
+      <!-- Live Ticket Preview -->
+      <div class="vc-live-preview-box">
+        <div class="vc-live-preview-head">
+          <span>👁️ Xem trước Voucher (Hiển thị phía khách hàng):</span>
+        </div>
+        <div class="vc-preview-ticket" id="vc-preview-ticket-wrap">
+          <div class="vc-prev-stub" id="vc-prev-stub">
+            <span style="font-size:1.4rem;" id="vc-prev-icon">🔥</span>
+            <strong style="font-size:1.15rem; font-weight:900; margin-top:4px;" id="vc-prev-discount">15%</strong>
+            <span style="font-size:9.5px; opacity:0.9; text-transform:uppercase; letter-spacing:0.5px;" id="vc-prev-stub-label">GIẢM GIÁ</span>
+          </div>
+          <div class="vc-prev-body">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+              <div style="min-width:0;">
+                <strong style="font-size:0.92rem; color:#1e293b; display:block; line-height:1.25; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;" id="vc-prev-title">Tiêu đề voucher</strong>
+                <span style="font-size:11px; color:#64748b; margin-top:2px; display:block;" id="vc-prev-cond">Đơn tối thiểu 0đ</span>
+              </div>
+              <span style="background:#fff7ed; color:#ea580c; border:1px dashed #ea580c; padding:3px 7px; border-radius:6px; font-size:11.5px; font-weight:800; letter-spacing:0.5px; white-space:nowrap;" id="vc-prev-code">FASTCODE</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; font-size:10.5px; color:#94a3b8;">
+              <span id="vc-prev-tier">👑 Tất cả thành viên</span>
+              <span style="color:#16a34a; font-weight:700;">● Hoạt động</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Visual Voucher Type Selector -->
+      <div>
+        <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:6px;">Hình thức ưu đãi *</label>
+        <div class="vc-type-selector" id="vc-modal-type-selector">
+          <div class="vc-type-card active" data-type="percentage" onclick="window.selectVoucherTypeModal('percentage')">
+            <div class="vc-type-icon">🔥</div>
+            <div class="vc-type-title">Giảm %</div>
+            <div class="vc-type-desc">Theo tỷ lệ %</div>
+          </div>
+          <div class="vc-type-card" data-type="fixed" onclick="window.selectVoucherTypeModal('fixed')">
+            <div class="vc-type-icon">💰</div>
+            <div class="vc-type-title">Giảm Tiền</div>
+            <div class="vc-type-desc">Cố định VNĐ</div>
+          </div>
+          <div class="vc-type-card" data-type="free_shipping" onclick="window.selectVoucherTypeModal('free_shipping')">
+            <div class="vc-type-icon">🚚</div>
+            <div class="vc-type-title">Freeship</div>
+            <div class="vc-type-desc">Phí giao hàng</div>
+          </div>
+          <div class="vc-type-card" data-type="bogo" onclick="window.selectVoucherTypeModal('bogo')">
+            <div class="vc-type-icon">🍔</div>
+            <div class="vc-type-title">Mua 1 Tặng 1</div>
+            <div class="vc-type-desc">Tặng món quy đổi</div>
+          </div>
+        </div>
+        <!-- Select kept sync'ed for form submission and standard validation -->
+        <select id="v-field-type" class="form-control" onchange="window.updateVoucherFormTypeLabels()" style="display:none;" required>
+          <option value="percentage">Giảm theo % (Phần trăm)</option>
+          <option value="fixed">Giảm tiền mặt cố định (VNĐ)</option>
+          <option value="free_shipping">🚚 Miễn phí vận chuyển (Freeship)</option>
+          <option value="bogo">🍔 Mua 1 tặng 1 (BOGO)</option>
+        </select>
+      </div>
+
+      <!-- Row 1: Code & Generator -->
+      <div style="display:grid; grid-template-columns:1fr auto; gap:10px; align-items:flex-end;">
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Mã Voucher (Code) *</label>
+          <input type="text" id="v-field-code" class="form-control" placeholder="VD: FASTFOOD20" style="text-transform:uppercase; font-weight:800; letter-spacing:0.5px;" required>
+        </div>
+        <button type="button" class="btn btn-outline" onclick="generateRandomVoucherCode()" style="white-space:nowrap; padding:0.55rem 0.85rem; font-size:0.8rem; font-weight:750;">
+          ⚡ Sinh mã ngẫu nhiên
+        </button>
+      </div>
+
+      <!-- Row 2: Title -->
+      <div>
+        <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Tiêu đề hiển thị *</label>
+        <input type="text" id="v-field-title" class="form-control" placeholder="VD: Giảm 20.000đ cho đơn hàng từ 60.000đ" required>
+      </div>
+
+      <!-- Row 3: Description -->
+      <div>
+        <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Mô tả / Thể lệ áp dụng</label>
+        <textarea id="v-field-desc" class="form-control" rows="2" placeholder="Áp dụng cho mọi món ăn trên toàn hệ thống FASTFOOD..."></textarea>
+      </div>
+
+      <!-- Row 4: Discount Value -->
+      <div>
+        <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;" id="lbl-discount-val">Mức giảm (% hoặc VNĐ) *</label>
+        <input type="number" id="v-field-disc-val" class="form-control" min="0" step="any" placeholder="VD: 15 (nếu %) hoặc 20000" required>
+      </div>
+
+      <!-- Row 5: Min Order & Max Discount -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Đơn hàng tối thiểu (VNĐ)</label>
+          <input type="number" id="v-field-min-order" class="form-control" min="0" step="1000" value="0" placeholder="0 = không yêu cầu">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Mức giảm tối đa (VNĐ)</label>
+          <input type="number" id="v-field-max-disc" class="form-control" min="0" step="1000" placeholder="Để trống nếu không giới hạn">
+        </div>
+      </div>
+
+      <!-- Row 6: Limits & Tier -->
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;">
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Tổng số phát hành</label>
+          <input type="number" id="v-field-usage-limit" class="form-control" min="0" value="0" placeholder="0 = vô hạn">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Lượt dùng / Mỗi khách</label>
+          <input type="number" id="v-field-user-limit" class="form-control" min="1" value="1" required>
+        </div>
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Hạng thành viên</label>
+          <select id="v-field-tier" class="form-control">
+            <option value="ALL">Tất cả khách hàng</option>
+            <option value="BRONZE">Từ Hạng Đồng (Bronze)+</option>
+            <option value="SILVER">Từ Hạng Bạc (Silver)+</option>
+            <option value="GOLD">Từ Hạng Vàng (Gold)+</option>
+            <option value="DIAMOND">Chỉ Kim Cương (Diamond)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Row 7: Date Range -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Ngày bắt đầu hiệu lực</label>
+          <input type="datetime-local" id="v-field-start" class="form-control">
+        </div>
+        <div>
+          <label style="display:block; font-size:0.8rem; font-weight:750; color:#334155; margin-bottom:4px;">Ngày kết thúc (Hết hạn)</label>
+          <input type="datetime-local" id="v-field-end" class="form-control">
+        </div>
+      </div>
+
+      <!-- Row 8: Checkboxes -->
+      <div style="display:flex; gap:20px; align-items:center; background:#f8fafc; padding:10px 14px; border-radius:10px; border:1px solid #e2e8f0;">
+        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+          <input type="checkbox" id="v-field-public" checked style="accent-color:#ea580c;">
+          Công khai trên Sàn Săn Voucher
+        </label>
+        <label style="display:flex; align-items:center; gap:6px; font-size:0.85rem; font-weight:700; color:#334155; cursor:pointer;">
+          <input type="checkbox" id="v-field-active" checked style="accent-color:#16a34a;">
+          Kích hoạt hoạt động ngay
+        </label>
+      </div>
+
+      <!-- Footer Buttons -->
+      <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+        <button type="button" class="btn btn-outline" onclick="closeVoucherAdminModal()" style="font-weight:700;">Hủy Bỏ</button>
+        <button type="submit" id="btn-save-voucher-submit" class="btn btn-primary" style="font-weight:750; padding:0.6rem 1.4rem;">
+          💾 Lưu Voucher
+        </button>
+      </div>
+    </form>
+  </dialog>
 
   <dialog id="record-dialog" aria-labelledby="dialog-title">
     <div class="modal-head">
@@ -8647,7 +9463,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       function renderSection() {
         const section = sections[activeSection];
         const addButton = document.getElementById('add-button');
-        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings' || activeSection === 'membership') {
+        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings' || activeSection === 'membership' || activeSection === 'vouchers') {
           const isMessages = activeSection === 'messages';
           const isReviews = activeSection === 'reviews';
           const isAiBot = activeSection === 'ai-bot';
@@ -8655,6 +9471,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           const isBanners = activeSection === 'banners';
           const isFooterSettings = activeSection === 'footer-settings';
           const isMembership = activeSection === 'membership';
+          const isVouchers = activeSection === 'vouchers';
           let sectionTitle = 'Tin nhắn khách hàng';
           let sectionDesc = 'Theo dõi và trả lời tin nhắn hỗ trợ từ khách hàng.';
           if (isReviews) {
@@ -8675,6 +9492,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           } else if (isMembership) {
             sectionTitle = 'Hạng Thành Viên & Điểm Thưởng';
             sectionDesc = 'Quản lý danh sách thành viên, xem lịch sử giao dịch và cấu hình tỷ lệ quy đổi điểm.';
+          } else if (isVouchers) {
+            sectionTitle = 'Quản Lý Voucher & Mã Khuyến Mãi';
+            sectionDesc = 'Tạo mới, phân loại 4 hình thức ưu đãi, thiết lập điều kiện hạng TV và theo dõi hiệu quả sử dụng voucher.';
           }
           document.getElementById('breadcrumb').textContent = isAiBot ? 'Trợ lý AI Chatbot' : sectionTitle;
           document.getElementById('page-title').textContent = sectionTitle;
@@ -8692,6 +9512,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (bannersSection) bannersSection.hidden = !isBanners;
           if (footerSettingsSection) footerSettingsSection.hidden = !isFooterSettings;
           if (membershipSection) membershipSection.hidden = !isMembership;
+          const vouchersSection = document.getElementById('vouchers-section');
+          if (vouchersSection) vouchersSection.hidden = !isVouchers;
           window.adminChatInbox?.setActive(isMessages);
           if (isReviews) {
             clearReviewsBadge();
@@ -8704,6 +9526,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (isMembership && !membershipLoaded) {
             loadMembershipData();
           }
+          if (isVouchers && !vouchersLoaded) {
+            loadAdminVouchers();
+          }
           return;
         }
         chatInbox.hidden = true;
@@ -8713,6 +9538,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (bannersSection) bannersSection.hidden = true;
         if (footerSettingsSection) footerSettingsSection.hidden = true;
         if (membershipSection) membershipSection.hidden = true;
+        const vouchersSection = document.getElementById('vouchers-section');
+        if (vouchersSection) vouchersSection.hidden = true;
         tablePanel.hidden = false;
         window.adminChatInbox?.setActive(false);
         const collection = section.collection;
@@ -8996,7 +9823,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       document.getElementById('search-form').addEventListener('submit', (event) => {
         event.preventDefault();
-        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings' || activeSection === 'membership') return;
+        if (activeSection === 'messages' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings' || activeSection === 'membership' || activeSection === 'vouchers') return;
         if (activeSection === 'reviews') {
           reviewSearchTerm = document.getElementById('search-input').value.trim().toLocaleLowerCase('vi');
           renderOrderReviews(renderedReviews);
@@ -9284,7 +10111,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       const urlParams = new URLSearchParams(window.location.search);
       const initialSection = urlParams.get('section') || (window.location.hash ? window.location.hash.replace(/^#/, '') : '');
-      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller' || initialSection === 'banners' || initialSection === 'footer-settings' || initialSection === 'membership')) {
+      if (initialSection && (sections[initialSection] || initialSection === 'messages' || initialSection === 'reviews' || initialSection === 'ai-bot' || initialSection === 'bestseller' || initialSection === 'banners' || initialSection === 'footer-settings' || initialSection === 'membership' || initialSection === 'vouchers')) {
         const targetBtn = document.querySelector(`.nav-item[data-section="${initialSection}"]`);
         if (targetBtn) {
           activeSection = initialSection;
@@ -10406,6 +11233,480 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       // Save loyalty config button
       document.getElementById('btn-save-loyalty-config')?.addEventListener('click', saveLoyaltyConfig);
+
+      // === Voucher Management (Voucher Shop & Sinh Nhật) Logic ===
+      let vouchersLoaded = false;
+      let adminVouchersList = [];
+      const vcDialog = document.getElementById('voucher-admin-dialog');
+
+      window.loadAdminVouchers = async function() {
+        const tbody = document.getElementById('vouchers-table-body');
+        if (!tbody) return;
+        tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Đang tải danh sách voucher...</td></tr>';
+
+        const searchVal = document.getElementById('vc-search-input')?.value.trim() || '';
+        const typeVal = document.getElementById('vc-filter-type')?.value || '';
+        const tierVal = document.getElementById('vc-filter-tier')?.value || '';
+        const statusVal = document.getElementById('vc-filter-status')?.value || '';
+
+        // Cập nhật trạng thái active & nút reset
+        const tSelect = document.getElementById('vc-filter-type');
+        const tierSelect = document.getElementById('vc-filter-tier');
+        const stSelect = document.getElementById('vc-filter-status');
+        const resetBtn = document.getElementById('vc-btn-reset-filters');
+        const clearBtn = document.getElementById('vc-search-clear');
+
+        if (clearBtn) clearBtn.style.display = searchVal ? 'flex' : 'none';
+        if (tSelect) tSelect.classList.toggle('is-active-filter', Boolean(typeVal));
+        if (tierSelect) tierSelect.classList.toggle('is-active-filter', Boolean(tierVal));
+        if (stSelect) stSelect.classList.toggle('is-active-filter', Boolean(statusVal));
+
+        const hasActiveFilter = Boolean(searchVal || typeVal || tierVal || statusVal);
+        if (resetBtn) resetBtn.style.display = hasActiveFilter ? 'inline-flex' : 'none';
+
+        try {
+          const params = new URLSearchParams({
+            action: 'get_admin_vouchers',
+            search: searchVal,
+            voucher_type: typeVal,
+            min_member_tier: tierVal,
+            is_active: statusVal
+          });
+          const res = await fetch(`api.php?${params.toString()}`);
+          const result = await res.json();
+
+          if (result.success && result.data) {
+            adminVouchersList = result.data.vouchers || [];
+            const stats = result.data.stats || {};
+
+            // Cập nhật stats cards
+            const tEl = document.getElementById('vc-stat-total');
+            const aEl = document.getElementById('vc-stat-active');
+            const aSubEl = document.getElementById('vc-stat-active-sub');
+            const uEl = document.getElementById('vc-stat-usages');
+            const dEl = document.getElementById('vc-stat-discount');
+            const bEl = document.getElementById('vc-stat-birthday');
+
+            if (tEl) tEl.textContent = stats.total_vouchers || 0;
+            if (aEl) aEl.textContent = stats.active_vouchers || 0;
+            if (aSubEl) aSubEl.textContent = stats.active_vouchers || 0;
+            if (uEl) uEl.textContent = stats.total_usages || 0;
+            if (dEl) dEl.textContent = money(stats.total_discount || 0);
+            if (bEl) bEl.textContent = `${stats.birthday_gifted || 0} 🎂`;
+
+            renderAdminVouchersTable(adminVouchersList);
+            vouchersLoaded = true;
+          } else {
+            tbody.innerHTML = `<tr><td colspan="11" class="empty-state">${escapeHtml(result.message || 'Không thể tải voucher.')}</td></tr>`;
+          }
+        } catch (err) {
+          tbody.innerHTML = `<tr><td colspan="11" class="empty-state">Lỗi kết nối: ${escapeHtml(err.message)}</td></tr>`;
+        }
+      };
+
+      window.copyVoucherCodeAdmin = function(code) {
+        if (!code) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(code).then(() => {
+            showToast('Đã sao chép mã: ' + code);
+          }).catch(() => {
+            showToast('Mã voucher: ' + code);
+          });
+        } else {
+          showToast('Mã voucher: ' + code);
+        }
+      };
+
+      function renderAdminVouchersTable(vouchers) {
+        const tbody = document.getElementById('vouchers-table-body');
+        if (!tbody) return;
+
+        if (!vouchers.length) {
+          tbody.innerHTML = '<tr><td colspan="11" class="empty-state">Không tìm thấy voucher nào phù hợp với bộ lọc.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = vouchers.map(v => {
+          const typeBadge = {
+            percentage: '<span class="badge" style="background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; font-weight:800; font-size:11px;">🔥 Giảm %</span>',
+            fixed: '<span class="badge" style="background:#fef3c7; color:#b45309; border:1px solid #fde68a; font-weight:800; font-size:11px;">💰 Giảm tiền</span>',
+            free_shipping: '<span class="badge" style="background:#dcfce7; color:#15803d; border:1px solid #bbf7d0; font-weight:800; font-size:11px;">🚚 Freeship</span>',
+            bogo: '<span class="badge" style="background:#fce7f3; color:#be185d; border:1px solid #fbcfe8; font-weight:800; font-size:11px;">🍔 Mua 1 Tặng 1</span>'
+          }[v.voucher_type] || '<span class="badge">Ưu đãi</span>';
+
+          const discText = v.voucher_type === 'percentage'
+            ? `<strong style="color:#ea580c;">${parseFloat(v.discount_value)}%</strong>`
+            : (v.voucher_type === 'free_shipping' ? 'Freeship (' + money(v.discount_value) + ')' : money(v.discount_value));
+
+          const tierConfig = {
+            DIAMOND: { color: '#0284c7', bg: '#e0f2fe', border: '#bae6fd', label: '💎 Diamond' },
+            GOLD:    { color: '#b45309', bg: '#fef3c7', border: '#fde68a', label: '👑 Gold' },
+            SILVER:  { color: '#475569', bg: '#f1f5f9', border: '#cbd5e1', label: '⭐ Silver' },
+            BRONZE:  { color: '#9a3412', bg: '#fff7ed', border: '#ffedd5', label: '🥉 Bronze' },
+          };
+          const tInfo = tierConfig[v.min_member_tier];
+          const reqTier = tInfo
+            ? `<span style="background:${tInfo.bg}; color:${tInfo.color}; border:1px solid ${tInfo.border}; font-weight:800; font-size:11px; padding:2px 7px; border-radius:6px;">${tInfo.label}+</span>`
+            : '<span style="color:#64748b; font-size:11.5px; background:#f8fafc; padding:2px 6px; border-radius:4px; border:1px solid #e2e8f0;">Tất cả</span>';
+
+          const statusBadge = parseInt(v.is_active, 10) === 1
+            ? '<span class="status-badge status-active"><span class="status-pulse-dot dot-active"></span>Hoạt động</span>'
+            : '<span class="status-badge status-cancelled"><span class="status-pulse-dot dot-locked"></span>Đã khóa</span>';
+
+          const used = parseInt(v.actual_usages || v.usage_count || 0, 10);
+          const limit = parseInt(v.usage_limit, 10);
+          const pct = limit > 0 ? Math.min(100, Math.round((used / limit) * 100)) : null;
+          const usageDisplay = limit > 0 ? `
+            <div style="min-width:85px;">
+              <div style="display:flex; justify-content:space-between; font-size:11px; font-weight:750; margin-bottom:2px;">
+                <span>${used}/${limit}</span>
+                <span style="color:${pct >= 100 ? '#ef4444' : '#64748b'}; font-weight:800;">${pct}%</span>
+              </div>
+              <div style="background:#e2e8f0; height:5px; border-radius:99px; overflow:hidden;">
+                <div style="background:${pct >= 100 ? '#ef4444' : (pct >= 80 ? '#f59e0b' : '#16a34a')}; width:${pct}%; height:100%;"></div>
+              </div>
+            </div>
+          ` : `<span style="font-weight:750; color:#1e293b;">${used} / ∞</span>`;
+
+          const endDateText = v.end_date ? formatVietnamDateTime(v.end_date) : '<span style="color:#64748b;">Vô hạn</span>';
+
+          return `
+            <tr>
+              <td>
+                <span class="vc-copy-pill" onclick="window.copyVoucherCodeAdmin('${escapeHtml(v.code)}')" title="Click để sao chép mã">
+                  <span>📋</span> ${escapeHtml(v.code)}
+                </span>
+                ${parseInt(v.is_birthday_voucher, 10) === 1 ? '<span style="display:block; font-size:10px; color:#b45309; margin-top:2px;">🎂 Voucher Sinh Nhật</span>' : ''}
+              </td>
+              <td>
+                <strong style="display:block; font-size:12.5px; color:#1e293b;">${escapeHtml(v.title)}</strong>
+                <small style="color:#64748b; font-size:11px;">${escapeHtml(v.description || '')}</small>
+              </td>
+              <td>${typeBadge}</td>
+              <td>${discText}</td>
+              <td>${money(v.min_order_value || 0)}</td>
+              <td>${v.max_discount_amount ? money(v.max_discount_amount) : '<span style="color:#94a3b8;">—</span>'}</td>
+              <td>${usageDisplay}</td>
+              <td>${reqTier}</td>
+              <td style="font-size:11.5px; color:#64748b;">${endDateText}</td>
+              <td>${statusBadge}</td>
+              <td style="text-align:right;">
+                <div class="row-actions" style="justify-content:flex-end;">
+                  <button type="button" class="action-button" onclick="window.openEditVoucherModal(${v.id})" title="Chỉnh sửa voucher">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11z"/></svg>Sửa
+                  </button>
+                  <button type="button" class="action-button" onclick="window.toggleVoucherStatus(${v.id})" title="${parseInt(v.is_active, 10) === 1 ? 'Khóa voucher' : 'Kích hoạt voucher'}">
+                    ${parseInt(v.is_active, 10) === 1 ? '🔒 Khóa' : '🔓 Mở'}
+                  </button>
+                  <button type="button" class="action-button delete" onclick="window.deleteVoucher(${v.id})" title="Xóa voucher">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M5 7l1 14h12l1-14M9 7V4h6v3"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      window.selectVoucherTypeModal = function(type) {
+        const select = document.getElementById('v-field-type');
+        if (select) {
+          select.value = type;
+        }
+        document.querySelectorAll('#vc-modal-type-selector .vc-type-card').forEach(card => {
+          card.classList.toggle('active', card.getAttribute('data-type') === type);
+        });
+        updateVoucherFormTypeLabels();
+        updateLiveVoucherPreview();
+      };
+
+      window.updateLiveVoucherPreview = function() {
+        const type = document.getElementById('v-field-type')?.value || 'percentage';
+        const discVal = parseFloat(document.getElementById('v-field-disc-val')?.value) || 0;
+        const code = (document.getElementById('v-field-code')?.value || 'FASTCODE').trim().toUpperCase();
+        const title = (document.getElementById('v-field-title')?.value || 'Tiêu đề voucher').trim();
+        const minOrder = parseFloat(document.getElementById('v-field-min-order')?.value) || 0;
+        const maxDisc = parseFloat(document.getElementById('v-field-max-disc')?.value) || 0;
+        const tier = document.getElementById('v-field-tier')?.value || 'ALL';
+
+        const iconEl = document.getElementById('vc-prev-icon');
+        const discEl = document.getElementById('vc-prev-discount');
+        const subEl = document.getElementById('vc-prev-stub-label');
+        const titleEl = document.getElementById('vc-prev-title');
+        const codeEl = document.getElementById('vc-prev-code');
+        const condEl = document.getElementById('vc-prev-cond');
+        const tierEl = document.getElementById('vc-prev-tier');
+        const stubEl = document.getElementById('vc-prev-stub');
+
+        if (codeEl) codeEl.textContent = code;
+        if (titleEl) titleEl.textContent = title;
+        if (tierEl) {
+          tierEl.textContent = tier === 'ALL' ? '👑 Tất cả thành viên' : `👑 Từ Hạng ${tier}+`;
+        }
+
+        let condText = minOrder > 0 ? `Đơn tối thiểu ${money(minOrder)}` : 'Áp dụng mọi đơn hàng';
+        if (type === 'percentage' && maxDisc > 0) {
+          condText += ` (Tối đa ${money(maxDisc)})`;
+        }
+        if (condEl) condEl.textContent = condText;
+
+        if (type === 'percentage') {
+          if (iconEl) iconEl.textContent = '🔥';
+          if (discEl) discEl.textContent = `${discVal}%`;
+          if (subEl) subEl.textContent = 'GIẢM GIÁ';
+          if (stubEl) stubEl.style.background = 'linear-gradient(135deg, #f97316, #ea580c)';
+        } else if (type === 'fixed') {
+          if (iconEl) iconEl.textContent = '💰';
+          if (discEl) discEl.textContent = discVal >= 1000 ? `${Math.round(discVal / 1000)}k` : `${discVal}đ`;
+          if (subEl) subEl.textContent = 'TIỀN MẶT';
+          if (stubEl) stubEl.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+        } else if (type === 'free_shipping') {
+          if (iconEl) iconEl.textContent = '🚚';
+          if (discEl) discEl.textContent = '0đ';
+          if (subEl) subEl.textContent = 'FREESHIP';
+          if (stubEl) stubEl.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+        } else if (type === 'bogo') {
+          if (iconEl) iconEl.textContent = '🍔';
+          if (discEl) discEl.textContent = '1+1';
+          if (subEl) subEl.textContent = 'TẶNG MÓN';
+          if (stubEl) stubEl.style.background = 'linear-gradient(135deg, #ec4899, #db2777)';
+        }
+      };
+
+      window.openCreateVoucherModal = function() {
+        document.getElementById('voucher-dialog-title').textContent = 'Tạo Voucher Mới';
+        document.getElementById('voucher-admin-form').reset();
+        document.getElementById('v-field-id').value = '';
+        generateRandomVoucherCode();
+        selectVoucherTypeModal('percentage');
+        
+        const nowStr = new Date().toISOString().slice(0, 16);
+        document.getElementById('v-field-start').value = nowStr;
+
+        updateLiveVoucherPreview();
+        vcDialog?.showModal();
+      };
+
+      window.openEditVoucherModal = function(id) {
+        const v = adminVouchersList.find(item => parseInt(item.id, 10) === parseInt(id, 10));
+        if (!v) return;
+
+        document.getElementById('voucher-dialog-title').textContent = `Chỉnh Sửa Voucher #${v.id} (${v.code})`;
+        document.getElementById('v-field-id').value = v.id;
+        document.getElementById('v-field-code').value = v.code;
+        document.getElementById('v-field-title').value = v.title || '';
+        document.getElementById('v-field-desc').value = v.description || '';
+        document.getElementById('v-field-disc-val').value = v.discount_value || 0;
+        document.getElementById('v-field-min-order').value = v.min_order_value || 0;
+        document.getElementById('v-field-max-disc').value = v.max_discount_amount || '';
+        document.getElementById('v-field-usage-limit').value = v.usage_limit || 0;
+        document.getElementById('v-field-user-limit').value = v.user_limit || 1;
+        document.getElementById('v-field-tier').value = v.min_member_tier || 'ALL';
+        document.getElementById('v-field-public').checked = parseInt(v.is_public, 10) === 1;
+        document.getElementById('v-field-active').checked = parseInt(v.is_active, 10) === 1;
+
+        if (v.start_date) {
+          document.getElementById('v-field-start').value = v.start_date.replace(' ', 'T').slice(0, 16);
+        }
+        if (v.end_date) {
+          document.getElementById('v-field-end').value = v.end_date.replace(' ', 'T').slice(0, 16);
+        } else {
+          document.getElementById('v-field-end').value = '';
+        }
+
+        selectVoucherTypeModal(v.voucher_type || 'percentage');
+        updateLiveVoucherPreview();
+        vcDialog?.showModal();
+      };
+
+      window.closeVoucherAdminModal = function() {
+        vcDialog?.close();
+      };
+
+      window.generateRandomVoucherCode = function() {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+        let code = 'FAST';
+        for (let i = 0; i < 4; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        document.getElementById('v-field-code').value = code;
+        updateLiveVoucherPreview();
+      };
+
+      window.updateVoucherFormTypeLabels = function() {
+        const type = document.getElementById('v-field-type')?.value;
+        const lbl = document.getElementById('lbl-discount-val');
+        const input = document.getElementById('v-field-disc-val');
+        if (!lbl || !input) return;
+
+        if (type === 'percentage') {
+          lbl.textContent = 'Mức giảm (%) *';
+          input.placeholder = 'VD: 15 (nghĩa là giảm 15%)';
+        } else if (type === 'free_shipping') {
+          lbl.textContent = 'Mức giảm phí ship tối đa (VNĐ) *';
+          input.placeholder = 'VD: 18000';
+          if (!input.value || input.value === '0') input.value = '18000';
+        } else if (type === 'bogo') {
+          lbl.textContent = 'Giá trị món tặng quy đổi (VNĐ) *';
+          input.placeholder = 'VD: 35000';
+        } else {
+          lbl.textContent = 'Số tiền giảm cố định (VNĐ) *';
+          input.placeholder = 'VD: 20000';
+        }
+      };
+
+      window.saveVoucherAdminForm = async function(e) {
+        e.preventDefault();
+        const submitBtn = document.getElementById('btn-save-voucher-submit');
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang lưu...';
+
+        const voucherData = {
+          id: document.getElementById('v-field-id').value || null,
+          code: document.getElementById('v-field-code').value.trim().toUpperCase(),
+          title: document.getElementById('v-field-title').value.trim(),
+          description: document.getElementById('v-field-desc').value.trim(),
+          voucher_type: document.getElementById('v-field-type').value,
+          discount_value: parseFloat(document.getElementById('v-field-disc-val').value) || 0,
+          min_order_value: parseFloat(document.getElementById('v-field-min-order').value) || 0,
+          max_discount_amount: document.getElementById('v-field-max-disc').value ? parseFloat(document.getElementById('v-field-max-disc').value) : null,
+          usage_limit: parseInt(document.getElementById('v-field-usage-limit').value, 10) || 0,
+          user_limit: parseInt(document.getElementById('v-field-user-limit').value, 10) || 1,
+          min_member_tier: document.getElementById('v-field-tier').value,
+          is_public: document.getElementById('v-field-public').checked ? 1 : 0,
+          is_active: document.getElementById('v-field-active').checked ? 1 : 0,
+          start_date: document.getElementById('v-field-start').value || null,
+          end_date: document.getElementById('v-field-end').value || null,
+        };
+
+        try {
+          const res = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'save_admin_voucher', voucher: voucherData })
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            closeVoucherAdminModal();
+            showToast(result.message || 'Lưu voucher thành công!');
+            loadAdminVouchers();
+          } else {
+            alert(result.message || 'Lưu voucher thất bại.');
+          }
+        } catch (err) {
+          alert('Lỗi kết nối máy chủ: ' + err.message);
+        } finally {
+          submitBtn.disabled = false;
+          submitBtn.textContent = '💾 Lưu Voucher';
+        }
+      };
+
+      window.toggleVoucherStatus = async function(id) {
+        try {
+          const res = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'toggle_voucher_status', id: id })
+          });
+          const result = await res.json();
+          if (result.success) {
+            showToast(result.message);
+            loadAdminVouchers();
+          } else {
+            alert(result.message || 'Không thể đổi trạng thái.');
+          }
+        } catch (err) {
+          alert('Lỗi kết nối: ' + err.message);
+        }
+      };
+
+      window.deleteVoucher = async function(id) {
+        if (!confirm('Bạn có chắc chắn muốn xóa voucher này? Nếu voucher đã phát sinh đơn hàng, hệ thống sẽ tự động chuyển sang trạng thái KHÓA để bảo toàn lịch sử hóa đơn.')) return;
+
+        try {
+          const res = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'delete_admin_voucher', id: id })
+          });
+          const result = await res.json();
+          if (result.success) {
+            showToast(result.message);
+            loadAdminVouchers();
+          } else {
+            alert(result.message || 'Không thể xóa voucher.');
+          }
+        } catch (err) {
+          alert('Lỗi kết nối: ' + err.message);
+        }
+      };
+
+      window.triggerBirthdayCronAdmin = async function() {
+        const btn = document.getElementById('btn-trigger-bday-cron');
+        if (btn) btn.disabled = true;
+
+        try {
+          const res = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'trigger_birthday_cron' })
+          });
+          const result = await res.json();
+          if (result.success) {
+            alert(result.message);
+            loadAdminVouchers();
+          } else {
+            alert(result.message || 'Lỗi khi quét sinh nhật.');
+          }
+        } catch (err) {
+          alert('Lỗi kết nối: ' + err.message);
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      };
+
+      // Voucher Toolbar & Live Preview Event Bindings
+      document.getElementById('btn-open-create-voucher')?.addEventListener('click', openCreateVoucherModal);
+      document.getElementById('btn-trigger-bday-cron')?.addEventListener('click', triggerBirthdayCronAdmin);
+
+      let vcSearchTimeout = null;
+      document.getElementById('vc-search-input')?.addEventListener('input', (e) => {
+        clearTimeout(vcSearchTimeout);
+        const clearBtn = document.getElementById('vc-search-clear');
+        if (clearBtn) clearBtn.style.display = e.target.value.trim() ? 'flex' : 'none';
+        vcSearchTimeout = setTimeout(loadAdminVouchers, 300);
+      });
+      document.getElementById('vc-search-clear')?.addEventListener('click', () => {
+        const sInput = document.getElementById('vc-search-input');
+        if (sInput) sInput.value = '';
+        document.getElementById('vc-search-clear')?.style.setProperty('display', 'none');
+        loadAdminVouchers();
+      });
+      document.getElementById('vc-filter-type')?.addEventListener('change', loadAdminVouchers);
+      document.getElementById('vc-filter-tier')?.addEventListener('change', loadAdminVouchers);
+      document.getElementById('vc-filter-status')?.addEventListener('change', loadAdminVouchers);
+
+      document.getElementById('vc-btn-reset-filters')?.addEventListener('click', () => {
+        const sInput = document.getElementById('vc-search-input');
+        const tSelect = document.getElementById('vc-filter-type');
+        const tierSelect = document.getElementById('vc-filter-tier');
+        const stSelect = document.getElementById('vc-filter-status');
+        if (sInput) sInput.value = '';
+        if (tSelect) tSelect.value = '';
+        if (tierSelect) tierSelect.value = '';
+        if (stSelect) stSelect.value = '';
+        document.getElementById('vc-search-clear')?.style.setProperty('display', 'none');
+        document.getElementById('vc-btn-reset-filters')?.style.setProperty('display', 'none');
+        [tSelect, tierSelect, stSelect].forEach(el => el?.classList.remove('is-active-filter'));
+        loadAdminVouchers();
+      });
+
+      ['v-field-code', 'v-field-title', 'v-field-disc-val', 'v-field-min-order', 'v-field-max-disc', 'v-field-tier'].forEach(fId => {
+        const el = document.getElementById(fId);
+        el?.addEventListener('input', updateLiveVoucherPreview);
+        el?.addEventListener('change', updateLiveVoucherPreview);
+      });
 
       document.getElementById('today-label').textContent = new Intl.DateTimeFormat('vi-VN', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' }).format(new Date());
       renderAll();

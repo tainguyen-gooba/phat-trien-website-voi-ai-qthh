@@ -12,7 +12,7 @@ try {
     $db   = 'fastfood_db';
     $user = 'root';
     $pass = '';
-    $ports = array_unique(array_filter([getenv('DB_PORT') ?: null, '3301', '3306']));
+    $ports = array_unique(array_filter([getenv('DB_PORT') ?: null, '3307', '3301', '3306']));
     $pdo = null;
     $connectedPort = null;
     $lastErr = null;

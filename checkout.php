@@ -193,9 +193,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($couponId) {
-                try {
-                    $db->prepare("UPDATE coupons SET usage_count = usage_count + 1 WHERE id = ?")->execute([$couponId]);
-                } catch (Exception $e) {}
+                require_once ROOT_PATH . '/helpers/voucher.php';
+                @recordVoucherUsage($couponId, $userId, $orderId, $orderCode, (float)$discount);
             }
 
             // 2. Lưu từng món vào order_items
@@ -281,7 +280,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $pageTitle = 'Xác Nhận & Thanh Toán Đơn Hàng - FASTFOOD';
 $activeNav = 'cart';
-$extraCss  = ['css/pages.css'];
+$extraCss  = ['css/pages.css', 'css/vouchers.css'];
 
 require_once ROOT_PATH . '/includes/header.php';
 ?>
@@ -525,7 +524,7 @@ require_once ROOT_PATH . '/includes/header.php';
         <?php endif; ?>
 
         <?php if ($appliedCoupon): ?>
-          <div style="margin: 0.75rem 0; background: #fff7ed; border: 1.5px dashed #fb923c; border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem;">
+          <div id="checkout-voucher-box" style="margin: 0.75rem 0; background: #fff7ed; border: 1.5px dashed #fb923c; border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem;">
             <div style="display:flex; justify-content:space-between; align-items:center;">
               <div>
                 <span style="background:#ea580c; color:#fff; font-weight:800; font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:4px; text-transform:uppercase;">
@@ -533,11 +532,28 @@ require_once ROOT_PATH . '/includes/header.php';
                 </span>
                 <span style="font-weight:700; color:#ea580c; margin-left:0.35rem;">-<?= formatVND($discount) ?></span>
               </div>
-              <a href="<?= getUrl('cart.php') ?>" style="font-size:0.75rem; color:var(--text-muted); text-decoration:underline;">Thay đổi</a>
+              <div style="display:flex; gap:0.4rem; align-items:center;">
+                <button type="button" onclick="openCheckoutVoucherPicker()" style="background:none; border:none; color:#ea580c; font-size:0.75rem; font-weight:750; cursor:pointer; text-decoration:underline;">
+                  Đổi mã
+                </button>
+                <button type="button" onclick="removeCheckoutVoucher()" style="background:none; border:none; color:#dc2626; font-size:0.75rem; font-weight:750; cursor:pointer;">
+                  ✕ Gỡ
+                </button>
+              </div>
             </div>
             <div style="font-size:0.74rem; color:#9a3412; margin-top:0.25rem;">
               <?= escapeHtml($appliedCoupon['title']) ?>
             </div>
+          </div>
+        <?php else: ?>
+          <div id="checkout-voucher-box" style="margin: 0.75rem 0; background: #fffaf0; border: 1.5px dashed #fdba74; border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <div style="font-weight:750; color:#9a3412; font-size:0.85rem;">🎟️ Voucher Giảm Giá</div>
+              <div style="font-size:0.72rem; color:#64748b;">Chọn hoặc nhập mã để giảm chi phí</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline" onclick="openCheckoutVoucherPicker()" style="font-size:0.78rem; font-weight:750; padding:0.25rem 0.65rem; border-color:#ea580c; color:#ea580c; background:#fff;">
+              Chọn Voucher ➔
+            </button>
           </div>
         <?php endif; ?>
 
@@ -689,7 +705,41 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+function openCheckoutVoucherPicker() {
+  const subtotal = <?= (float)$subtotal ?>;
+  if (typeof VoucherModal !== 'undefined') {
+    VoucherModal.open({
+      subtotal: subtotal,
+      onApplied: function(data, msg) {
+        window.location.reload();
+      },
+      onRemoved: function() {
+        window.location.reload();
+      }
+    });
+  }
+}
+
+async function removeCheckoutVoucher() {
+  if (typeof VoucherModal !== 'undefined') {
+    await VoucherModal.removeVoucher();
+  } else {
+    try {
+      const url = window.getApiUrl ? window.getApiUrl('api/vouchers.php') : 'api/vouchers.php';
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'remove' })
+      });
+      window.location.reload();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+}
 </script>
 
+<?php require_once ROOT_PATH . '/includes/voucher-modal.php'; ?>
 <?php require_once ROOT_PATH . '/includes/footer.php'; ?>
 

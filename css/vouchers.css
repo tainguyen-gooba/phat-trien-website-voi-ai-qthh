@@ -1,0 +1,727 @@
+/**
+ * FASTFOOD - Customer Voucher System Stylesheet
+ * File: css/vouchers.css
+ * Phong cách Modern Orange - White cao cấp, thiết kế dạng Ticket xé vé, Responsive
+ * Tích hợp 4 loại voucher: %, Tiền mặt, Freeship, Mua 1 tặng 1
+ */
+
+:root {
+  --ff-voucher-orange: #ea580c;
+  --ff-voucher-orange-dark: #c2410c;
+  --ff-voucher-orange-light: #fff7ed;
+  --ff-voucher-orange-border: #fed7aa;
+  --ff-voucher-dark: #0f172a;
+  --ff-voucher-muted: #64748b;
+  --ff-voucher-green: #16a34a;
+
+  /* 4 Voucher Category Theme Gradients */
+  --v-pct-grad: linear-gradient(135deg, #ff6b35 0%, #ea580c 100%);
+  --v-pct-bg: #fff7ed;
+  --v-pct-color: #c2410c;
+  --v-pct-border: #fed7aa;
+
+  --v-fixed-grad: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  --v-fixed-bg: #fefce8;
+  --v-fixed-color: #b45309;
+  --v-fixed-border: #fde68a;
+
+  --v-ship-grad: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%);
+  --v-ship-bg: #f0f9ff;
+  --v-ship-color: #0369a1;
+  --v-ship-border: #bae6fd;
+
+  --v-bogo-grad: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
+  --v-bogo-bg: #faf5ff;
+  --v-bogo-color: #6b21a8;
+  --v-bogo-border: #e9d5ff;
+}
+
+/* ==========================================================================
+   1. HERO BANNER & SEARCH BAR
+   ========================================================================== */
+.voucher-hero {
+  background: linear-gradient(135deg, #ea580c 0%, #f97316 45%, #fb923c 100%);
+  color: #ffffff;
+  padding: 3.25rem 2rem 2.75rem;
+  border-radius: 26px;
+  margin: 1.5rem auto 2.25rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 16px 36px rgba(234, 88, 12, 0.22);
+}
+
+.voucher-hero::before {
+  content: '';
+  position: absolute;
+  top: -40%;
+  right: -15%;
+  width: 480px;
+  height: 480px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  animation: heroPulse 6s ease-in-out infinite alternate;
+}
+
+.voucher-hero::after {
+  content: '🍔 🍕 🍟 🥤';
+  position: absolute;
+  bottom: 12px;
+  right: 25px;
+  font-size: 3.5rem;
+  opacity: 0.16;
+  letter-spacing: 12px;
+  pointer-events: none;
+}
+
+@keyframes heroPulse {
+  from { transform: scale(0.95); opacity: 0.6; }
+  to { transform: scale(1.08); opacity: 1; }
+}
+
+.voucher-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 820px;
+}
+
+.voucher-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.22);
+  backdrop-filter: blur(12px);
+  padding: 0.4rem 1rem;
+  border-radius: 30px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.voucher-hero-title {
+  font-size: 2.35rem;
+  font-weight: 900;
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.6px;
+  line-height: 1.22;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.voucher-hero-desc {
+  font-size: 1.05rem;
+  opacity: 0.94;
+  margin: 0 0 1.75rem;
+  line-height: 1.55;
+  max-width: 680px;
+}
+
+.voucher-quick-stats-bar {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.voucher-stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(12px);
+  padding: 0.65rem 1.25rem;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  font-size: 0.92rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  transition: transform 0.2s ease;
+}
+
+.voucher-stat-chip:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.voucher-stat-chip strong {
+  font-size: 1.2rem;
+  font-weight: 850;
+  color: #fff;
+}
+
+/* ==========================================================================
+   2. TABS NAVIGATION & INTERACTIVE FILTER BAR
+   ========================================================================== */
+.voucher-tabs-bar {
+  display: flex;
+  gap: 0.6rem;
+  background: #ffffff;
+  padding: 0.5rem;
+  border-radius: 18px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  margin-bottom: 1.75rem;
+  border: 1px solid #f1f5f9;
+  overflow-x: auto;
+}
+
+.voucher-tab-btn {
+  flex: 1;
+  min-width: 175px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.9rem 1.3rem;
+  border: none;
+  background: transparent;
+  color: var(--ff-voucher-muted);
+  font-weight: 750;
+  font-size: 0.95rem;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.voucher-tab-btn:hover {
+  color: var(--ff-voucher-orange);
+  background: #fff7ed;
+}
+
+.voucher-tab-btn.active {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #ffffff;
+  box-shadow: 0 6px 18px rgba(234, 88, 12, 0.25);
+}
+
+.voucher-tab-badge {
+  padding: 0.2rem 0.6rem;
+  font-size: 0.75rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.08);
+  font-weight: 800;
+}
+
+.voucher-tab-btn.active .voucher-tab-badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+/* Interactive Filter & Search Strip */
+.voucher-toolbar-wrap {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.75rem;
+  background: #ffffff;
+  padding: 0.85rem 1.15rem;
+  border-radius: 16px;
+  border: 1px solid #f1f5f9;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+}
+
+.voucher-filter-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.voucher-filter-pill, .wallet-filter-pill {
+  padding: 0.45rem 0.95rem;
+  border-radius: 30px;
+  border: 1.5px solid #fed7aa;
+  background: #ffffff;
+  color: #9a3412;
+  font-size: 0.83rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.voucher-filter-pill:hover, .wallet-filter-pill:hover {
+  border-color: #ea580c;
+  background: #fff7ed;
+  transform: translateY(-1px);
+}
+
+.voucher-filter-pill.active, .wallet-filter-pill.active {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  border-color: #ea580c;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.25);
+}
+
+.voucher-search-box {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 30px;
+  padding: 0.4rem 0.95rem;
+  width: 250px;
+  transition: all 0.2s ease;
+}
+
+.voucher-search-box:focus-within {
+  border-color: #ea580c;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.12);
+}
+
+.voucher-search-box input {
+  border: none;
+  background: transparent;
+  outline: none;
+  font-size: 0.85rem;
+  width: 100%;
+  color: #1e293b;
+  font-weight: 600;
+}
+
+/* ==========================================================================
+   3. VOUCHER CARDS GRID & AUTHENTIC TICKET DESIGN
+   ========================================================================== */
+.voucher-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 1.35rem;
+  margin-bottom: 2.75rem;
+}
+
+.voucher-ticket-card {
+  position: relative;
+  display: flex;
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1.5px solid #fed7aa;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04);
+  overflow: hidden;
+  transition: all 0.24s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.voucher-ticket-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(234, 88, 12, 0.14);
+  border-color: #fb923c;
+}
+
+/* Left Ticket Stub */
+.ticket-stub {
+  width: 115px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.1rem 0.6rem;
+  text-align: center;
+  position: relative;
+  border-right: 2px dashed #fed7aa;
+  color: #ffffff;
+  background: var(--v-pct-grad);
+}
+
+/* Color thematic stubs per voucher type */
+.voucher-ticket-card[data-voucher-type="percentage"] .ticket-stub {
+  background: var(--v-pct-grad);
+  border-right-color: #fed7aa;
+}
+
+.voucher-ticket-card[data-voucher-type="fixed"] .ticket-stub {
+  background: var(--v-fixed-grad);
+  border-right-color: #fde68a;
+}
+
+.voucher-ticket-card[data-voucher-type="free_shipping"] .ticket-stub {
+  background: var(--v-ship-grad);
+  border-right-color: #bae6fd;
+}
+
+.voucher-ticket-card[data-voucher-type="bogo"] .ticket-stub {
+  background: var(--v-bogo-grad);
+  border-right-color: #e9d5ff;
+}
+
+.voucher-ticket-card.is-claimed .ticket-stub {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-right-color: #a7f3d0;
+}
+
+.ticket-discount-tag {
+  font-size: 1.45rem;
+  font-weight: 950;
+  color: #ffffff;
+  line-height: 1.1;
+  margin-bottom: 0.35rem;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.ticket-discount-sub {
+  font-size: 0.68rem;
+  font-weight: 850;
+  color: rgba(255, 255, 255, 0.92);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  background: rgba(0, 0, 0, 0.18);
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+/* Semi-circular ticket notches (cutout holes) */
+.ticket-stub::before,
+.ticket-stub::after {
+  content: '';
+  position: absolute;
+  right: -9px;
+  width: 17px;
+  height: 17px;
+  background: #f8fafc;
+  border-radius: 50%;
+  border: 1.5px solid #fed7aa;
+  z-index: 3;
+}
+
+.ticket-stub::before {
+  top: -9px;
+  clip-path: inset(50% 0 0 0);
+}
+
+.ticket-stub::after {
+  bottom: -9px;
+  clip-path: inset(0 0 50% 0);
+}
+
+/* Ticket Main Body */
+.ticket-body {
+  flex: 1;
+  padding: 1.15rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-width: 0;
+  background: #ffffff;
+}
+
+.ticket-header-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.ticket-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 850;
+  color: var(--ff-voucher-dark);
+  line-height: 1.32;
+}
+
+.ticket-tier-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  background: linear-gradient(135deg, #fef3c7, #fde68a);
+  color: #92400e;
+  border: 1px solid #fcd34d;
+  padding: 0.15rem 0.55rem;
+  border-radius: 6px;
+  box-shadow: 0 1px 3px rgba(180, 83, 9, 0.1);
+}
+
+.ticket-type-tag {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.15rem 0.5rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.ticket-type-tag.percentage {
+  background: var(--v-pct-bg);
+  color: var(--v-pct-color);
+  border: 1px solid var(--v-pct-border);
+}
+
+.ticket-type-tag.fixed {
+  background: var(--v-fixed-bg);
+  color: var(--v-fixed-color);
+  border: 1px solid var(--v-fixed-border);
+}
+
+.ticket-type-tag.free_shipping {
+  background: var(--v-ship-bg);
+  color: var(--v-ship-color);
+  border: 1px solid var(--v-ship-border);
+}
+
+.ticket-type-tag.bogo {
+  background: var(--v-bogo-bg);
+  color: var(--v-bogo-color);
+  border: 1px solid var(--v-bogo-border);
+}
+
+.ticket-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.65rem;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ticket-status-pill.saved {
+  background: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.ticket-status-pill.used {
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.ticket-meta-info {
+  font-size: 0.82rem;
+  color: var(--ff-voucher-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.ticket-condition {
+  font-weight: 650;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.ticket-expiry {
+  font-size: 0.76rem;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Quota Progress Bar */
+.ticket-quota-wrap {
+  margin-top: 0.2rem;
+}
+
+.ticket-quota-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.ticket-quota-bar {
+  width: 100%;
+  height: 6px;
+  background: #f1f5f9;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.ticket-quota-progress {
+  height: 100%;
+  background: linear-gradient(90deg, #f97316, #ea580c);
+  border-radius: 10px;
+  transition: width 0.4s ease;
+}
+
+/* Code & Actions Strip */
+.ticket-actions-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding-top: 0.75rem;
+  border-top: 1px dashed #e2e8f0;
+  margin-top: 0.25rem;
+}
+
+.ticket-code-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: #fff7ed;
+  border: 1.5px dashed #fb923c;
+  color: #c2410c;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-weight: 850;
+  font-size: 0.92rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+
+.ticket-btn-action {
+  padding: 0.48rem 1.05rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 0.84rem;
+  font-weight: 750;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.ticket-btn-claim {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 10px rgba(234, 88, 12, 0.25);
+}
+
+.ticket-btn-claim:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(234, 88, 12, 0.35);
+}
+
+.ticket-btn-claimed {
+  background: #dcfce7;
+  color: #15803d;
+  cursor: default;
+  border: 1px solid #bbf7d0;
+}
+
+.ticket-btn-use {
+  background: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.15);
+}
+
+.ticket-btn-use:hover {
+  background: #ea580c;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(234, 88, 12, 0.28);
+}
+
+.ticket-btn-copy {
+  background: #f8fafc;
+  color: #475569;
+  border: 1.5px solid #e2e8f0;
+  padding: 0.42rem 0.7rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.ticket-btn-copy:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+/* Birthday Exclusive Ribbon */
+.voucher-ticket-card.is-birthday-exclusive {
+  border: 2px solid #f59e0b;
+  box-shadow: 0 8px 24px rgba(245, 158, 11, 0.18);
+}
+
+.voucher-ticket-card.is-birthday-exclusive::before {
+  content: '🎂 QUÀ SINH NHẬT ĐỘC QUYỀN';
+  position: absolute;
+  top: 0;
+  right: 0;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 850;
+  padding: 2px 10px;
+  border-bottom-left-radius: 10px;
+  letter-spacing: 0.5px;
+  z-index: 4;
+}
+
+/* Disabled & Used State */
+.voucher-ticket-card.is-used,
+.voucher-ticket-card.is-expired {
+  opacity: 0.62;
+  filter: grayscale(0.85);
+  border-color: #e2e8f0;
+}
+
+/* ==========================================================================
+   4. TOAST NOTIFICATION CONTAINER
+   ========================================================================== */
+#voucher-toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.voucher-toast {
+  pointer-events: auto;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 0.85rem 1.35rem;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  animation: toastIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  border-left: 4px solid #f97316;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* ==========================================================================
+   5. RESPONSIVE DESIGN
+   ========================================================================== */
+@media (max-width: 640px) {
+  .voucher-hero {
+    padding: 2.25rem 1.25rem 2rem;
+    border-radius: 20px;
+  }
+  .voucher-hero-title {
+    font-size: 1.75rem;
+  }
+  .voucher-grid {
+    grid-template-columns: 1fr;
+  }
+  .ticket-stub {
+    width: 95px;
+    padding: 1rem 0.4rem;
+  }
+  .ticket-discount-tag {
+    font-size: 1.25rem;
+  }
+  .voucher-toolbar-wrap {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .voucher-search-box {
+    width: 100%;
+  }
+}

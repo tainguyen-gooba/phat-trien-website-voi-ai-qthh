@@ -6,7 +6,7 @@ require_once __DIR__ . '/config/config.php';
 
 $pageTitle = 'Giỏ Hàng Của Bạn - FASTFOOD';
 $activeNav = 'cart';
-$extraCss  = ['css/pages.css'];
+$extraCss  = ['css/pages.css', 'css/vouchers.css'];
 
 $cart = $_SESSION['cart'] ?? [];
 $subtotal = 0;
@@ -167,16 +167,26 @@ require_once ROOT_PATH . '/includes/header.php';
                   -<?= formatVND($discount) ?> (<?= escapeHtml($appliedCoupon['title']) ?>)
                 </div>
               </div>
-              <button type="button" class="btn btn-sm btn-outline text-danger" onclick="removeCoupon()" style="padding:0.25rem 0.6rem; font-size:0.75rem;">
-                Gỡ bỏ
-              </button>
+              <div style="display:flex; gap:0.4rem; align-items:center;">
+                <button type="button" class="btn btn-sm btn-outline" onclick="openCartVoucherPicker()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
+                  Đổi mã
+                </button>
+                <button type="button" class="btn btn-sm btn-outline text-danger" onclick="removeCoupon()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
+                  Gỡ bỏ
+                </button>
+              </div>
             </div>
           <?php else: ?>
-            <label style="display:block; font-size:0.8rem; font-weight:700; color:#9a3412; margin-bottom:0.4rem;">
-              🎟️ Bạn có mã ưu đãi? (Ví dụ: NEW50)
-            </label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+              <label style="font-size:0.82rem; font-weight:800; color:#9a3412; margin:0;">
+                🎟️ Mã Giảm Giá / Voucher
+              </label>
+              <button type="button" onclick="openCartVoucherPicker()" style="background:none; border:none; color:#ea580c; font-size:0.8rem; font-weight:800; cursor:pointer; text-decoration:underline;">
+                Chọn từ Ví Voucher ➔
+              </button>
+            </div>
             <div style="display:flex; gap:0.5rem;">
-              <input type="text" id="cart-coupon-input" class="form-control form-control-sm" placeholder="Nhập mã (NEW50...)" style="text-transform:uppercase; font-weight:700; font-size:0.85rem;">
+              <input type="text" id="cart-coupon-input" class="form-control form-control-sm" placeholder="Nhập mã (FASTFOOD20...)" style="text-transform:uppercase; font-weight:700; font-size:0.85rem;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
               <button type="button" class="btn btn-sm btn-primary" onclick="applyCoupon()" style="white-space:nowrap; padding:0.4rem 0.85rem; font-size:0.85rem;">
                 Áp dụng
               </button>
@@ -296,18 +306,28 @@ function updateCartUI(data) {
               -${formatVND(data.discount)} (${data.appliedCoupon.title})
             </div>
           </div>
-          <button type="button" class="btn btn-sm btn-outline text-danger" onclick="removeCoupon()" style="padding:0.25rem 0.6rem; font-size:0.75rem;">
-            Gỡ bỏ
-          </button>
+          <div style="display:flex; gap:0.4rem; align-items:center;">
+            <button type="button" class="btn btn-sm btn-outline" onclick="openCartVoucherPicker()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
+              Đổi mã
+            </button>
+            <button type="button" class="btn btn-sm btn-outline text-danger" onclick="removeCoupon()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
+              Gỡ bỏ
+            </button>
+          </div>
         </div>
       `;
     } else {
       voucherBox.innerHTML = `
-        <label style="display:block; font-size:0.8rem; font-weight:700; color:#9a3412; margin-bottom:0.4rem;">
-          🎟️ Bạn có mã ưu đãi? (Ví dụ: NEW50)
-        </label>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
+          <label style="font-size:0.82rem; font-weight:800; color:#9a3412; margin:0;">
+            🎟️ Mã Giảm Giá / Voucher
+          </label>
+          <button type="button" onclick="openCartVoucherPicker()" style="background:none; border:none; color:#ea580c; font-size:0.8rem; font-weight:800; cursor:pointer; text-decoration:underline;">
+            Chọn từ Ví Voucher ➔
+          </button>
+        </div>
         <div style="display:flex; gap:0.5rem;">
-          <input type="text" id="cart-coupon-input" class="form-control form-control-sm" placeholder="Nhập mã (NEW50...)" style="text-transform:uppercase; font-weight:700; font-size:0.85rem;">
+          <input type="text" id="cart-coupon-input" class="form-control form-control-sm" placeholder="Nhập mã (FASTFOOD20...)" style="text-transform:uppercase; font-weight:700; font-size:0.85rem;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
           <button type="button" class="btn btn-sm btn-primary" onclick="applyCoupon()" style="white-space:nowrap; padding:0.4rem 0.85rem; font-size:0.85rem;">
             Áp dụng
           </button>
@@ -447,7 +467,48 @@ async function removeCoupon() {
     console.error(err);
   }
 }
+
+async function fetchCartSummaryAndUpdate() {
+  try {
+    const res = await fetch('<?= getUrl('api/cart.php') ?>', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'get' })
+    });
+    const result = await res.json();
+    if (result.success && result.data) {
+      updateCartUI(result.data);
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+function openCartVoucherPicker() {
+  const subtotalText = document.getElementById('cart-subtotal')?.textContent || '0';
+  const subtotal = parseInt(subtotalText.replace(/\D/g, ''), 10) || 0;
+  if (typeof VoucherModal !== 'undefined') {
+    VoucherModal.open({
+      subtotal: subtotal,
+      onApplied: function(data, msg) {
+        fetchCartSummaryAndUpdate();
+        if (typeof UIComponents !== 'undefined' && UIComponents.showToast) {
+          UIComponents.showToast(msg || 'Đã áp dụng voucher thành công!', 'success');
+        } else {
+          alert(msg || 'Đã áp dụng voucher thành công!');
+        }
+      },
+      onRemoved: function(data, msg) {
+        fetchCartSummaryAndUpdate();
+        if (typeof UIComponents !== 'undefined' && UIComponents.showToast) {
+          UIComponents.showToast(msg || 'Đã hủy áp dụng voucher.', 'info');
+        }
+      }
+    });
+  }
+}
 </script>
 
+<?php require_once ROOT_PATH . '/includes/voucher-modal.php'; ?>
 <?php require_once ROOT_PATH . '/includes/footer.php'; ?>
 

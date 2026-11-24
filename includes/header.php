@@ -77,6 +77,7 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
       <nav class="nav-menu" id="main-nav-menu">
         <a href="<?= getUrl('index.php') ?>" class="nav-link <?= $activeNav === 'home' ? 'active' : '' ?>">Trang Chủ</a>
         <a href="<?= getUrl('foods.php') ?>" class="nav-link <?= $activeNav === 'foods' ? 'active' : '' ?>">Món Ăn</a>
+        <a href="<?= getUrl('vouchers.php') ?>" class="nav-link <?= $activeNav === 'vouchers' ? 'active' : '' ?>">Khuyến Mãi</a>
         <a href="<?= getUrl('order-history.php') ?>" class="nav-link <?= $activeNav === 'orders' ? 'active' : '' ?>">Đơn Hàng</a>
       </nav>
 
@@ -149,6 +150,15 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
                       <div class="dropdown-item-text">
                         <strong>Hồ sơ tài khoản</strong>
                         <small>Xem và sửa thông tin cá nhân</small>
+                      </div>
+                    </a>
+                  </li>
+                  <li>
+                    <a href="<?= getUrl('vouchers.php#tab-wallet') ?>" class="user-dropdown-item">
+                      <span class="dropdown-item-icon">🎟️</span>
+                      <div class="dropdown-item-text">
+                        <strong>Ví Voucher</strong>
+                        <small>Kho voucher & ưu đãi của bạn</small>
                       </div>
                     </a>
                   </li>

@@ -63,17 +63,17 @@ function getCartSummary() {
 
     $shippingFee = ($subtotal > 0 && $subtotal < 100000) ? 18000 : 0;
 
-    // Xử lý giảm giá từ Coupon / Voucher
+    // Xử lý giảm giá từ Coupon / Voucher (Tích hợp Hệ thống Voucher Shop 4 loại: %, Tiền, Freeship, Mua 1 tặng 1)
     $appliedCoupon = $_SESSION['applied_coupon'] ?? null;
     $discount = 0;
     if ($appliedCoupon && $subtotal > 0) {
-        if (($appliedCoupon['discount_type'] ?? '') === 'percentage') {
-            $discount = ($subtotal * (float)$appliedCoupon['discount_value']) / 100.0;
-            if (!empty($appliedCoupon['max_discount_amount']) && (float)$appliedCoupon['max_discount_amount'] > 0) {
-                $discount = min($discount, (float)$appliedCoupon['max_discount_amount']);
-            }
+        require_once __DIR__ . '/../helpers/voucher.php';
+        $vRes = validateAndCalculateVoucher($appliedCoupon, $subtotal, $uid > 0 ? $uid : null, (float)$shippingFee);
+        if (!empty($vRes['valid'])) {
+            $discount = (float)$vRes['discount_amount'];
         } else {
-            $discount = min($subtotal, (float)($appliedCoupon['discount_value'] ?? 0));
+            // Không đạt điều kiện đơn tối thiểu hoặc điều kiện khác
+            $discount = 0;
         }
     }
     $total = max(0, $subtotal + $shippingFee - $discount);
@@ -240,24 +240,34 @@ if ($method === 'POST') {
             if (!$couponCode) {
                 jsonError('Vui lòng nhập mã giảm giá.');
             }
+            require_once __DIR__ . '/../helpers/voucher.php';
             $db = getDB();
-            $stmt = $db->prepare("SELECT * FROM coupons WHERE UPPER(code) = ? AND is_active = 1 LIMIT 1");
-            $stmt->execute([$couponCode]);
-            $cp = $stmt->fetch();
+            $cp = null;
+
+            // 1. Kiểm tra bảng vouchers trước
+            try {
+                $stmt = $db->prepare("SELECT * FROM vouchers WHERE UPPER(code) = ? AND is_active = 1 LIMIT 1");
+                $stmt->execute([$couponCode]);
+                $cp = $stmt->fetch();
+            } catch (Exception $e) {}
+
+            // 2. Fallback sang bảng coupons cũ nếu chưa có
+            if (!$cp) {
+                try {
+                    $stmt = $db->prepare("SELECT * FROM coupons WHERE UPPER(code) = ? AND is_active = 1 LIMIT 1");
+                    $stmt->execute([$couponCode]);
+                    $cp = $stmt->fetch();
+                } catch (Exception $e) {}
+            }
+
             if (!$cp) {
                 jsonError('Mã giảm giá "' . $couponCode . '" không hợp lệ hoặc đã hết hạn.');
             }
-            $now = date('Y-m-d H:i:s');
-            if (!empty($cp['start_date']) && $cp['start_date'] > $now) {
-                jsonError('Mã giảm giá chưa đến ngày áp dụng.');
-            }
-            if (!empty($cp['end_date']) && $cp['end_date'] < $now) {
-                jsonError('Mã giảm giá đã hết hạn sử dụng.');
-            }
-            if ($cp['usage_limit'] > 0 && $cp['usage_count'] >= $cp['usage_limit']) {
-                jsonError('Mã giảm giá đã hết lượt sử dụng.');
-            }
+
             $cUser = currentUser();
+            $currentUserId = $cUser ? (int)$cUser['id'] : null;
+
+            // Kiểm tra voucher chào mừng khách hàng mới
             if ($couponCode === 'NEW50' || $couponCode === 'NEW50K' || strpos($couponCode, 'NEW50K-') === 0) {
                 if ($cUser) {
                     $ordCheck = $db->prepare("SELECT COUNT(*) FROM orders WHERE customer_id = ? AND order_status != 'cancelled'");
@@ -268,6 +278,7 @@ if ($method === 'POST') {
                 }
             }
 
+            // Kiểm tra voucher cấp riêng cho user
             if (!empty($cp['user_id'])) {
                 if (!$cUser) {
                     jsonError('Mã giảm giá này dành riêng cho tài khoản được cấp. Vui lòng đăng nhập để sử dụng.');
@@ -275,21 +286,48 @@ if ($method === 'POST') {
                     jsonError('Mã giảm giá này chỉ dành riêng cho chủ sở hữu tài khoản được cấp.');
                 }
             }
+
+            // Tính toán tạm tính giỏ hàng hiện tại
+            $cartSummary = getCartSummary();
+            $subtotal = (float)$cartSummary['subtotal'];
+            $shippingFee = (float)$cartSummary['shippingFee'];
+
+            if ($subtotal <= 0) {
+                jsonError('Giỏ hàng đang trống, vui lòng chọn món trước khi áp dụng voucher.');
+            }
+
+            // Kiểm tra điều kiện & tính toán chiết khấu bằng helper voucher chung
+            $calc = validateAndCalculateVoucher($cp, $subtotal, $currentUserId, $shippingFee);
+            if (empty($calc['valid'])) {
+                jsonError($calc['reason'] ?? 'Voucher không thỏa mãn điều kiện áp dụng.');
+            }
+
+            $voucherType = $cp['voucher_type'] ?? ($cp['discount_type'] ?? 'percentage');
             $_SESSION['applied_coupon'] = [
                 'id'                  => (int)$cp['id'],
                 'code'                => $cp['code'],
                 'title'               => $cp['title'],
-                'discount_type'       => $cp['discount_type'],
+                'voucher_type'        => $voucherType,
+                'discount_type'       => $voucherType,
                 'discount_value'      => (float)$cp['discount_value'],
                 'min_order_value'     => (float)$cp['min_order_value'],
-                'max_discount_amount' => (float)$cp['max_discount_amount']
+                'max_discount_amount' => (float)$cp['max_discount_amount'],
+                'min_member_tier'     => $cp['min_member_tier'] ?? 'ALL',
+                'discount_amount'     => (float)$calc['discount_amount']
             ];
-            jsonSuccess('Áp dụng mã giảm giá ' . $cp['code'] . ' thành công!', getCartSummary());
+
+            $savedMsg = 'Áp dụng mã ' . $cp['code'] . ' thành công! Tiết kiệm ' . number_format($calc['discount_amount'], 0, ',', '.') . 'đ';
+            jsonSuccess($savedMsg, getCartSummary());
             break;
 
         case 'remove_coupon':
             unset($_SESSION['applied_coupon']);
             jsonSuccess('Đã hủy áp dụng mã giảm giá.', getCartSummary());
+            break;
+
+        case 'get':
+        case 'summary':
+            jsonSuccess('Lấy thông tin giỏ hàng thành công.', getCartSummary());
             break;
 
         default:

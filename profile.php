@@ -26,19 +26,36 @@ if ($isUpdateProfile) {
     $fullName = trim($_POST['fullName'] ?? '');
     $phone    = trim($_POST['phone'] ?? '');
     $address  = trim($_POST['address'] ?? '');
+    $dob      = trim($_POST['date_of_birth'] ?? '');
 
     if (mb_strlen($fullName) < 3) {
         $error = 'Họ và tên không hợp lệ (tối thiểu 3 ký tự).';
     } elseif (!preg_match('/^[0-9+() -]{10,15}$/', $phone)) {
         $error = 'Số điện thoại không hợp lệ.';
+    } elseif ($dob !== '' && !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dob)) {
+        $error = 'Định dạng ngày sinh không hợp lệ (YYYY-MM-DD).';
+    } elseif ($dob !== '' && strtotime($dob) > strtotime(date('Y-m-d'))) {
+        $error = 'Ngày sinh không thể là một ngày trong tương lai.';
+    } elseif ($dob !== '' && strtotime($dob) < strtotime('1920-01-01')) {
+        $error = 'Năm sinh không hợp lệ (tối thiểu từ năm 1920).';
     } else {
-        $upStmt = $db->prepare("UPDATE users SET full_name = ?, phone = ?, address = ?, updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$fullName, $phone, $address, $userId]);
+        $cleanDob = ($dob !== '') ? $dob : null;
+        $upStmt = $db->prepare("UPDATE users SET full_name = ?, phone = ?, address = ?, date_of_birth = ?, updated_at = NOW() WHERE id = ?");
+        $upStmt->execute([$fullName, $phone, $address, $cleanDob, $userId]);
 
         $_SESSION['user_name']  = $fullName;
         $_SESSION['user_phone'] = $phone;
         $currentUser = currentUser();
         $message = 'Cập nhật thông tin thành công!';
+
+        // Tự động kiểm tra và tặng voucher sinh nhật nếu hôm nay là sinh nhật
+        if ($cleanDob) {
+            require_once ROOT_PATH . '/helpers/voucher.php';
+            $gift = @checkAndGiftBirthdayVoucher($userId);
+            if ($gift) {
+                $message .= " 🎂 Chúc mừng sinh nhật! Bạn vừa nhận được voucher {$gift['code']} giảm {$gift['discount_percent']}%!";
+            }
+        }
     }
 }
 
@@ -86,18 +103,14 @@ if (!$isMaxTier) {
 // Overall 0 to 5,000,000 timeline position for visual nodes
 $overallPercent = min(100.0, max(0.0, round(($totalSpent / 5000000.0) * 100, 1)));
 
-// 7. Fetch Voucher Packages
+// 7. Fetch Voucher Packages & Wallet Vouchers
+require_once ROOT_PATH . '/helpers/voucher.php';
 $voucherPackages = getVoucherPackages();
+$birthdayStatus  = getUserBirthdayStatus($userId);
 
-// 8. Fetch Active User Coupons
-$cpStmt = $db->prepare("SELECT * FROM coupons 
-    WHERE user_id = ? 
-      AND is_active = 1 
-      AND (end_date IS NULL OR end_date >= NOW()) 
-      AND (usage_limit IS NULL OR usage_count < usage_limit)
-    ORDER BY created_at DESC, id DESC");
-$cpStmt->execute([$userId]);
-$userCoupons = $cpStmt->fetchAll();
+// 8. Fetch Active User Coupons & Wallet Vouchers
+$walletVouchers = getUserWalletVouchers($userId);
+$userCoupons = $walletVouchers;
 $couponCount = count($userCoupons);
 
 // 9. Fetch Point Transactions Ledger History
@@ -360,19 +373,31 @@ require_once ROOT_PATH . '/includes/header.php';
         <?php if (!empty($userCoupons)): ?>
           <?php foreach ($userCoupons as $coupon): 
               $discountVal = (float)$coupon['discount_value'];
-              $isPercent = ($coupon['discount_type'] === 'percentage');
-              $discountDisplay = $isPercent ? rtrim(rtrim(number_format($discountVal, 1), '0'), '.') . '%' : number_format($discountVal, 0, ',', '.') . 'đ';
+              $vType = $coupon['voucher_type'] ?? ($coupon['discount_type'] ?? 'percentage');
+              $discountDisplay = $coupon['discount_display'] ?? (
+                  $vType === 'percentage' 
+                      ? rtrim(rtrim(number_format($discountVal, 1), '0'), '.') . '%'
+                      : ($vType === 'free_shipping' ? 'FREESHIP' : number_format($discountVal, 0, ',', '.') . 'đ')
+              );
               $minOrder = (float)($coupon['min_order_value'] ?? 0);
-              $endDate = $coupon['end_date'] ? date('d/m/Y', strtotime($coupon['end_date'])) : 'Không thời hạn';
+              $endDate = !empty($coupon['effective_end_date']) ? date('d/m/Y', strtotime($coupon['effective_end_date'])) : (!empty($coupon['end_date']) ? date('d/m/Y', strtotime($coupon['end_date'])) : 'Không thời hạn');
+              $typeBadge = $coupon['type_badge'] ?? 'Ưu Đãi';
+              $isBirthday = !empty($coupon['is_birthday_voucher']) || (!empty($coupon['source']) && $coupon['source'] === 'birthday');
           ?>
             <div class="voucher-ticket">
               <div class="voucher-ticket-left">
                 <div class="ticket-discount-tag"><?= $discountDisplay ?></div>
-                <div class="ticket-discount-sub">GIẢM NGAY</div>
+                <div class="ticket-discount-sub"><?= $typeBadge ?></div>
               </div>
 
               <div class="voucher-ticket-right">
                 <div>
+                  <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.25rem;">
+                    <?php if ($isBirthday): ?>
+                      <span style="background:#fef3c7; color:#b45309; font-weight:800; font-size:0.7rem; padding:0.15rem 0.45rem; border-radius:4px;">🎂 Sinh Nhật</span>
+                    <?php endif; ?>
+                    <span style="background:#ffedd5; color:#ea580c; font-weight:750; font-size:0.7rem; padding:0.15rem 0.45rem; border-radius:4px;"><?= $typeBadge ?></span>
+                  </div>
                   <h4 class="ticket-title"><?= escapeHtml($coupon['title'] ?: 'Mã Ưu Đãi VIP FASTFOOD') ?></h4>
                   <div class="ticket-condition">
                     <?= $minOrder > 0 ? 'Đơn tối thiểu ' . number_format($minOrder, 0, ',', '.') . 'đ' : 'Áp dụng cho mọi đơn hàng' ?>
@@ -584,8 +609,24 @@ require_once ROOT_PATH . '/includes/header.php';
           <span style="color: var(--ff-muted-slate); font-size: 0.85rem; margin-left: 0.5rem;">
             <?= escapeHtml($user['email']) ?>
           </span>
+          <div style="margin-top:0.35rem; font-size:0.85rem; color:#475569;">
+            🎂 <strong>Ngày sinh:</strong> 
+            <?= !empty($user['date_of_birth']) ? date('d/m/Y', strtotime($user['date_of_birth'])) : '<span style="color:#94a3b8; font-style:italic;">Chưa cập nhật ngày sinh</span>' ?>
+          </div>
         </div>
       </div>
+
+      <?php if (!empty($birthdayStatus['is_birthday_today'])): ?>
+        <div style="margin-bottom:1.25rem; background:linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border:1.5px solid #fb923c; border-radius:12px; padding:1rem 1.25rem; display:flex; align-items:center; gap:0.85rem;">
+          <div style="font-size:2rem;">🎂</div>
+          <div>
+            <strong style="color:#9a3412; font-size:1rem; display:block;">Chúc Mừng Sinh Nhật <?= escapeHtml($user['full_name']) ?>! 🎉</strong>
+            <p style="margin:0.2rem 0 0; font-size:0.85rem; color:#c2410c;">
+              FASTFOOD đã gửi tặng bạn voucher ưu đãi sinh nhật độc quyền trong mục <strong>Ví Voucher</strong>. Hãy thưởng thức tiệc ngon hôm nay nhé!
+            </p>
+          </div>
+        </div>
+      <?php endif; ?>
 
       <?php if ($message): ?>
         <div class="profile-alert-success alert alert-success">
@@ -618,6 +659,16 @@ require_once ROOT_PATH . '/includes/header.php';
           <label class="profile-form-label" for="profile-phone">Số điện thoại *</label>
           <input type="tel" name="phone" id="profile-phone" class="profile-form-control" 
                  value="<?= escapeHtml($user['phone']) ?>" required>
+        </div>
+
+        <div class="profile-form-group">
+          <label class="profile-form-label" for="profile-dob">🎂 Ngày Sinh (Nhận quà ưu đãi sinh nhật)</label>
+          <input type="date" name="date_of_birth" id="profile-dob" class="profile-form-control" 
+                 value="<?= escapeHtml($user['date_of_birth'] ?? '') ?>" 
+                 max="<?= date('Y-m-d') ?>" min="1920-01-01">
+          <small style="color: var(--ff-muted-slate); font-size: 0.8rem; margin-top: 4px; display: block;">
+            💡 FASTFOOD sẽ tự động gửi tặng bạn voucher ưu đãi độc quyền lên tới 25% vào đúng ngày sinh nhật mỗi năm!
+          </small>
         </div>
 
         <div class="profile-form-group">

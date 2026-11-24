@@ -286,18 +286,56 @@
     async function chatRequest(path, options = {}) {
       const cleanPath = path.startsWith('/') ? path : `/${path}`;
       const authToken = activeToken || token || (typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('fastfood_auth_token') : '');
-      const response = await fetch(`${resolvedApiUrl}/chat${cleanPath}`, {
-        ...options,
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
-          ...(options.headers || {}),
-        },
-      });
-      const result = await response.json();
-      if (!response.ok || !result.success) {
-        throw new Error(result.message || 'Không thể xử lý yêu cầu.');
+      const reqHeaders = {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(authToken ? { Authorization: `Bearer ${authToken}` } : {}),
+        ...(options.headers || {}),
+      };
+
+      let response;
+      try {
+        response = await fetch(`${resolvedApiUrl}/chat${cleanPath}`, {
+          ...options,
+          headers: reqHeaders,
+        });
+      } catch (networkErr) {
+        // Fallback sang backend/index.php nếu rewrite bị chặn
+        const fallbackUrl = (window.BASE_URL || '').replace(/\/+$/, '') + `/backend/index.php/api/v1/chat${cleanPath}`;
+        response = await fetch(fallbackUrl, {
+          ...options,
+          headers: reqHeaders,
+        });
+      }
+
+      if (!response.ok && response.status === 404) {
+        const fallbackUrl = (window.BASE_URL || '').replace(/\/+$/, '') + `/backend/index.php/api/v1/chat${cleanPath}`;
+        try {
+          const fbRes = await fetch(fallbackUrl, {
+            ...options,
+            headers: reqHeaders,
+          });
+          if (fbRes.ok) {
+            response = fbRes;
+          }
+        } catch (_) {}
+      }
+
+      let result = null;
+      try {
+        result = await response.json();
+      } catch (parseErr) {
+        // Fallback sang admin/api.php nếu request là conversations
+        if (cleanPath.includes('/admin/conversations')) {
+          try {
+            const apiRes = await fetch('api.php?action=admin_conversations');
+            result = await apiRes.json();
+          } catch (_) {}
+        }
+      }
+
+      if (!result || !result.success) {
+        throw new Error(result?.message || 'Không thể xử lý yêu cầu.');
       }
       return result.data;
     }
@@ -1563,7 +1601,7 @@
           pollTimer = null;
         }
         if (active) {
-          refreshConversations();
+          refreshConversations(true);
           pollTimer = setInterval(async () => {
             if (!active) return;
             if (selectedSessionId) {

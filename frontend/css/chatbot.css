@@ -449,6 +449,7 @@
 .ff-msg-row {
   display: flex;
   gap: 10px;
+  width: fit-content;
   max-width: 85%;
   margin-bottom: 12px;
   background: transparent !important;
@@ -457,6 +458,7 @@
   border-radius: 0 !important;
   padding: 0 !important;
   animation: ffMsgIn 0.25s ease-out;
+  flex-shrink: 0;
 }
 
 @keyframes ffMsgIn {
@@ -468,11 +470,15 @@
   align-self: flex-end;
   flex-direction: row-reverse;
   margin-left: auto;
+  width: fit-content;
+  max-width: 85%;
 }
 
 .ff-msg-row.assistant {
   align-self: flex-start;
   margin-right: auto;
+  width: fit-content;
+  max-width: 85%;
 }
 
 .ff-msg-avatar {
@@ -489,6 +495,8 @@
 }
 
 .ff-msg-bubble {
+  width: fit-content;
+  min-width: 68px;
   max-width: 100%;
   padding: 10px 16px;
   border-radius: 18px;
@@ -497,12 +505,22 @@
   word-break: normal;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  box-sizing: border-box;
 }
 
 .ff-msg-content {
+  width: fit-content;
+  min-width: 0;
+  max-width: 100%;
   word-break: normal;
   overflow-wrap: break-word;
   word-wrap: break-word;
+}
+
+.ff-msg-content p {
+  margin: 0 0 6px 0;
+  word-break: normal;
+  overflow-wrap: break-word;
 }
 
 .ff-msg-row.user .ff-msg-bubble,

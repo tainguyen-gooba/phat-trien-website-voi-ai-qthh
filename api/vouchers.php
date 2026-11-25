@@ -184,15 +184,30 @@ switch ($action) {
             jsonError($eval['reason'] ?? 'Không đủ điều kiện áp dụng mã này.');
         }
 
+        // Kiểm tra voucher cấp riêng cho user
+        if (!empty($vc['user_id'])) {
+            if (!$userId) {
+                jsonError('Mã giảm giá này dành riêng cho tài khoản được cấp. Vui lòng đăng nhập để sử dụng.');
+            } elseif ((int)$vc['user_id'] !== $userId) {
+                jsonError('Mã giảm giá này chỉ dành riêng cho chủ sở hữu tài khoản được cấp.');
+            }
+        }
+
         // Kiểm tra voucher chào mừng NEW50
         $voucherCode = strtoupper($vc['code']);
         if ($voucherCode === 'NEW50' || $voucherCode === 'NEW50K' || strpos($voucherCode, 'NEW50K-') === 0) {
-            if ($userId > 0) {
-                $ordCheck = $db->prepare("SELECT COUNT(*) FROM orders WHERE customer_id = ? AND order_status != 'cancelled'");
-                $ordCheck->execute([$userId]);
-                if ((int)$ordCheck->fetchColumn() > 0) {
-                    jsonError('Voucher chào mừng ' . $voucherCode . ' chỉ áp dụng cho đơn hàng đầu tiên của khách hàng mới.');
-                }
+            if ($userId <= 0) {
+                jsonError('Vui lòng đăng nhập và xác thực thông tin bạn mới để sử dụng Voucher 50.000đ.');
+            }
+            $claimChk = $db->prepare("SELECT id FROM customer_voucher_claims WHERE user_id = ? LIMIT 1");
+            $claimChk->execute([$userId]);
+            if (!$claimChk->fetch()) {
+                jsonError('Bạn chưa nhập thông tin xác thực bạn mới nên chưa nhận được Voucher 50.000đ này.');
+            }
+            $ordCheck = $db->prepare("SELECT COUNT(*) FROM orders WHERE customer_id = ? AND order_status != 'cancelled'");
+            $ordCheck->execute([$userId]);
+            if ((int)$ordCheck->fetchColumn() > 0) {
+                jsonError('Voucher chào mừng ' . $voucherCode . ' chỉ áp dụng cho đơn hàng đầu tiên của khách hàng mới.');
             }
         }
 

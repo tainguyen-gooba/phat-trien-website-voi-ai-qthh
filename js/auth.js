@@ -122,6 +122,8 @@ function initDemoAccountFill() {
 function initWelcomeModal() {
   const modal = document.getElementById('welcome-voucher-modal');
   if (!modal) return;
+  if (modal.dataset.initialized === '1') return;
+  modal.dataset.initialized = '1';
 
   const formView = document.getElementById('voucher-form-view');
   const successView = document.getElementById('voucher-success-view');
@@ -153,7 +155,7 @@ function initWelcomeModal() {
 
       const fullName = (document.getElementById('voucher-fullname')?.value || '').trim();
       const phone = (document.getElementById('voucher-phone')?.value || '').trim();
-      const cccd = (document.getElementById('voucher-cccd')?.value || '').trim();
+      const dob = (document.getElementById('voucher-dob')?.value || '').trim();
       const address = (document.getElementById('voucher-address')?.value || '').trim();
 
       // Validation phía Client
@@ -168,9 +170,15 @@ function initWelcomeModal() {
         return;
       }
 
-      const cleanCccd = cccd.replace(/[^0-9]/g, '');
-      if (cleanCccd.length !== 9 && cleanCccd.length !== 12) {
-        showVoucherError('Số CCCD/CMND không hợp lệ. Vui lòng nhập đúng 9 hoặc 12 chữ số.', 'voucher-cccd');
+      if (!dob || !/^\d{4}-\d{2}-\d{2}$/.test(dob)) {
+        showVoucherError('Vui lòng chọn ngày sinh hợp lệ.', 'voucher-dob');
+        return;
+      }
+      const dobDate = new Date(dob + 'T00:00:00');
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      if (isNaN(dobDate.getTime()) || dobDate > todayEnd || dob < '1920-01-01') {
+        showVoucherError('Ngày sinh không hợp lệ (không được chọn ngày ở tương lai).', 'voucher-dob');
         return;
       }
 
@@ -185,7 +193,8 @@ function initWelcomeModal() {
       if (submitSpinner) submitSpinner.style.display = 'inline';
 
       try {
-        const response = await fetch('api/claim-voucher.php', {
+        const claimUrl = window.getApiUrl ? window.getApiUrl('api/claim-voucher.php') : 'api/claim-voucher.php';
+        const response = await fetch(claimUrl, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -194,7 +203,7 @@ function initWelcomeModal() {
           body: JSON.stringify({
             fullName: fullName,
             phone: cleanPhone,
-            cccd: cleanCccd,
+            date_of_birth: dob,
             address: address
           })
         });
@@ -221,10 +230,12 @@ function initWelcomeModal() {
           // Lỗi từ chối do trùng lặp hoặc vi phạm quy tắc
           const message = result?.message || 'Không thể cấp voucher. Vui lòng kiểm tra lại thông tin.';
           let highlightField = null;
-          if (message.includes('CCCD') || message.includes('Căn cước')) {
-            highlightField = 'voucher-cccd';
+          if (message.includes('Ngày sinh') || message.includes('Năm sinh') || message.includes('sinh')) {
+            highlightField = 'voucher-dob';
           } else if (message.includes('điện thoại') || message.includes('SĐT')) {
             highlightField = 'voucher-phone';
+          } else if (message.includes('địa chỉ')) {
+            highlightField = 'voucher-address';
           }
           showVoucherError(message, highlightField);
         }
@@ -260,7 +271,8 @@ function initWelcomeModal() {
   skipBtns.forEach(btn => {
     btn.addEventListener('click', function () {
       // Gửi yêu cầu giải phóng cờ session ở background
-      fetch('api/claim-voucher.php?action=skip_welcome', {
+      const skipUrl = window.getApiUrl ? window.getApiUrl('api/claim-voucher.php?action=skip_welcome') : 'api/claim-voucher.php?action=skip_welcome';
+      fetch(skipUrl, {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
       }).catch(() => {});
@@ -280,7 +292,8 @@ function initWelcomeModal() {
   // Bấm phím Escape để đóng/bỏ qua
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && modal.classList.contains('active')) {
-      fetch('api/claim-voucher.php?action=skip_welcome', {
+      const skipUrl = window.getApiUrl ? window.getApiUrl('api/claim-voucher.php?action=skip_welcome') : 'api/claim-voucher.php?action=skip_welcome';
+      fetch(skipUrl, {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' }
       }).catch(() => {});

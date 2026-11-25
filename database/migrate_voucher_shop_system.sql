@@ -1,4 +1,4 @@
-v-- Migration: Hoàn thiện Hệ thống Voucher Shop & Voucher Sinh Nhật
+-- Migration: Hoàn thiện Hệ thống Voucher Shop & Voucher Sinh Nhật
 -- Bổ sung trường date_of_birth vào users và tạo các bảng:
 -- vouchers, user_vouchers, voucher_usages, voucher_conditions, birthday_voucher_logs
 

@@ -5,7 +5,7 @@
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
-define('DB_PORT', getenv('DB_PORT') ?: '3307');
+define('DB_PORT', getenv('DB_PORT') ?: '3306');
 define('DB_NAME', getenv('DB_NAME') ?: 'fastfood_db');
 define('DB_USER', getenv('DB_USER') ?: 'root');
 define('DB_PASS', getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : (getenv('DB_PASS') ?: ''));
@@ -13,7 +13,7 @@ define('DB_PASS', getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : (get
 function getDB() {
     static $pdo = null;
     if ($pdo === null) {
-        $ports = array_unique(array_filter([DB_PORT, '3307', '3306', '3301']));
+        $ports = array_unique(array_filter([DB_PORT, '3306', '3307', '3301']));
         $lastException = null;
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,

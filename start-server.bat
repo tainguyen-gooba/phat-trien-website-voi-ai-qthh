@@ -8,7 +8,9 @@ REM 1. Kiem tra MySQL (Cong 3306 hoac 3301)
 netstat -ano | findstr ":3306 :3301" >nul
 if errorlevel 1 (
     echo [1/2] Dang khoi dong MySQL XAMPP...
-    if exist "D:\xampp\mysql\bin\mysqld.exe" (
+    if exist "C:\xampp\mysql\bin\mysqld.exe" (
+        start "" /B "C:\xampp\mysql\bin\mysqld.exe" --defaults-file="C:\xampp\mysql\bin\my.ini" --standalone
+    ) else if exist "D:\xampp\mysql\bin\mysqld.exe" (
         start "" /B "D:\xampp\mysql\bin\mysqld.exe" --defaults-file="D:\xampp\mysql\bin\my.ini" --standalone
     )
     timeout /t 2 /nobreak >nul
@@ -27,7 +29,9 @@ if errorlevel 1 (
     start http://127.0.0.1:5000
     echo Nhan Ctrl + C de dung server.
     echo.
-    if exist "D:\xampp\php\php.exe" (
+    if exist "C:\xampp\php\php.exe" (
+        "C:\xampp\php\php.exe" -S 127.0.0.1:5000 router.php
+    ) else if exist "D:\xampp\php\php.exe" (
         "D:\xampp\php\php.exe" -S 127.0.0.1:5000 router.php
     ) else (
         php -S 127.0.0.1:5000 router.php

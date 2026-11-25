@@ -211,6 +211,11 @@ async function checkPaymentStatus(isManual = false) {
     const result = await res.json();
     if (result.success && result.data?.paymentStatus === 'completed') {
       clearInterval(timerInterval);
+      try {
+        const ch = new BroadcastChannel('fastfood_realtime');
+        ch.postMessage({ type: 'payment:updated', data: { orderCode: orderCode, paymentStatus: 'completed' } });
+        ch.postMessage({ type: 'order:updated', data: { id: orderCode, orderCode: orderCode, orderNo: '#' + orderCode, status: 'preparing', paymentStatus: 'completed' } });
+      } catch (e) {}
       document.getElementById('payment-status-desc').innerHTML = 
         '<strong style="color:var(--success); font-size:1.1rem;">🎉 Thanh toán thành công! Đang chuyển đến đơn hàng...</strong>';
       setTimeout(() => {

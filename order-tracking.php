@@ -30,6 +30,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action_cancel'])) {
         if (!empty($ordRow['customer_id']) && (int)$ordRow['customer_id'] > 0) {
             handleOrderCancellation((int)$ordRow['id']);
         }
+        $_SESSION['cancelled_order_broadcast'] = $orderCode;
     }
 
     header('Location: ' . getUrl("order-tracking.php?id=" . urlencode($orderCode)));
@@ -63,6 +64,7 @@ $steps = [
     'preparing'        => 2,
     'delivering'       => 3,
     'delivered'        => 4,
+    'completed'        => 4,
     'cancelled'        => 0,
 ];
 $currentStep = $steps[$status] ?? 1;
@@ -134,6 +136,7 @@ require_once ROOT_PATH . '/includes/header.php';
         <span style="color:#64748b; font-size:0.85rem; display:block; margin-bottom:3px;">Phương thức thanh toán:</span>
         <strong style="color:#0f172a;"><?= strtoupper($order['payment_method']) ?></strong>
         <span style="color:#64748b; font-size:0.85rem; display:block; margin-top:0.75rem; margin-bottom:3px;">Trạng thái thanh toán:</span>
+        <div id="tracking-payment-status">
         <?php if ($order['payment_status'] === 'completed' || ($order['realtime_payment_status'] ?? '') === 'completed'): ?>
           <strong style="color:#10b981;">Đã thanh toán thành công</strong>
         <?php else: ?>
@@ -142,6 +145,7 @@ require_once ROOT_PATH . '/includes/header.php';
             <a href="<?= getUrl('payment.php?orderCode=' . urlencode($orderCode)) ?>" class="btn btn-primary btn-sm" style="margin-left:0.5rem; padding:0.2rem 0.6rem;">Quét QR thanh toán</a>
           <?php endif; ?>
         <?php endif; ?>
+        </div>
       </div>
     </div>
   </div>
@@ -239,7 +243,7 @@ require_once ROOT_PATH . '/includes/header.php';
 
     <!-- Nút hủy đơn nếu còn ở trạng thái chờ -->
     <?php if (in_array($status, ['placed', 'pending', 'awaiting_payment'])): ?>
-      <div style="margin-top:2rem; text-align:right;">
+      <div id="tracking-cancel-wrap" style="margin-top:2rem; text-align:right;">
         <form action="<?= getUrl('order-tracking.php?id=' . urlencode($orderCode)) ?>" method="POST" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này? Theo quy định, mỗi lần hủy đơn có thể tăng 3% phí ship cho đơn sau.')">
           <input type="hidden" name="action_cancel" value="1">
           <button type="submit" class="btn btn-outline text-danger btn-sm">
@@ -282,6 +286,27 @@ require_once ROOT_PATH . '/includes/header.php';
     }
     <?php endif; ?>
 
+    <?php
+    $cancelledBroadcast = $_SESSION['cancelled_order_broadcast'] ?? '';
+    if ($cancelledBroadcast) {
+        unset($_SESSION['cancelled_order_broadcast']);
+    }
+    ?>
+    <?php if ($cancelledBroadcast === $orderCode): ?>
+    if (channel) {
+      channel.postMessage({
+        type: 'order:updated',
+        data: {
+          id: '<?= escapeHtml($orderCode) ?>',
+          orderCode: '<?= escapeHtml($orderCode) ?>',
+          orderNo: '#<?= escapeHtml($orderCode) ?>',
+          status: 'cancelled',
+          order_status: 'cancelled'
+        }
+      });
+    }
+    <?php endif; ?>
+
     // 2. Hàm cập nhật trực quan tiến độ bước nhảy Realtime
     const stepMap = {
       'pending': 1,
@@ -289,12 +314,19 @@ require_once ROOT_PATH . '/includes/header.php';
       'preparing': 2,
       'delivering': 3,
       'delivered': 4,
+      'completed': 4,
       'cancelled': 0
     };
 
     let currentStepVal = <?= (int)$currentStep ?>;
 
-    function applyTrackingUpdate(newStatus) {
+    function applyTrackingUpdate(newStatus, newPaymentStatus) {
+      if (newPaymentStatus === 'completed') {
+        const payEl = document.getElementById('tracking-payment-status');
+        if (payEl) {
+          payEl.innerHTML = '<strong style="color:#10b981;">Đã thanh toán thành công</strong>';
+        }
+      }
       if (!newStatus) return;
       const clean = String(newStatus).toLowerCase();
       if (clean === 'cancelled') {
@@ -302,6 +334,10 @@ require_once ROOT_PATH . '/includes/header.php';
         return;
       }
       const targetStep = stepMap[clean] || 1;
+      if (targetStep >= 2) {
+        const cancelWrap = document.getElementById('tracking-cancel-wrap');
+        if (cancelWrap) cancelWrap.style.display = 'none';
+      }
       if (targetStep === currentStepVal) return;
       currentStepVal = targetStep;
 
@@ -344,7 +380,13 @@ require_once ROOT_PATH . '/includes/header.php';
           const d = e.data.data || e.data;
           const code = String(d.id || d.orderCode || d.orderNo || '').replace(/^#/, '');
           if (code === window.TRACKED_ORDER_CODE) {
-            applyTrackingUpdate(d.status || d.order_status);
+            applyTrackingUpdate(d.status || d.order_status, d.paymentStatus || d.payment_status);
+          }
+        } else if (e.data.type === 'payment:updated') {
+          const d = e.data.data || e.data;
+          const code = String(d.orderCode || d.id || '').replace(/^#/, '');
+          if (code === window.TRACKED_ORDER_CODE) {
+            applyTrackingUpdate(null, d.paymentStatus);
           }
         } else if (e.data.type === 'content:updated' && e.data.collection === 'orders') {
           checkOrderStatus();
@@ -357,7 +399,7 @@ require_once ROOT_PATH . '/includes/header.php';
       if (!d) return;
       const code = String(d.id || d.orderCode || d.orderNo || '').replace(/^#/, '');
       if (code === window.TRACKED_ORDER_CODE) {
-        applyTrackingUpdate(d.status || d.order_status);
+        applyTrackingUpdate(d.status || d.order_status, d.paymentStatus || d.payment_status);
       }
     });
 
@@ -372,7 +414,7 @@ require_once ROOT_PATH . '/includes/header.php';
         const json = await res.json();
         if (json.success && json.data && json.data.trackedOrder) {
           const ord = json.data.trackedOrder;
-          applyTrackingUpdate(ord.order_status);
+          applyTrackingUpdate(ord.order_status, ord.payment_status);
         }
       } catch (e) {}
     }

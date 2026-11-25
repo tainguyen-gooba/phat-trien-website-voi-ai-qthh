@@ -38,7 +38,7 @@ require_once ROOT_PATH . '/includes/header.php';
     <div class="state-box" style="text-align:center; padding:4rem 1rem;">
       <div style="font-size:3.5rem; margin-bottom:1rem;">🛍️</div>
       <h3 class="state-title">Bạn chưa có đơn hàng nào</h3>
-      <p class="state-desc" style="color:var(--text-muted); margin:0.5rem 0 1.5rem;">Hãy khám phá các món ăn thơm ngon và đặt bữa ăn đầu tiên cùng FASTFOOD nhé!</p>
+      <p class="state-desc" style="color:var(--text-muted); margin:0.5rem auto 1.5rem;">Hãy khám phá các món ăn thơm ngon và đặt bữa ăn đầu tiên cùng FASTFOOD nhé!</p>
       <a href="<?= getUrl('foods.php') ?>" class="btn btn-primary btn-lg">Khám Phá Món Ngon Ngay</a>
     </div>
   <?php else: ?>

@@ -1,20 +1,20 @@
--- Migration: Hoàn thiện Hệ thống Voucher Shop & Voucher Sinh Nhật
+v-- Migration: Hoàn thiện Hệ thống Voucher Shop & Voucher Sinh Nhật
 -- Bổ sung trường date_of_birth vào users và tạo các bảng:
 -- vouchers, user_vouchers, voucher_usages, voucher_conditions, birthday_voucher_logs
 
 -- 1. Bổ sung ngày sinh vào bảng users
 ALTER TABLE users 
-ADD COLUMN IF NOT EXISTS date_of_birth DATE NULL AFTER cccd;
+ADD COLUMN date_of_birth DATE NULL;
 
 -- 2. Cập nhật bảng coupons để tương thích hoàn toàn 4 loại voucher
 ALTER TABLE coupons 
 MODIFY COLUMN discount_type VARCHAR(30) NOT NULL DEFAULT 'percentage';
 
 ALTER TABLE coupons 
-ADD COLUMN IF NOT EXISTS voucher_type VARCHAR(30) NOT NULL DEFAULT 'percentage' AFTER discount_type;
+ADD COLUMN voucher_type VARCHAR(30) NOT NULL DEFAULT 'percentage' AFTER discount_type;
 
 ALTER TABLE coupons 
-ADD COLUMN IF NOT EXISTS min_member_tier VARCHAR(20) NOT NULL DEFAULT 'ALL' AFTER max_discount_amount;
+ADD COLUMN min_member_tier VARCHAR(20) NOT NULL DEFAULT 'ALL' AFTER max_discount_amount;
 
 -- 3. Tạo bảng vouchers (Bảng chuyên biệt quản lý Voucher Shop)
 CREATE TABLE IF NOT EXISTS vouchers (

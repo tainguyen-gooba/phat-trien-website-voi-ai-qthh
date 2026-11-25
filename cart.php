@@ -50,7 +50,7 @@ require_once ROOT_PATH . '/includes/header.php';
       <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80" 
            alt="Empty Cart" style="width:110px; height:110px; border-radius:50%; object-fit:cover; margin:0 auto 1.25rem; box-shadow:var(--shadow-md); border:3px solid var(--secondary-color);">
       <h3 class="state-title">Giỏ hàng của bạn đang trống</h3>
-      <p class="state-desc" style="color:var(--text-muted); margin:0.5rem 0 1.5rem;">Hãy khám phá thực đơn thơm ngon và ngập tràn ưu đãi của FASTFOOD ngay bây giờ!</p>
+      <p class="state-desc" style="color:var(--text-muted); margin:0.5rem auto 1.5rem;">Hãy khám phá thực đơn thơm ngon và ngập tràn ưu đãi của FASTFOOD ngay bây giờ!</p>
       <a href="<?= getUrl('foods.php') ?>" class="btn btn-primary btn-lg">Khám Phá Món Ngon</a>
     </div>
   <?php else: ?>
@@ -229,7 +229,7 @@ function updateCartUI(data) {
           <img src="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=160&auto=format&fit=crop&q=80" 
                alt="Empty Cart" style="width:110px; height:110px; border-radius:50%; object-fit:cover; margin:0 auto 1.25rem; box-shadow:var(--shadow-md); border:3px solid var(--secondary-color);">
           <h3 class="state-title">Giỏ hàng của bạn đang trống</h3>
-          <p class="state-desc" style="color:var(--text-muted); margin:0.5rem 0 1.5rem;">Hãy khám phá thực đơn thơm ngon và ngập tràn ưu đãi của FASTFOOD ngay bây giờ!</p>
+          <p class="state-desc" style="color:var(--text-muted); margin:0.5rem auto 1.5rem;">Hãy khám phá thực đơn thơm ngon và ngập tràn ưu đãi của FASTFOOD ngay bây giờ!</p>
           <a href="<?= getUrl('foods.php') ?>" class="btn btn-primary btn-lg">Khám Phá Món Ngon</a>
         </div>
       `;

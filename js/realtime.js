@@ -189,6 +189,7 @@
   // 5. Intelligent Background Polling (Dự phòng đồng bộ với Database MySQL)
   let lastOrderId = 0;
   let lastChatId = 0;
+  let lastUserId = 0;
   let lastOrderUpdate = '';
   let isPolling = false;
 
@@ -204,6 +205,7 @@
         action: 'poll',
         lastOrderId: String(lastOrderId),
         lastChatId: String(lastChatId),
+        lastUserId: String(lastUserId),
         lastOrderUpdate: lastOrderUpdate,
         orderCode: trackedOrder
       });
@@ -233,6 +235,12 @@
           lastChatId = Math.max(lastChatId, d.maxChatId);
         }
 
+        if (lastUserId === 0 && d.maxUserId) {
+          lastUserId = d.maxUserId;
+        } else if (d.maxUserId) {
+          lastUserId = Math.max(lastUserId, d.maxUserId);
+        }
+
         if (d.serverTime) {
           lastOrderUpdate = d.serverTime;
         }
@@ -243,6 +251,13 @@
             const orderPayload = { order: order };
             triggerLocalListeners('order:new', orderPayload);
             if (isAdmin) window.playOrderNotificationSound();
+          });
+        }
+
+        // A1b. Có khách hàng mới đăng ký cho Admin
+        if (Array.isArray(d.newUsers) && d.newUsers.length > 0) {
+          d.newUsers.forEach(user => {
+            triggerLocalListeners('user:new', { user: user });
           });
         }
 

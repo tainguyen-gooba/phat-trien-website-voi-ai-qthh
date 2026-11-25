@@ -12,7 +12,9 @@ function isLoggedIn() {
     if ($isAdminContext) {
         return !empty($_SESSION['admin_user']['id']) || (!empty($_SESSION['user_id']) && ((int)($_SESSION['user_role_id'] ?? 0) === 1 || (int)($_SESSION['user_role_id'] ?? 0) === 5));
     }
-    return !empty($_SESSION['customer_user']['id']) || (!empty($_SESSION['user_id']) && (int)($_SESSION['user_role_id'] ?? 0) !== 1 && (int)($_SESSION['user_role_id'] ?? 0) !== 5);
+    return !empty($_SESSION['customer_user']['id'])
+        || !empty($_SESSION['user_id'])
+        || !empty($GLOBALS['FF_FALLBACK_ADMIN_USER']['id']);
 }
 
 function currentUser() {
@@ -41,7 +43,7 @@ function currentUser() {
     if (!empty($_SESSION['customer_user'])) {
         return $_SESSION['customer_user'];
     }
-    if (!empty($_SESSION['user_id']) && (int)($_SESSION['user_role_id'] ?? 0) !== 1 && (int)($_SESSION['user_role_id'] ?? 0) !== 5) {
+    if (!empty($_SESSION['user_id'])) {
         return [
             'id'        => (int)$_SESSION['user_id'],
             'full_name' => $_SESSION['user_name'] ?? 'Khách hàng',
@@ -53,6 +55,9 @@ function currentUser() {
             'avatar'    => $_SESSION['user_avatar'] ?? '',
             'avatar_url'=> $_SESSION['user_avatar'] ?? '',
         ];
+    }
+    if (!empty($GLOBALS['FF_FALLBACK_ADMIN_USER']['id'])) {
+        return $GLOBALS['FF_FALLBACK_ADMIN_USER'];
     }
     return null;
 }

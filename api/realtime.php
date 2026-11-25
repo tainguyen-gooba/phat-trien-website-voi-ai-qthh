@@ -36,6 +36,7 @@ switch ($action) {
     case 'poll':
         $lastOrderId = (int)($body['lastOrderId'] ?? $_GET['lastOrderId'] ?? 0);
         $lastChatId  = (int)($body['lastChatId'] ?? $_GET['lastChatId'] ?? 0);
+        $lastUserId  = (int)($body['lastUserId'] ?? $_GET['lastUserId'] ?? 0);
         $lastOrderUpdate = trim($body['lastOrderUpdate'] ?? $_GET['lastOrderUpdate'] ?? '');
         $orderCode   = trim($body['orderCode'] ?? $_GET['orderCode'] ?? '');
         $customerId  = (int)($body['customerId'] ?? $_GET['customerId'] ?? ($currentUser['id'] ?? 0));
@@ -167,17 +168,40 @@ switch ($action) {
             }
         }
 
-        // D. Lấy max ID hiện tại
+        // D. Lấy max ID hiện tại & người dùng mới đăng ký cho Admin
         $maxOrderId = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM orders")->fetchColumn();
         $maxChatId  = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM chat_messages")->fetchColumn();
+        $maxUserId  = 0;
+        $newUsers   = [];
+        if ($isAdminUser) {
+            $maxUserId = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM users")->fetchColumn();
+            if ($lastUserId > 0) {
+                $roleMap = [1 => 'Quản trị viên', 2 => 'Khách hàng', 3 => 'Chủ nhà hàng', 4 => 'Tài xế', 5 => 'Nhân viên hỗ trợ'];
+                $uStmt = $db->prepare("SELECT id, full_name, email, phone, role_id, status FROM users WHERE id > ? ORDER BY id ASC LIMIT 50");
+                $uStmt->execute([$lastUserId]);
+                foreach ($uStmt->fetchAll() as $ur) {
+                    $newUsers[] = [
+                        'id'     => (string)$ur['id'],
+                        'name'   => $ur['full_name'],
+                        'email'  => $ur['email'],
+                        'phone'  => $ur['phone'] ?: 'Chưa cập nhật',
+                        'role'   => $roleMap[(int)$ur['role_id']] ?? 'Khách hàng',
+                        'roleId' => (int)$ur['role_id'],
+                        'status' => ($ur['status'] === 'active' || $ur['status'] === 'Đang hoạt động') ? 'Đang hoạt động' : 'Đã khóa'
+                    ];
+                }
+            }
+        }
 
         $pollData = [
             'newOrders'     => $newOrders,
             'updatedOrders' => $updatedOrders,
+            'newUsers'      => $newUsers,
             'newMessages'   => $newMessages,
             'trackedOrder'  => $trackedOrder,
             'maxOrderId'    => $maxOrderId,
             'maxChatId'     => $maxChatId,
+            'maxUserId'     => $maxUserId,
             'serverTime'    => date('Y-m-d H:i:s')
         ];
 
@@ -316,6 +340,62 @@ switch ($action) {
 
         jsonSuccess('Lấy danh sách hội thoại thành công!', [
             'conversations' => $conversations
+        ]);
+        break;
+
+    /**
+     * 5. Khách hàng gửi đánh giá đơn hàng sau khi giao thành công
+     */
+    case 'submit_review':
+        $orderCode = strtoupper(trim($body['orderCode'] ?? $_POST['orderCode'] ?? ''));
+        $rating    = max(1, min(5, (int)($body['rating'] ?? $_POST['rating'] ?? 5)));
+        $comment   = trim($body['comment'] ?? $_POST['comment'] ?? '');
+
+        if (!$orderCode) {
+            jsonError('Thiếu mã đơn hàng để đánh giá.');
+        }
+
+        $ordStmt = $db->prepare("SELECT id, order_code, customer_id, restaurant_id, recipient_name, order_status FROM orders WHERE order_code = ? LIMIT 1");
+        $ordStmt->execute([$orderCode]);
+        $ord = $ordStmt->fetch();
+        if (!$ord) {
+            jsonError('Không tìm thấy đơn hàng #' . $orderCode, 404);
+        }
+
+        $userId = (int)($currentUser['id'] ?? $ord['customer_id'] ?? 0);
+        if ($userId <= 0) {
+            $userId = (int)$db->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
+        }
+        $restaurantId = (int)($ord['restaurant_id'] ?? 1);
+        if ($restaurantId <= 0) {
+            $restaurantId = 1;
+        }
+
+        $existStmt = $db->prepare("SELECT id FROM reviews WHERE order_id = ? LIMIT 1");
+        $existStmt->execute([(int)$ord['id']]);
+        $existingId = $existStmt->fetchColumn();
+
+        if ($existingId) {
+            $upd = $db->prepare("UPDATE reviews SET rating = ?, comment = ?, updated_at = NOW() WHERE id = ?");
+            $upd->execute([$rating, $comment, (int)$existingId]);
+            $reviewId = (int)$existingId;
+        } else {
+            $ins = $db->prepare("INSERT INTO reviews (order_id, user_id, restaurant_id, rating, comment, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+            $ins->execute([(int)$ord['id'], $userId, $restaurantId, $rating, $comment]);
+            $reviewId = (int)$db->lastInsertId();
+        }
+
+        jsonSuccess('Cảm ơn bạn đã đánh giá đơn hàng!', [
+            'review' => [
+                'id'           => $reviewId,
+                'orderCode'    => $ord['order_code'],
+                'customerName' => $currentUser['full_name'] ?? $ord['recipient_name'] ?? 'Khách hàng',
+                'target'       => 'restaurant',
+                'rating'       => $rating,
+                'comment'      => $comment,
+                'submittedAt'  => date('c'),
+                'isNew'        => true
+            ]
         ]);
         break;
 

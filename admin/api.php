@@ -90,7 +90,7 @@ switch ($action) {
 
         // Update orders table with timestamp fields
         if ($orderDbStatus === 'completed') {
-            $upStmt = $db->prepare("UPDATE orders SET order_status = ?, completed_at = IFNULL(completed_at, NOW()), updated_at = NOW() WHERE id = ?");
+            $upStmt = $db->prepare("UPDATE orders SET order_status = ?, payment_status = CASE WHEN LOWER(payment_method) = 'cod' THEN 'completed' ELSE payment_status END, completed_at = IFNULL(completed_at, NOW()), updated_at = NOW() WHERE id = ?");
         } elseif ($orderDbStatus === 'cancelled') {
             $upStmt = $db->prepare("UPDATE orders SET order_status = ?, cancelled_at = IFNULL(cancelled_at, NOW()), cancellation_reason = IFNULL(cancellation_reason, 'Quản trị viên hủy đơn hàng'), updated_at = NOW() WHERE id = ?");
         } else {

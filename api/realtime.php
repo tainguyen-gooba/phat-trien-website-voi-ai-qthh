@@ -343,6 +343,62 @@ switch ($action) {
         ]);
         break;
 
+    /**
+     * 5. Khách hàng gửi đánh giá đơn hàng sau khi giao thành công
+     */
+    case 'submit_review':
+        $orderCode = strtoupper(trim($body['orderCode'] ?? $_POST['orderCode'] ?? ''));
+        $rating    = max(1, min(5, (int)($body['rating'] ?? $_POST['rating'] ?? 5)));
+        $comment   = trim($body['comment'] ?? $_POST['comment'] ?? '');
+
+        if (!$orderCode) {
+            jsonError('Thiếu mã đơn hàng để đánh giá.');
+        }
+
+        $ordStmt = $db->prepare("SELECT id, order_code, customer_id, restaurant_id, recipient_name, order_status FROM orders WHERE order_code = ? LIMIT 1");
+        $ordStmt->execute([$orderCode]);
+        $ord = $ordStmt->fetch();
+        if (!$ord) {
+            jsonError('Không tìm thấy đơn hàng #' . $orderCode, 404);
+        }
+
+        $userId = (int)($currentUser['id'] ?? $ord['customer_id'] ?? 0);
+        if ($userId <= 0) {
+            $userId = (int)$db->query("SELECT id FROM users ORDER BY id ASC LIMIT 1")->fetchColumn();
+        }
+        $restaurantId = (int)($ord['restaurant_id'] ?? 1);
+        if ($restaurantId <= 0) {
+            $restaurantId = 1;
+        }
+
+        $existStmt = $db->prepare("SELECT id FROM reviews WHERE order_id = ? LIMIT 1");
+        $existStmt->execute([(int)$ord['id']]);
+        $existingId = $existStmt->fetchColumn();
+
+        if ($existingId) {
+            $upd = $db->prepare("UPDATE reviews SET rating = ?, comment = ?, updated_at = NOW() WHERE id = ?");
+            $upd->execute([$rating, $comment, (int)$existingId]);
+            $reviewId = (int)$existingId;
+        } else {
+            $ins = $db->prepare("INSERT INTO reviews (order_id, user_id, restaurant_id, rating, comment, created_at, updated_at) VALUES (?, ?, ?, ?, ?, NOW(), NOW())");
+            $ins->execute([(int)$ord['id'], $userId, $restaurantId, $rating, $comment]);
+            $reviewId = (int)$db->lastInsertId();
+        }
+
+        jsonSuccess('Cảm ơn bạn đã đánh giá đơn hàng!', [
+            'review' => [
+                'id'           => $reviewId,
+                'orderCode'    => $ord['order_code'],
+                'customerName' => $currentUser['full_name'] ?? $ord['recipient_name'] ?? 'Khách hàng',
+                'target'       => 'restaurant',
+                'rating'       => $rating,
+                'comment'      => $comment,
+                'submittedAt'  => date('c'),
+                'isNew'        => true
+            ]
+        ]);
+        break;
+
     default:
         jsonError('Hành động không hợp lệ.');
 }

@@ -164,9 +164,9 @@ class TestClient {
       }
     } catch (_) {}
 
-    // Fallback to /admin/login.php
+    // Fallback to /login.php?for=admin
     const formParams = new URLSearchParams({ email, password });
-    const res = await fetch(`${this.baseUrl}/admin/login.php`, {
+    const res = await fetch(`${this.baseUrl}/login.php?for=admin`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: formParams.toString(),
@@ -229,9 +229,9 @@ class TestClient {
     }
 
     if (!res.ok || !json.success) {
-      // Fallback to admin/login.php
+      // Fallback to /login.php?for=admin
       const formParams = new URLSearchParams({ email, password });
-      const webRes = await fetch(`${this.baseUrl}/admin/login.php`, {
+      const webRes = await fetch(`${this.baseUrl}/login.php?for=admin`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: formParams.toString(),

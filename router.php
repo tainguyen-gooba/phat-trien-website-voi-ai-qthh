@@ -22,11 +22,13 @@ $htmlToPhp = [
     '/restaurants.html'       => '/restaurants.php',
     '/pages/profile.html'     => '/profile.php',
     '/profile.html'           => '/profile.php',
-    '/admin/login.html'       => '/login.php',
+    '/admin/login.php'        => '/login.php?for=admin',
+    '/admin/login.html'       => '/login.php?for=admin',
 ];
 
 if (isset($htmlToPhp[$uri])) {
-    header('Location: ' . $htmlToPhp[$uri], true, 301);
+    $status = (strpos($uri, '/admin/login') === 0) ? 302 : 301;
+    header('Location: ' . $htmlToPhp[$uri], true, $status);
     exit;
 }
 

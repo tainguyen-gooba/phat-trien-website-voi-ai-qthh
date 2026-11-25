@@ -23,6 +23,7 @@ $isAdminContext = (
     (!empty($_GET['role']) && $_GET['role'] === 'admin') ||
     (!empty($_POST['role']) && $_POST['role'] === 'admin') ||
     (!empty($_GET['for']) && $_GET['for'] === 'admin') ||
+    (!empty($_POST['for']) && $_POST['for'] === 'admin') ||
     (strcasecmp($reqRole, 'admin') === 0) ||
     // API gọi từ trang Admin
     (strpos($requestUri, '/api/') !== false && strpos($referer, '/admin') !== false)

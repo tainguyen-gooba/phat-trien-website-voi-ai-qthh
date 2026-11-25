@@ -75,10 +75,10 @@ async function runAllTests() {
     }
   }
 
-  // Đăng nhập tài khoản Admin qua /admin/login.php để có session quản trị FF_SESS_ADMIN
+  // Đăng nhập tài khoản Admin qua /login.php?for=admin để có session quản trị FF_SESS_ADMIN
   let adminCookie = '';
   try {
-    const loginRes = await request('/admin/login.php', {
+    const loginRes = await request('/login.php?for=admin', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: 'email=admin%40fastfood.vn&password=123456'

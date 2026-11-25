@@ -89,7 +89,7 @@ function requireLogin() {
 function requireAdmin() {
     if (!isAdmin()) {
         if (!isLoggedIn()) {
-            header('Location: ' . BASE_URL . '/admin/login.php');
+            header('Location: ' . BASE_URL . '/login.php?for=admin');
             exit;
         }
         die('<h1>403 Forbidden</h1><p>Bạn không có quyền quản trị tối cao (Admin) để truy cập trang này.</p>');
@@ -99,7 +99,7 @@ function requireAdmin() {
 function requireAdminOrStaff() {
     if (!isAdminOrStaff()) {
         if (!isLoggedIn()) {
-            header('Location: ' . BASE_URL . '/admin/login.php');
+            header('Location: ' . BASE_URL . '/login.php?for=admin');
             exit;
         }
         die('<h1>403 Forbidden</h1><p>Khu vực này chỉ dành cho Ban Quản Trị và Nhân viên hệ thống.</p>');

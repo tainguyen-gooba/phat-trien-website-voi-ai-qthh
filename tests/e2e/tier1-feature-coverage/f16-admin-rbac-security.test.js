@@ -42,7 +42,7 @@ describe('Tier 1: F16 - Admin Security & Role Authorization', () => {
     const isBlocked = res.status === 401 || 
                       res.status === 403 || 
                       res.status === 302 || 
-                      res.location.includes('admin/login.php') ||
+                      res.location.includes('login.php') ||
                       res.text.includes('403') ||
                       res.text.includes('login');
 
@@ -61,8 +61,8 @@ describe('Tier 1: F16 - Admin Security & Role Authorization', () => {
                         res.status === 302 || 
                         res.text.includes('403') || 
                         res.text.includes('Forbidden') ||
-                        res.text.includes('admin/login.php') ||
-                        res.text.includes('Cổng Quản Trị') ||
+                        res.text.includes('login.php') ||
+                        res.text.includes('Đăng Nhập') ||
                         res.body?.error;
 
     assert.ok(isForbidden, `Customer must be blocked from save_loyalty_config, got status: ${res.status}`);

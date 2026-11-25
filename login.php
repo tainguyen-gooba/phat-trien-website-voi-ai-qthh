@@ -17,6 +17,7 @@ if (isLoggedIn() && empty($_POST) && !isset($_GET['switch'])) {
 $error = '';
 $redirect = trim($_GET['redirect'] ?? $_POST['redirect'] ?? '');
 $activeTab = trim($_GET['tab'] ?? $_POST['tab'] ?? '');
+$forAdmin = (($_GET['for'] ?? $_POST['for'] ?? '') === 'admin');
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email    = strtolower(trim($_POST['email'] ?? ''));
@@ -46,14 +47,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($valid) {
             $isAdminRole = ((int)$user['role_id'] === 1 || (int)$user['role_id'] === 5);
+            $targetSessName = $isAdminRole ? 'FF_SESS_ADMIN' : 'FASTFOOD_SESSID';
+
+            if (session_status() === PHP_SESSION_ACTIVE && session_name() !== $targetSessName) {
+                session_write_close();
+                if (!headers_sent()) {
+                    session_name($targetSessName);
+                    if (!empty($_COOKIE[$targetSessName]) && preg_match('/^[a-zA-Z0-9,-]{16,128}$/', $_COOKIE[$targetSessName])) {
+                        session_id($_COOKIE[$targetSessName]);
+                    } else {
+                        session_id(session_create_id());
+                    }
+                    session_start();
+                }
+            }
 
             if ($isAdminRole) {
-                // Luôn lưu Admin vào phiên làm việc Quản trị
+                // Luôn lưu Admin vào phiên làm việc Quản trị (FF_SESS_ADMIN)
                 setUserSession($user, 'admin');
-                header('Location: ' . BASE_URL . '/admin/index.php');
+                if ($redirect && strpos($redirect, 'admin') !== false && strpos($redirect, 'login') === false) {
+                    header('Location: ' . $redirect);
+                } else {
+                    header('Location: ' . BASE_URL . '/admin/index.php');
+                }
                 exit;
             } else {
-                // Khách hàng lưu vào phiên làm việc Khách hàng
+                // Khách hàng lưu vào phiên làm việc Khách hàng (FASTFOOD_SESSID)
                 setUserSession($user, 'customer');
 
                 // Đảm bảo không hiển thị popup chào mừng voucher khi đăng nhập
@@ -108,7 +127,9 @@ require_once ROOT_PATH . '/includes/header.php';
     <div class="auth-head">
       <h1 class="auth-head-title">Đăng Nhập Tài Khoản</h1>
       <p class="auth-head-desc">
-        Chào mừng bạn trở lại! Đăng nhập để khám phá hàng trăm món ăn hấp dẫn cùng ưu đãi độc quyền.
+        <?= $forAdmin
+            ? 'Đăng nhập bằng tài khoản Quản trị viên hoặc Nhân viên để truy cập Bảng Điều Khiển.'
+            : 'Chào mừng bạn trở lại! Đăng nhập để khám phá hàng trăm món ăn hấp dẫn cùng ưu đãi độc quyền.' ?>
       </p>
     </div>
 
@@ -119,7 +140,10 @@ require_once ROOT_PATH . '/includes/header.php';
       </div>
     <?php endif; ?>
 
-    <form action="<?= getUrl('login.php') ?>" method="POST" id="main-login-form">
+    <form action="<?= getUrl('login.php' . ($forAdmin ? '?for=admin' : '')) ?>" method="POST" id="main-login-form">
+      <?php if ($forAdmin): ?>
+        <input type="hidden" name="for" value="admin">
+      <?php endif; ?>
       <?php if ($redirect): ?>
         <input type="hidden" name="redirect" value="<?= escapeHtml($redirect) ?>">
       <?php endif; ?>

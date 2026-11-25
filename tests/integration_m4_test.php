@@ -148,7 +148,7 @@ echo "--- 1. Testing RBAC Security & Role Authorization (F16) ---\n";
 // 1.1 Unauthenticated guest requesting get_loyalty_members
 $guestRes = makeHttpRequest("{$baseUrl}/admin/api.php?action=get_loyalty_members");
 assertTest(
-    $guestRes['status'] === 401 || $guestRes['status'] === 403 || $guestRes['status'] === 302 || strpos($guestRes['headers'], 'admin/login.php') !== false,
+    $guestRes['status'] === 401 || $guestRes['status'] === 403 || $guestRes['status'] === 302 || strpos($guestRes['headers'], 'login.php') !== false,
     "Guest is blocked from admin/api.php (HTTP {$guestRes['status']})"
 );
 
@@ -163,7 +163,7 @@ $custUserId = (int)$db->lastInsertId();
 $custCookies = loginUser($custEmail, '123456');
 $custReq = makeHttpRequest("{$baseUrl}/admin/api.php?action=get_loyalty_members", 'GET', null, $custCookies);
 assertTest(
-    $custReq['status'] === 403 || $custReq['status'] === 401 || $custReq['status'] === 302 || strpos($custReq['body'], '403') !== false || strpos($custReq['body'], 'Forbidden') !== false || strpos($custReq['headers'], 'admin/login.php') !== false,
+    $custReq['status'] === 403 || $custReq['status'] === 401 || $custReq['status'] === 302 || strpos($custReq['body'], '403') !== false || strpos($custReq['body'], 'Forbidden') !== false || strpos($custReq['headers'], 'login.php') !== false,
     "Customer (role 2) is blocked from admin/api.php (HTTP {$custReq['status']})"
 );
 

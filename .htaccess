@@ -1,6 +1,10 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
 
+    # Điều hướng trang đăng nhập admin cũ sang login.php chung (giữ đúng base path)
+    RewriteCond %{REQUEST_URI} ^(.*)/admin/login\.php$ [NC]
+    RewriteRule ^admin/login\.php$ %1/login.php?for=admin [R=302,L,QSA]
+
     # Chuyển tiếp API v1 sang backend/index.php
     RewriteRule ^api/v1(?:/.*)?$ backend/index.php [QSA,L]
 </IfModule>

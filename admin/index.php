@@ -8441,6 +8441,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           }
           handleOrderUpdate(update);
         });
+        liveSocket.on('user:new', ({ user } = {}) => {
+          handleNewUser(user);
+        });
         liveSocket.on('payment:updated', (update) => {
           if (!dashboardReady) {
             pendingPaymentEvents.push(update);
@@ -9082,6 +9085,36 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           orderCode: orderId,
           createdAt: order.createdAt || new Date().toISOString(),
         });
+      }
+
+      function handleNewUser(user) {
+        if (!user || !user.id) return;
+        const uid = String(user.id);
+        const exists = data.users.some((u) => String(u.id) === uid);
+        if (!exists) {
+          data.users.push({
+            id: uid,
+            name: user.name || user.full_name || 'Khách hàng',
+            email: user.email || '',
+            phone: user.phone || 'Chưa cập nhật',
+            role: user.role || 'Khách hàng',
+            roleId: Number(user.roleId || 2),
+            status: user.status || 'Đang hoạt động'
+          });
+          saveRealtimeSnapshot();
+          renderAll();
+          if (typeof membershipLoaded !== 'undefined' && membershipLoaded && typeof loadMembershipMembers === 'function') {
+            loadMembershipMembers();
+          }
+          showToast(`Khách hàng mới đăng ký: ${user.name || user.email}`);
+          handleIncomingNotification({
+            id: `user_${uid}_${Date.now()}`,
+            title: 'Khách hàng mới đăng ký',
+            content: `${user.name || 'Khách hàng'} (${user.email || ''}) vừa tạo tài khoản mới.`,
+            type: 'user',
+            createdAt: new Date().toISOString()
+          });
+        }
       }
 
       function handleOrderUpdate(update) {

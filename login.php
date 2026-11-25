@@ -65,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($isAdminRole) {
                 // Luôn lưu Admin vào phiên làm việc Quản trị (FF_SESS_ADMIN)
                 setUserSession($user, 'admin');
-                if ($redirect && strpos($redirect, 'admin') !== false && strpos($redirect, 'login') === false) {
+                if ($redirect && strpos($redirect, 'login') === false) {
                     header('Location: ' . $redirect);
                 } else {
                     header('Location: ' . BASE_URL . '/admin/index.php');

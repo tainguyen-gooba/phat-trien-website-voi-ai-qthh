@@ -88,6 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 unset($_SESSION['welcome_popup_data']);
                 unset($_SESSION['welcome_discount_applied']);
 
+                // Đánh dấu phát sự kiện realtime user:new sang Admin sau khi chuyển trang
+                $_SESSION['new_user_broadcast'] = [
+                    'id'     => (string)$newUserId,
+                    'name'   => $fullName,
+                    'email'  => $email,
+                    'phone'  => $phone ?: 'Chưa cập nhật',
+                    'role'   => 'Khách hàng',
+                    'roleId' => 2,
+                    'status' => 'Đang hoạt động'
+                ];
+
                 header('Location: ' . getUrl('index.php'));
                 exit;
             }

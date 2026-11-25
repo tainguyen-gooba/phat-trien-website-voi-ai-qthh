@@ -36,6 +36,7 @@ switch ($action) {
     case 'poll':
         $lastOrderId = (int)($body['lastOrderId'] ?? $_GET['lastOrderId'] ?? 0);
         $lastChatId  = (int)($body['lastChatId'] ?? $_GET['lastChatId'] ?? 0);
+        $lastUserId  = (int)($body['lastUserId'] ?? $_GET['lastUserId'] ?? 0);
         $lastOrderUpdate = trim($body['lastOrderUpdate'] ?? $_GET['lastOrderUpdate'] ?? '');
         $orderCode   = trim($body['orderCode'] ?? $_GET['orderCode'] ?? '');
         $customerId  = (int)($body['customerId'] ?? $_GET['customerId'] ?? ($currentUser['id'] ?? 0));
@@ -167,17 +168,40 @@ switch ($action) {
             }
         }
 
-        // D. Lấy max ID hiện tại
+        // D. Lấy max ID hiện tại & người dùng mới đăng ký cho Admin
         $maxOrderId = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM orders")->fetchColumn();
         $maxChatId  = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM chat_messages")->fetchColumn();
+        $maxUserId  = 0;
+        $newUsers   = [];
+        if ($isAdminUser) {
+            $maxUserId = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM users")->fetchColumn();
+            if ($lastUserId > 0) {
+                $roleMap = [1 => 'Quản trị viên', 2 => 'Khách hàng', 3 => 'Chủ nhà hàng', 4 => 'Tài xế', 5 => 'Nhân viên hỗ trợ'];
+                $uStmt = $db->prepare("SELECT id, full_name, email, phone, role_id, status FROM users WHERE id > ? ORDER BY id ASC LIMIT 50");
+                $uStmt->execute([$lastUserId]);
+                foreach ($uStmt->fetchAll() as $ur) {
+                    $newUsers[] = [
+                        'id'     => (string)$ur['id'],
+                        'name'   => $ur['full_name'],
+                        'email'  => $ur['email'],
+                        'phone'  => $ur['phone'] ?: 'Chưa cập nhật',
+                        'role'   => $roleMap[(int)$ur['role_id']] ?? 'Khách hàng',
+                        'roleId' => (int)$ur['role_id'],
+                        'status' => ($ur['status'] === 'active' || $ur['status'] === 'Đang hoạt động') ? 'Đang hoạt động' : 'Đã khóa'
+                    ];
+                }
+            }
+        }
 
         $pollData = [
             'newOrders'     => $newOrders,
             'updatedOrders' => $updatedOrders,
+            'newUsers'      => $newUsers,
             'newMessages'   => $newMessages,
             'trackedOrder'  => $trackedOrder,
             'maxOrderId'    => $maxOrderId,
             'maxChatId'     => $maxChatId,
+            'maxUserId'     => $maxUserId,
             'serverTime'    => date('Y-m-d H:i:s')
         ];
 

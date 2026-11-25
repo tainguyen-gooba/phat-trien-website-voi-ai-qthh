@@ -36,11 +36,19 @@ switch ($action) {
     case 'poll':
         $lastOrderId = (int)($body['lastOrderId'] ?? $_GET['lastOrderId'] ?? 0);
         $lastChatId  = (int)($body['lastChatId'] ?? $_GET['lastChatId'] ?? 0);
+        $lastOrderUpdate = trim($body['lastOrderUpdate'] ?? $_GET['lastOrderUpdate'] ?? '');
         $orderCode   = trim($body['orderCode'] ?? $_GET['orderCode'] ?? '');
         $customerId  = (int)($body['customerId'] ?? $_GET['customerId'] ?? ($currentUser['id'] ?? 0));
 
-        // A. Lấy đơn hàng mới cho Admin/Staff
+        $normalizeOrderStatus = function ($st) {
+            $s = strtolower(trim((string)$st));
+            if ($s === 'completed') return 'delivered';
+            return $s ?: 'pending';
+        };
+
+        // A. Lấy đơn hàng mới & đơn hàng vừa cập nhật cho Admin/Staff
         $newOrders = [];
+        $updatedOrders = [];
         $trackedOrder = null;
         if ($isAdminUser) {
             if ($lastOrderId > 0) {
@@ -70,7 +78,7 @@ switch ($action) {
                                 'address' => $r['delivery_address']
                             ],
                             'total'         => (float)$r['total_amount'],
-                            'status'        => $r['order_status'],
+                            'status'        => $normalizeOrderStatus($r['order_status']),
                             'paymentMethod' => $r['p_method'] ?: $r['payment_method'],
                             'paymentStatus' => $r['p_status'] ?: $r['payment_status'],
                             'createdAt'     => $r['created_at']
@@ -78,14 +86,53 @@ switch ($action) {
                     }
                 }
             }
+
+            if ($lastOrderUpdate !== '') {
+                $upStmt = $db->prepare("SELECT o.order_code, o.order_status, COALESCE(p.status, o.payment_status) AS p_status, o.updated_at
+                                        FROM orders o
+                                        LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+                                        WHERE o.updated_at > ?
+                                        ORDER BY o.updated_at DESC LIMIT 50");
+                $upStmt->execute([$lastOrderUpdate]);
+                foreach ($upStmt->fetchAll() as $ur) {
+                    $updatedOrders[] = [
+                        'orderCode'     => $ur['order_code'],
+                        'order_status'  => $normalizeOrderStatus($ur['order_status']),
+                        'status'        => $normalizeOrderStatus($ur['order_status']),
+                        'paymentStatus' => $ur['p_status'],
+                        'updatedAt'     => $ur['updated_at'],
+                    ];
+                }
+            }
+        } elseif ($customerId > 0 && $lastOrderUpdate !== '') {
+            $upStmt = $db->prepare("SELECT o.order_code, o.order_status, COALESCE(p.status, o.payment_status) AS p_status, o.updated_at
+                                    FROM orders o
+                                    LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+                                    WHERE o.customer_id = ? AND o.updated_at > ?
+                                    ORDER BY o.updated_at DESC LIMIT 30");
+            $upStmt->execute([$customerId, $lastOrderUpdate]);
+            foreach ($upStmt->fetchAll() as $ur) {
+                $updatedOrders[] = [
+                    'orderCode'     => $ur['order_code'],
+                    'order_status'  => $normalizeOrderStatus($ur['order_status']),
+                    'status'        => $normalizeOrderStatus($ur['order_status']),
+                    'paymentStatus' => $ur['p_status'],
+                    'updatedAt'     => $ur['updated_at'],
+                ];
+            }
         }
 
         // B. Nếu đang theo dõi 1 đơn cụ thể (Khách hàng ở order-tracking.php)
         if ($orderCode) {
-            $stmt = $db->prepare("SELECT order_code, COALESCE(NULLIF(order_status, ''), 'pending') AS order_status, payment_status, total_amount, updated_at 
-                                  FROM orders WHERE order_code = ? LIMIT 1");
+            $stmt = $db->prepare("SELECT o.order_code, COALESCE(NULLIF(o.order_status, ''), 'pending') AS order_status, COALESCE(p.status, o.payment_status) AS payment_status, o.total_amount, o.updated_at 
+                                  FROM orders o
+                                  LEFT JOIN realtime_payments p ON p.order_code = o.order_code
+                                  WHERE o.order_code = ? LIMIT 1");
             $stmt->execute([$orderCode]);
             $trackedOrder = $stmt->fetch();
+            if ($trackedOrder) {
+                $trackedOrder['order_status'] = $normalizeOrderStatus($trackedOrder['order_status']);
+            }
         }
 
         // C. Lấy tin nhắn chat mới
@@ -125,12 +172,13 @@ switch ($action) {
         $maxChatId  = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM chat_messages")->fetchColumn();
 
         $pollData = [
-            'newOrders'    => $newOrders,
-            'newMessages'  => $newMessages,
-            'trackedOrder' => $trackedOrder,
-            'maxOrderId'   => $maxOrderId,
-            'maxChatId'    => $maxChatId,
-            'serverTime'   => date('Y-m-d H:i:s')
+            'newOrders'     => $newOrders,
+            'updatedOrders' => $updatedOrders,
+            'newMessages'   => $newMessages,
+            'trackedOrder'  => $trackedOrder,
+            'maxOrderId'    => $maxOrderId,
+            'maxChatId'     => $maxChatId,
+            'serverTime'    => date('Y-m-d H:i:s')
         ];
 
         if ($isAdminUser) {

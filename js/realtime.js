@@ -160,11 +160,25 @@
         }
       }
 
-      // Nếu nội dung website/bestseller được cập nhật từ Admin -> tự động đồng bộ trang chủ
+      // Nếu nội dung website/bestseller/thực đơn/voucher được cập nhật từ Admin -> tự động đồng bộ các tab khách hàng
       if (eventName === 'content:updated') {
         const isAdmin = window.location.pathname.includes('/admin') || window.location.pathname.includes('dashboard');
-        if (!isAdmin && (window.location.pathname.endsWith('index.php') || window.location.pathname === '/' || window.location.pathname === '')) {
-          setTimeout(() => window.location.reload(), 300);
+        if (!isAdmin) {
+          const col = String(payload.collection || eventData?.collection || '').toLowerCase();
+          const path = window.location.pathname;
+          const isHome = path.endsWith('index.php') || path === '/' || path === '';
+          const isFoods = path.includes('foods.php') || path.includes('food-detail.php');
+          const isVouchers = path.includes('vouchers.php');
+          const isProfile = path.includes('profile.php');
+          if (
+            col === 'footer_settings' ||
+            (isHome && (!col || ['bestseller', 'banners', 'products', 'categories', 'footer_settings'].includes(col))) ||
+            (isFoods && ['products', 'categories'].includes(col)) ||
+            (isVouchers && col === 'vouchers') ||
+            (isProfile && ['loyalty', 'vouchers'].includes(col))
+          ) {
+            setTimeout(() => window.location.reload(), 350);
+          }
         }
       }
 
@@ -175,6 +189,7 @@
   // 5. Intelligent Background Polling (Dự phòng đồng bộ với Database MySQL)
   let lastOrderId = 0;
   let lastChatId = 0;
+  let lastOrderUpdate = '';
   let isPolling = false;
 
   async function pollServer() {
@@ -189,6 +204,7 @@
         action: 'poll',
         lastOrderId: String(lastOrderId),
         lastChatId: String(lastChatId),
+        lastOrderUpdate: lastOrderUpdate,
         orderCode: trackedOrder
       });
 
@@ -217,12 +233,29 @@
           lastChatId = Math.max(lastChatId, d.maxChatId);
         }
 
+        if (d.serverTime) {
+          lastOrderUpdate = d.serverTime;
+        }
+
         // A. Có đơn hàng mới cho Admin
         if (Array.isArray(d.newOrders) && d.newOrders.length > 0) {
           d.newOrders.forEach(order => {
             const orderPayload = { order: order };
             triggerLocalListeners('order:new', orderPayload);
             if (isAdmin) window.playOrderNotificationSound();
+          });
+        }
+
+        // A2. Đơn hàng vừa thay đổi trạng thái / thanh toán (Cross-browser polling)
+        if (Array.isArray(d.updatedOrders) && d.updatedOrders.length > 0) {
+          d.updatedOrders.forEach(upd => {
+            triggerLocalListeners('order:updated', upd);
+            if (upd.paymentStatus === 'completed') {
+              triggerLocalListeners('payment:updated', {
+                orderCode: upd.orderCode,
+                paymentStatus: 'completed'
+              });
+            }
           });
         }
 

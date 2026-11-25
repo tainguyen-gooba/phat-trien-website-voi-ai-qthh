@@ -8912,16 +8912,36 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       function handleOrderUpdate(update) {
-        if (!update?.orderCode || !update.displayStatus) return;
-        const record = data.orders.find((item) => String(item.id).replace(/^#/, '') === String(update.orderCode));
-        if (!record || record.status === update.displayStatus) return;
-        record.status = update.displayStatus;
-        record.statusText = update.displayStatus;
+        const code = String(update?.orderCode || update?.id || '').replace(/^#/, '');
+        if (!code) return;
+        const rawMap = {
+          pending: 'Chờ xác nhận',
+          awaiting_payment: 'Chờ thanh toán',
+          preparing: 'Đang chuẩn bị',
+          delivering: 'Đang giao',
+          delivered: 'Đã giao',
+          completed: 'Đã giao',
+          cancelled: 'Đã hủy'
+        };
+        const raw = String(update.status || update.order_status || '').toLowerCase();
+        const displayStatus = update.displayStatus || rawMap[raw] || update.status || '';
+        if (!displayStatus) return;
+
+        const record = data.orders.find((item) => String(item.id).replace(/^#/, '') === code);
+        if (!record) {
+          refreshOrders();
+          return;
+        }
+        if (record.status === displayStatus && (!update.paymentStatus || record.paymentStatus === update.paymentStatus)) return;
+        record.status = displayStatus;
+        record.statusText = displayStatus;
+        if (update.paymentStatus === 'completed') {
+          record.paymentStatus = 'completed';
+          record.paymentLabel = 'Đã thanh toán';
+        }
         saveRealtimeSnapshot();
         renderAll();
-        if (update.displayStatus !== 'Đã hủy') {
-          showToast(`Đơn ${update.orderCode} đã cập nhật: ${update.displayStatus}.`);
-        }
+        showToast(`Đơn #${code} đã cập nhật: ${displayStatus}.`);
       }
 
       function handlePaymentUpdate(update) {
@@ -10855,6 +10875,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           const result = await res.json();
           if (result.success) {
             showToast('✅ Đã lưu cấu hình Banner & Tốc độ chuyển ảnh 1-2s thành công!');
+            try {
+              new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'banners' });
+            } catch (e) {}
           } else {
             showToast(result.message || 'Lỗi khi lưu banners.', true);
           }
@@ -11172,6 +11195,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
           if (result.success) {
             showToast('✅ Đã lưu cấu hình Hạng & Điểm thưởng thành công!');
+            try {
+              new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'loyalty' });
+            } catch (e) {}
             if (alertBanner) {
               alertBanner.className = 'loyalty-alert-banner success';
               alertBanner.innerHTML = '<span>✅</span> <strong>Thành công!</strong> Cấu hình đã được lưu vào hệ thống và áp dụng ngay lập tức.';
@@ -11591,6 +11617,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             closeVoucherAdminModal();
             showToast(result.message || 'Lưu voucher thành công!');
             loadAdminVouchers();
+            try { new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'vouchers' }); } catch (e) {}
           } else {
             alert(result.message || 'Lưu voucher thất bại.');
           }
@@ -11613,6 +11640,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (result.success) {
             showToast(result.message);
             loadAdminVouchers();
+            try { new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'vouchers' }); } catch (e) {}
           } else {
             alert(result.message || 'Không thể đổi trạng thái.');
           }
@@ -11634,6 +11662,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (result.success) {
             showToast(result.message);
             loadAdminVouchers();
+            try { new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'vouchers' }); } catch (e) {}
           } else {
             alert(result.message || 'Không thể xóa voucher.');
           }

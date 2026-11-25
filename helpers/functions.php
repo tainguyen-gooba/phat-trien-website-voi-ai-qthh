@@ -84,7 +84,7 @@ function renderProductCard($p) {
     <div class="product-card" data-product-id="<?= $id ?>" data-category-id="<?= (int)($p['category_id'] ?? 0) ?>" data-category="<?= escapeHtml($category) ?>">
       <div class="product-thumb-wrap">
         <a href="<?= $detailUrl ?>" style="display:block; width:100%; height:100%;">
-          <img src="<?= $imgUrl ?>" alt="<?= escapeHtml($name) ?>" class="product-thumb" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/images/foods/banh-mi-chao.jpg';">
+          <img src="<?= $imgUrl ?>" alt="<?= escapeHtml($name) ?>" class="product-thumb" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='<?= getAssetUrl('assets/images/foods/banh-mi-chao.jpg') ?>';">
         </a>
         <?php if ($hasDiscount): ?>
           <span class="product-tag-discount">-<?= $discountPct ?>%</span>

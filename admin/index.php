@@ -48,7 +48,7 @@ $products = array_map(function($p) {
         'categoryId' => (int)$p['category_id'],
         'restaurant' => $p['restaurant'] ?: 'FASTFOOD Kitchen',
         'address' => $p['address'] ?: 'Buôn Ma Thuột',
-        'image' => $p['image'] ?: '',
+        'image' => $p['image'] ? getFoodImageUrl($p['image']) : '',
         'price' => (int)$p['price'],
         'status' => $p['is_available'] ? 'Đang bán' : 'Tạm hết',
         'options' => $opts,
@@ -9424,7 +9424,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               if (column.key === 'price' || column.key === 'total') return `<td>${escapeHtml(money(value))}</td>`;
               if (column.key === 'image' && value) {
                 const imageUrl = String(value).trim();
-                const safeImageUrl = /^https?:\/\/\S+$/i.test(imageUrl) || /^\/assets\/uploads\/[a-zA-Z0-9._-]+$/.test(imageUrl);
+                const safeImageUrl = /^https?:\/\/\S+$/i.test(imageUrl) || /^\/(fastfood\/)?assets\/\S+$/i.test(imageUrl) || /^\/assets\/uploads\/[a-zA-Z0-9._-]+$/i.test(imageUrl);
                 return `<td>${safeImageUrl ? `<a class="product-image-cell" href="${escapeHtml(imageUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(imageUrl)}" alt="" loading="lazy"><span>${escapeHtml(imageUrl)}</span></a>` : escapeHtml(imageUrl)}</td>`;
               }
               if (column.key === 'url' && value) {

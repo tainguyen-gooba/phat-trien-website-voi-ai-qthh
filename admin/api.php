@@ -159,10 +159,22 @@ switch ($action) {
                 $stmt = $db->prepare("UPDATE products SET name = ?, base_price = ?, discount_price = ?, category_id = ?, image_url = ?, is_available = ?, updated_at = NOW() WHERE id = ?");
                 $stmt->execute([$name, $basePrice, $discountPrice, $categoryId, $imageUrl, $isAvailable, $id]);
             }
+            if (!empty($imageUrl)) {
+                $hasPi = $db->query("SELECT id FROM product_images WHERE product_id = $id AND is_primary = 1 LIMIT 1")->fetchColumn();
+                if ($hasPi) {
+                    $db->prepare("UPDATE product_images SET image_url = ? WHERE product_id = ? AND is_primary = 1")->execute([$imageUrl, $id]);
+                } else {
+                    $db->prepare("INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, 1)")->execute([$id, $imageUrl]);
+                }
+            }
             jsonSuccess('Cập nhật món ăn và biến thể tùy chọn thành công!');
         } else {
             $stmt = $db->prepare("INSERT INTO products (name, slug, restaurant_id, category_id, base_price, discount_price, image_url, is_available, options, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
             $stmt->execute([$name, $slug, $restaurantId, $categoryId, $basePrice, $discountPrice, $imageUrl, $isAvailable, $optionsJson]);
+            $newId = (int)$db->lastInsertId();
+            if ($newId > 0 && !empty($imageUrl)) {
+                $db->prepare("INSERT INTO product_images (product_id, image_url, is_primary) VALUES (?, ?, 1)")->execute([$newId, $imageUrl]);
+            }
             jsonSuccess('Thêm món ăn mới kèm biến thể thành công!');
         }
         break;

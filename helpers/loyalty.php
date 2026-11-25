@@ -39,8 +39,10 @@ function getVoucherPackages(): array {
         1 => [
             'id'              => 1,
             'name'            => 'Voucher FASTFOOD 10.000đ',
+            'package_name'    => 'Voucher FASTFOOD 10.000đ',
             'points_cost'     => 100,
             'discount_amount' => 10000.0,
+            'voucher_value'   => 10000.0,
             'min_order_value' => 50000.0,
             'prefix'          => 'FF10K',
             'badge'           => '10K',
@@ -49,8 +51,10 @@ function getVoucherPackages(): array {
         2 => [
             'id'              => 2,
             'name'            => 'Voucher FASTFOOD 20.000đ',
+            'package_name'    => 'Voucher FASTFOOD 20.000đ',
             'points_cost'     => 200,
             'discount_amount' => 20000.0,
+            'voucher_value'   => 20000.0,
             'min_order_value' => 80000.0,
             'prefix'          => 'FF20K',
             'badge'           => '20K',
@@ -59,8 +63,10 @@ function getVoucherPackages(): array {
         3 => [
             'id'              => 3,
             'name'            => 'Voucher FASTFOOD 50.000đ',
+            'package_name'    => 'Voucher FASTFOOD 50.000đ',
             'points_cost'     => 500,
             'discount_amount' => 50000.0,
+            'voucher_value'   => 50000.0,
             'min_order_value' => 150000.0,
             'prefix'          => 'FF50K',
             'badge'           => '50K',

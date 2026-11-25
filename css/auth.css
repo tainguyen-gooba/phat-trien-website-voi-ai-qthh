@@ -799,3 +799,205 @@
   pointer-events: none;
   z-index: 1;
 }
+
+/* ===================================================================
+   FORGOT PASSWORD & OTP RESET EXTENSIONS (MODERN ORANGE - WHITE)
+   =================================================================== */
+.fp-stepper-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+}
+
+.fp-step-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  z-index: 2;
+}
+
+.fp-step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  border: 2px solid #cbd5e1;
+  color: #64748b;
+  font-size: 0.82rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.25s ease;
+}
+
+.fp-step-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #94a3b8;
+  white-space: nowrap;
+}
+
+.fp-step-item.active .fp-step-circle {
+  background: linear-gradient(135deg, #f97316, #ea580c);
+  border-color: #ea580c;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
+}
+.fp-step-item.active .fp-step-label {
+  color: #ea580c;
+}
+
+.fp-step-item.completed .fp-step-circle {
+  background: #dcfce7;
+  border-color: #16a34a;
+  color: #16a34a;
+}
+.fp-step-item.completed .fp-step-label {
+  color: #16a34a;
+}
+
+.fp-step-line {
+  flex: 1;
+  height: 2px;
+  background: #e2e8f0;
+  margin: 0 8px -18px;
+  transition: background 0.25s ease;
+}
+.fp-step-line.active {
+  background: #16a34a;
+}
+
+/* 6-digit OTP Input */
+.fp-otp-input {
+  width: 100%;
+  max-width: 260px;
+  height: 52px;
+  text-align: center;
+  font-size: 1.8rem;
+  font-weight: 900;
+  letter-spacing: 12px;
+  padding-left: 12px;
+  background: #f8fafc;
+  border: 2px solid #fed7aa;
+  border-radius: 14px;
+  color: #ea580c;
+  font-family: monospace, sans-serif;
+  transition: all 0.2s ease;
+  outline: none;
+}
+.fp-otp-input:focus {
+  background: #ffffff;
+  border-color: #ea580c;
+  box-shadow: 0 0 0 4px rgba(234, 88, 12, 0.14);
+}
+
+/* Demo Simulation Box */
+.fp-demo-box {
+  background: #fff7ed;
+  border: 1.5px dashed #fed7aa;
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-top: 1rem;
+}
+.fp-demo-badge {
+  font-size: 0.72rem;
+  font-weight: 850;
+  color: #9a3412;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.fp-demo-body {
+  font-size: 0.85rem;
+  color: #334155;
+}
+.fp-demo-code {
+  color: #ea580c;
+  font-size: 1.1rem;
+  letter-spacing: 2px;
+}
+.fp-demo-btn {
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #c2410c;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+}
+.fp-demo-btn:hover {
+  background: #ea580c;
+  color: #ffffff;
+  border-color: #ea580c;
+}
+
+/* Timer row */
+.fp-timer-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 10px;
+  font-size: 0.82rem;
+  color: #64748b;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.fp-resend-link {
+  background: none;
+  border: none;
+  color: #ea580c;
+  font-weight: 750;
+  font-size: 0.82rem;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.fp-resend-link:hover {
+  color: #c2410c;
+}
+
+/* Password Strength Meter */
+.fp-strength-wrap {
+  margin-top: 8px;
+}
+.fp-strength-bar {
+  width: 100%;
+  height: 4px;
+  background: #e2e8f0;
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+.fp-strength-fill {
+  width: 0%;
+  height: 100%;
+  transition: width 0.3s ease, background 0.3s ease;
+}
+.fp-strength-label {
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+/* Success Card */
+.fp-success-card {
+  text-align: center;
+  padding: 1.5rem 0.5rem 0.5rem;
+}
+.fp-success-icon-wrap {
+  width: 74px;
+  height: 74px;
+  border-radius: 50%;
+  background: #dcfce7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 4px solid #bbf7d0;
+}

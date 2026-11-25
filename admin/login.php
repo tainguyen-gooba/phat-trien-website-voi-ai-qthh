@@ -220,8 +220,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </button>
     </form>
 
-    <div class="login-footer">
-      <a href="<?= BASE_URL ?>/index.php">← Quay lại trang chủ Khách Hàng</a>
+    <div class="login-footer" style="display:flex; flex-direction:column; gap:8px;">
+      <div><a href="<?= BASE_URL ?>/forgot-password.php">Quên mật khẩu quản trị? Khôi phục tại đây →</a></div>
+      <div><a href="<?= BASE_URL ?>/index.php" style="color:var(--text-muted);">← Quay lại trang chủ Khách Hàng</a></div>
     </div>
   </div>
 

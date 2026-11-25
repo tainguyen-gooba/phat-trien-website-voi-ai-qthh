@@ -396,10 +396,10 @@ require_once ROOT_PATH . '/includes/header.php';
 
             <div class="loyalty-pkg-body">
               <div class="loyalty-pkg-value">
-                <?= number_format($pkg['voucher_value'], 0, ',', '.') ?>đ
+                <?= number_format((float)($pkg['discount_amount'] ?? $pkg['voucher_value'] ?? 0), 0, ',', '.') ?>đ
               </div>
-              <h4 class="loyalty-pkg-name"><?= escapeHtml($pkg['package_name']) ?></h4>
-              <p class="loyalty-pkg-desc"><?= escapeHtml($pkg['description']) ?></p>
+              <h4 class="loyalty-pkg-name"><?= escapeHtml($pkg['name'] ?? $pkg['package_name'] ?? 'Voucher') ?></h4>
+              <p class="loyalty-pkg-desc"><?= escapeHtml($pkg['description'] ?? '') ?></p>
             </div>
 
             <div class="loyalty-pkg-footer">
@@ -411,7 +411,7 @@ require_once ROOT_PATH . '/includes/header.php';
                 <button type="button" class="btn btn-primary js-exchange-voucher-btn" 
                         data-pkg-id="<?= (int)$pkg['id'] ?>" 
                         data-cost="<?= (int)$pkg['points_cost'] ?>"
-                        data-name="<?= escapeHtml($pkg['package_name']) ?>"
+                        data-name="<?= escapeHtml($pkg['name'] ?? $pkg['package_name'] ?? 'Voucher') ?>"
                         style="width:100%; font-size:0.85rem; font-weight:750;">
                   🪙 Đổi Ngay
                 </button>

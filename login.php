@@ -163,7 +163,7 @@ require_once ROOT_PATH . '/includes/header.php';
           <input type="checkbox" name="remember" value="1" checked>
           <span>Ghi nhớ đăng nhập</span>
         </label>
-        <a href="<?= getUrl('profile.php') ?>" class="auth-forgot-link">Quên mật khẩu?</a>
+        <a href="<?= getUrl('forgot-password.php') ?>" class="auth-forgot-link">Quên mật khẩu?</a>
       </div>
 
       <!-- Submit button -->

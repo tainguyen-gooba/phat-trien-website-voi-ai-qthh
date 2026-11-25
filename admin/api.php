@@ -511,6 +511,35 @@ switch ($action) {
         ]);
         break;
 
+    case 'update_member_loyalty':
+        // RBAC: Strictly Admin only (role_id === 1)
+        if (!isAdmin()) {
+            jsonError('Chỉ Quản trị viên cấp cao (Admin) mới có quyền sửa hoặc thăng hạng thành viên.', 403);
+        }
+
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+
+        $targetUserId = (int)($body['user_id'] ?? $_POST['user_id'] ?? 0);
+        if ($targetUserId <= 0) {
+            jsonError('Thiếu ID thành viên hợp lệ.', 400);
+        }
+
+        $payload = [
+            'member_tier'    => trim((string)($body['member_tier'] ?? $_POST['member_tier'] ?? '')),
+            'points_balance' => isset($body['points_balance']) ? $body['points_balance'] : ($_POST['points_balance'] ?? null),
+            'total_spent'    => isset($body['total_spent']) ? $body['total_spent'] : ($_POST['total_spent'] ?? null),
+            'sync_min_spent' => !empty($body['sync_min_spent'] ?? $_POST['sync_min_spent'] ?? false),
+            'reason'         => trim((string)($body['reason'] ?? $_POST['reason'] ?? '')),
+        ];
+
+        $res = adminUpdateMemberLoyalty($targetUserId, $payload);
+        if (empty($res['success'])) {
+            jsonError($res['error'] ?? 'Không thể cập nhật thông tin thành viên.', (int)($res['status'] ?? 400));
+        }
+
+        jsonSuccess($res['message'] ?? 'Cập nhật thành viên thành công!', $res['member'] ?? []);
+        break;
+
     case 'save_loyalty_config':
         // RBAC: Strictly Admin only (role_id === 1)
         if (!isAdmin()) {

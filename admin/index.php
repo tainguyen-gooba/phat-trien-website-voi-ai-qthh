@@ -6491,6 +6491,80 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
     .loyalty-role-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
     .loyalty-role-notice p { margin: 0; color: #3b82f6; }
+
+    /* Member Edit / Tier Promotion Modal & Action Button */
+    .action-button.edit-tier {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+    .action-button.edit-tier:hover {
+      background: #ea580c;
+      color: #ffffff;
+      border-color: #ea580c;
+    }
+    .tier-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .tier-select-card {
+      position: relative;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      background: #ffffff;
+      cursor: pointer;
+      text-align: center;
+      transition: all .18s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .tier-select-card:hover {
+      border-color: #fdba74;
+      background: #fffaf5;
+      transform: translateY(-1px);
+    }
+    .tier-select-card.is-selected {
+      border-color: #ea580c;
+      background: #fff7ed;
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.14);
+    }
+    .tier-select-card.tier-bronze.is-selected { border-color: #cd7f32; background: #fff7ed; }
+    .tier-select-card.tier-silver.is-selected { border-color: #64748b; background: #f8fafc; box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.14); }
+    .tier-select-card.tier-gold.is-selected { border-color: #eab308; background: #fefce8; box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.18); }
+    .tier-select-card.tier-diamond.is-selected { border-color: #06b6d4; background: #ecfeff; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.16); }
+    .tier-select-icon { font-size: 22px; line-height: 1; }
+    .tier-select-name { font-size: 12.5px; font-weight: 800; color: #0f172a; }
+    .tier-select-meta { font-size: 10px; color: #64748b; font-weight: 600; }
+    .quick-pts-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .quick-pts-btn {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .quick-pts-btn:hover {
+      background: #ea580c;
+      color: #fff;
+      border-color: #ea580c;
+    }
+    @media (max-width: 600px) {
+      .tier-selector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
   </style>
 </head>
 
@@ -7499,7 +7573,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                       <th>Điểm khả dụng</th>
                       <th>Tổng chi tiêu</th>
                       <th>Ngày tham gia</th>
-                      <th style="text-align: right; width: 140px;">Thao tác</th>
+                      <th style="text-align: right; min-width: 220px;">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody id="membership-table-body">
@@ -8071,6 +8145,105 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     <div class="modal-actions" style="padding: 14px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end;">
       <button class="secondary-button" type="button" id="btn-cancel-points-dialog">Đóng</button>
     </div>
+  </dialog>
+
+  <!-- MEMBER LOYALTY EDIT / TIER PROMOTION MODAL -->
+  <dialog id="member-loyalty-edit-dialog" class="points-modal-dialog" style="width: min(640px, calc(100vw - 32px));">
+    <form id="form-edit-member-loyalty" method="dialog">
+      <div class="modal-head">
+        <div>
+          <h2 style="margin:0; font-size:1.15rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+            <span>👑</span> Sửa &amp; Thăng Hạng Thành Viên
+          </h2>
+          <p style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">Nâng hạng thành viên, điều chỉnh điểm thưởng hoặc tổng chi tiêu tích lũy.</p>
+        </div>
+        <button class="modal-close" type="button" id="btn-close-edit-member-dialog" aria-label="Đóng">×</button>
+      </div>
+
+      <div class="points-modal-body" style="display:flex; flex-direction:column; gap:14px;">
+        <input type="hidden" id="edit-mem-user-id" value="">
+        <input type="hidden" id="edit-mem-tier-value" value="BRONZE">
+
+        <!-- Member Summary Strip -->
+        <div class="mem-summary-strip">
+          <div class="mem-avatar-box" id="edit-mem-avatar">--</div>
+          <div class="mem-info-box" style="flex:1; min-width:150px;">
+            <strong id="edit-mem-name">Thành viên</strong>
+            <span id="edit-mem-email">email@example.com</span>
+          </div>
+          <div class="mem-stat-pill-sm">
+            <span>Hạng hiện tại:</span>
+            <span id="edit-mem-current-tier-badge" class="tier-badge tier-badge-bronze">--</span>
+          </div>
+        </div>
+
+        <!-- Tier Selector Cards -->
+        <div>
+          <label class="bs-label" style="font-weight:800; color:#0f172a; display:block; margin-bottom:4px;">
+            Chọn Hạng Thành Viên Mới <span style="color:#ea580c;">*</span>
+          </label>
+          <div class="tier-selector-grid" id="edit-mem-tier-grid">
+            <button type="button" class="tier-select-card tier-bronze" data-tier="BRONZE" data-min-spent="0">
+              <span class="tier-select-icon">🥉</span>
+              <span class="tier-select-name">Đồng</span>
+              <span class="tier-select-meta">x1 điểm • 0đ</span>
+            </button>
+            <button type="button" class="tier-select-card tier-silver" data-tier="SILVER" data-min-spent="1000000">
+              <span class="tier-select-icon">🥈</span>
+              <span class="tier-select-name">Bạc</span>
+              <span class="tier-select-meta">x1.5 điểm • 1Tr</span>
+            </button>
+            <button type="button" class="tier-select-card tier-gold" data-tier="GOLD" data-min-spent="3000000">
+              <span class="tier-select-icon">🥇</span>
+              <span class="tier-select-name">Vàng</span>
+              <span class="tier-select-meta">x2 điểm • 3Tr</span>
+            </button>
+            <button type="button" class="tier-select-card tier-diamond" data-tier="DIAMOND" data-min-spent="5000000">
+              <span class="tier-select-icon">💎</span>
+              <span class="tier-select-name">Kim Cương</span>
+              <span class="tier-select-meta">x3 điểm • 5Tr</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sync Min Spent Checkbox -->
+        <label style="display:flex; align-items:center; gap:8px; background:#fff7ed; border:1px solid #fed7aa; padding:9px 12px; border-radius:10px; cursor:pointer; font-size:12px; font-weight:650; color:#9a3412;">
+          <input type="checkbox" id="edit-mem-sync-spent" style="width:16px; height:16px; accent-color:#ea580c; cursor:pointer;">
+          <span>Tự động nâng Tổng chi tiêu đạt mốc tối thiểu của hạng mới (nếu đang thấp hơn)</span>
+        </label>
+
+        <!-- Points & Total Spent Inputs -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+          <div class="bs-field" style="margin:0;">
+            <label class="bs-label" for="edit-mem-points" style="font-weight:750;">Điểm khả dụng (🪙)</label>
+            <input type="number" id="edit-mem-points" class="bs-input" min="0" step="1" required style="width:100%;">
+            <div class="quick-pts-row">
+              <button type="button" class="quick-pts-btn" data-add-pts="100">+100 🪙</button>
+              <button type="button" class="quick-pts-btn" data-add-pts="500">+500 🪙</button>
+              <button type="button" class="quick-pts-btn" data-add-pts="1000">+1.000 🪙</button>
+            </div>
+          </div>
+          <div class="bs-field" style="margin:0;">
+            <label class="bs-label" for="edit-mem-spent" style="font-weight:750;">Tổng chi tiêu tích lũy (VNĐ)</label>
+            <input type="number" id="edit-mem-spent" class="bs-input" min="0" step="1000" required style="width:100%;">
+            <small id="edit-mem-spent-hint" style="display:block; margin-top:5px; font-size:11px; color:#64748b;">Hiện tại: 0 đ</small>
+          </div>
+        </div>
+
+        <!-- Reason / Note -->
+        <div class="bs-field" style="margin:0;">
+          <label class="bs-label" for="edit-mem-reason" style="font-weight:750;">Ghi chú / Lý do điều chỉnh (lưu vào Lịch sử điểm)</label>
+          <input type="text" id="edit-mem-reason" class="bs-input" maxlength="200" placeholder="Ví dụ: Admin thăng hạng VIP khách hàng thân thiết" style="width:100%;">
+        </div>
+      </div>
+
+      <div class="modal-actions" style="padding: 14px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap:10px;">
+        <button class="secondary-button" type="button" id="btn-cancel-edit-member-dialog">Hủy</button>
+        <button class="primary-button" type="submit" id="btn-save-edit-member" style="background:#ea580c; border-color:#ea580c; font-weight:800;">
+          <span>💾</span> Lưu Thay Đổi
+        </button>
+      </div>
+    </form>
   </dialog>
 
   <script>
@@ -10978,9 +11151,16 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               <td><strong>${money(m.total_spent || 0)}</strong></td>
               <td style="color:#64748b; font-size:11px;">${m.created_at ? formatVietnamDateTime(m.created_at) : '—'}</td>
               <td style="text-align: right;">
-                <button type="button" class="action-button" onclick="window.openPointsHistoryModal(${m.id})">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Lịch sử điểm
-                </button>
+                <div class="row-actions" style="justify-content: flex-end;">
+                  ${isAdminUser ? `
+                    <button type="button" class="action-button edit-tier" onclick="window.openEditMemberLoyaltyModal(${m.id})" title="Sửa thông tin &amp; Thăng hạng thành viên">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11z"/></svg>Sửa
+                    </button>
+                  ` : ''}
+                  <button type="button" class="action-button" onclick="window.openPointsHistoryModal(${m.id})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Lịch sử điểm
+                  </button>
+                </div>
               </td>
             </tr>
           `;
@@ -11059,7 +11239,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             tbody.innerHTML = txs.map((tx) => {
               const typeInfo = txTypeMap[tx.transaction_type] || { label: tx.transaction_type, cls: 'tx-type-adjust' };
               const pts = Number(tx.points) || 0;
-              const ptsDisplay = pts > 0 ? `<span class="pts-positive">+${pts}</span>` : `<span class="pts-negative">${pts}</span>`;
+              const ptsDisplay = pts > 0
+                ? `<span class="pts-positive">+${pts}</span>`
+                : (pts < 0 ? `<span class="pts-negative">${pts}</span>` : `<span style="color:#64748b; font-weight:700;">0</span>`);
 
               return `
                 <tr>
@@ -11256,6 +11438,171 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       document.getElementById('btn-close-points-dialog')?.addEventListener('click', () => ptsDialog?.close());
       document.getElementById('btn-cancel-points-dialog')?.addEventListener('click', () => ptsDialog?.close());
       ptsDialog?.addEventListener('click', (e) => { if (e.target === ptsDialog) ptsDialog.close(); });
+
+      // Member Edit / Tier Promotion Modal Logic
+      const editMemDialog = document.getElementById('member-loyalty-edit-dialog');
+      const editMemForm = document.getElementById('form-edit-member-loyalty');
+      let currentEditingMember = null;
+
+      function selectEditMemberTier(tierCode) {
+        const code = String(tierCode || 'BRONZE').toUpperCase();
+        const hiddenInput = document.getElementById('edit-mem-tier-value');
+        if (hiddenInput) hiddenInput.value = code;
+
+        const cards = document.querySelectorAll('#edit-mem-tier-grid .tier-select-card');
+        let matchedMinSpent = 0;
+        cards.forEach((btn) => {
+          const isMatch = (btn.dataset.tier || '').toUpperCase() === code;
+          btn.classList.toggle('is-selected', isMatch);
+          if (isMatch) {
+            matchedMinSpent = Number(btn.dataset.minSpent || 0);
+          }
+        });
+
+        const syncChk = document.getElementById('edit-mem-sync-spent');
+        const spentInput = document.getElementById('edit-mem-spent');
+        const hintEl = document.getElementById('edit-mem-spent-hint');
+        if (hintEl) {
+          hintEl.textContent = `Mốc chuẩn của hạng ${code}: ${money(matchedMinSpent)}`;
+        }
+        if (syncChk?.checked && spentInput) {
+          const baseSpent = Number(currentEditingMember?.total_spent || 0);
+          spentInput.value = String(Math.max(baseSpent, matchedMinSpent));
+        }
+      }
+
+      document.querySelectorAll('#edit-mem-tier-grid .tier-select-card').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          selectEditMemberTier(btn.dataset.tier);
+        });
+      });
+
+      document.getElementById('edit-mem-sync-spent')?.addEventListener('change', (e) => {
+        const tierCode = document.getElementById('edit-mem-tier-value')?.value || 'BRONZE';
+        const activeCard = document.querySelector(`#edit-mem-tier-grid .tier-select-card[data-tier="${tierCode}"]`);
+        const minSpent = Number(activeCard?.dataset.minSpent || 0);
+        const spentInput = document.getElementById('edit-mem-spent');
+        if (spentInput) {
+          const baseSpent = Number(currentEditingMember?.total_spent || 0);
+          if (e.target.checked) {
+            spentInput.value = String(Math.max(baseSpent, minSpent));
+          } else {
+            spentInput.value = String(Math.round(baseSpent));
+          }
+        }
+      });
+
+      document.querySelectorAll('#member-loyalty-edit-dialog .quick-pts-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const add = Number(btn.dataset.addPts || 0);
+          const ptsInput = document.getElementById('edit-mem-points');
+          if (ptsInput) {
+            ptsInput.value = String(Math.max(0, (Number(ptsInput.value) || 0) + add));
+          }
+        });
+      });
+
+      window.openEditMemberLoyaltyModal = async function(userId) {
+        if (!editMemDialog) return;
+        const member = membershipMembers.find((m) => Number(m.id) === Number(userId));
+        if (!member) {
+          showToast('Không tìm thấy dữ liệu thành viên.', true);
+          return;
+        }
+        currentEditingMember = member;
+
+        // Cập nhật mốc min_spent từ cấu hình hiện tại (nếu có)
+        try {
+          const cfgRes = await fetch('api.php?action=get_loyalty_config');
+          const cfgJson = await cfgRes.json();
+          if (cfgJson.success && cfgJson.data?.tiers) {
+            const tiers = cfgJson.data.tiers;
+            document.querySelectorAll('#edit-mem-tier-grid .tier-select-card').forEach((btn) => {
+              const tc = (btn.dataset.tier || '').toUpperCase();
+              if (tiers[tc]) {
+                const ms = Number(tiers[tc].min_spent || 0);
+                const ratio = Number(tiers[tc].point_ratio || 1);
+                btn.dataset.minSpent = String(ms);
+                const metaEl = btn.querySelector('.tier-select-meta');
+                if (metaEl) {
+                  metaEl.textContent = `x${ratio} điểm • ${ms >= 1000000 ? (ms / 1000000) + 'Tr' : money(ms)}`;
+                }
+              }
+            });
+          }
+        } catch (e) {}
+
+        document.getElementById('edit-mem-user-id').value = String(member.id);
+        document.getElementById('edit-mem-avatar').textContent = (member.full_name || 'U').trim().charAt(0).toUpperCase();
+        document.getElementById('edit-mem-name').textContent = member.full_name || 'Chưa đặt tên';
+        document.getElementById('edit-mem-email').textContent = `${member.phone || 'Chưa có SĐT'} • ${member.email || ''}`;
+        const curBadge = document.getElementById('edit-mem-current-tier-badge');
+        if (curBadge) curBadge.outerHTML = `<span id="edit-mem-current-tier-badge">${getTierBadgeHtml(member.member_tier)}</span>`;
+
+        document.getElementById('edit-mem-sync-spent').checked = false;
+        document.getElementById('edit-mem-points').value = String(member.points_balance || 0);
+        document.getElementById('edit-mem-spent').value = String(Math.round(Number(member.total_spent || 0)));
+        document.getElementById('edit-mem-reason').value = '';
+
+        selectEditMemberTier(member.member_tier || 'BRONZE');
+        editMemDialog.showModal();
+      };
+
+      document.getElementById('btn-close-edit-member-dialog')?.addEventListener('click', () => editMemDialog?.close());
+      document.getElementById('btn-cancel-edit-member-dialog')?.addEventListener('click', () => editMemDialog?.close());
+      editMemDialog?.addEventListener('click', (e) => { if (e.target === editMemDialog) editMemDialog.close(); });
+
+      editMemForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const saveBtn = document.getElementById('btn-save-edit-member');
+        const userId = Number(document.getElementById('edit-mem-user-id')?.value || 0);
+        const memberTier = document.getElementById('edit-mem-tier-value')?.value || 'BRONZE';
+        const pointsBalance = Number(document.getElementById('edit-mem-points')?.value || 0);
+        const totalSpent = Number(document.getElementById('edit-mem-spent')?.value || 0);
+        const syncMinSpent = !!document.getElementById('edit-mem-sync-spent')?.checked;
+        const reason = document.getElementById('edit-mem-reason')?.value.trim() || '';
+
+        if (!userId) return;
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = '<span>⏳</span> Đang lưu...';
+        }
+
+        try {
+          const res = await fetch('api.php?action=update_member_loyalty', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update_member_loyalty',
+              user_id: userId,
+              member_tier: memberTier,
+              points_balance: pointsBalance,
+              total_spent: totalSpent,
+              sync_min_spent: syncMinSpent,
+              reason
+            })
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            showToast(`✅ ${result.message || 'Cập nhật hạng thành viên thành công!'}`);
+            editMemDialog?.close();
+            await window.loadMembershipData(membershipPage);
+            try {
+              new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'loyalty', userId });
+            } catch (err) {}
+          } else {
+            showToast(result.message || 'Không thể cập nhật thông tin thành viên.', true);
+          }
+        } catch (err) {
+          showToast('Lỗi kết nối: ' + err.message, true);
+        } finally {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span>💾</span> Lưu Thay Đổi';
+          }
+        }
+      });
 
       // Save loyalty config button
       document.getElementById('btn-save-loyalty-config')?.addEventListener('click', saveLoyaltyConfig);

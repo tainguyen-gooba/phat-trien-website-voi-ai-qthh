@@ -40,6 +40,34 @@ if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     @session_start();
 }
 
+// Nếu đang ở trang khách hàng mà chưa có phiên khách hàng, nhưng Admin đã đăng nhập ở FF_SESS_ADMIN
+// -> Cho phép Admin truy cập website với tài khoản Admin (không ảnh hưởng nếu đã có khách hàng đăng nhập)
+$GLOBALS['FF_FALLBACK_ADMIN_USER'] = null;
+if (
+    !$isAdminContext &&
+    empty($_SESSION['customer_user']['id']) &&
+    empty($_SESSION['user_id']) &&
+    !empty($_COOKIE['FF_SESS_ADMIN']) &&
+    preg_match('/^[a-zA-Z0-9,-]{16,128}$/', $_COOKIE['FF_SESS_ADMIN'])
+) {
+    $customerSessId = session_id();
+    $customerSessName = session_name();
+    @session_write_close();
+    @session_name('FF_SESS_ADMIN');
+    @session_id($_COOKIE['FF_SESS_ADMIN']);
+    @session_start();
+    if (!empty($_SESSION['admin_user']['id'])) {
+        $GLOBALS['FF_FALLBACK_ADMIN_USER'] = $_SESSION['admin_user'];
+    }
+    @session_write_close();
+    // Khôi phục lại phiên khách hàng
+    @session_name($customerSessName ?: 'FASTFOOD_SESSID');
+    if ($customerSessId) {
+        @session_id($customerSessId);
+    }
+    @session_start();
+}
+
 define('ROOT_PATH', dirname(__DIR__));
 
 // Tự động tính BASE_URL chuẩn

@@ -198,25 +198,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // 2. Lưu từng món vào order_items
-            $itemStmt = $db->prepare("INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, subtotal)
-                                      VALUES (?, ?, ?, ?, ?, ?)");
+            $itemStmt = $db->prepare("INSERT INTO order_items (order_id, product_id, product_name, quantity, unit_price, subtotal, special_instructions)
+                                      VALUES (?, ?, ?, ?, ?, ?, ?)");
             $orderItemsData = [];
             foreach ($cart as $id => $item) {
                 $itemSub = (float)$item['price'] * (int)$item['qty'];
+                $rawProdId = !empty($item['productId']) ? $item['productId'] : explode('_', (string)$id)[0];
+                $realProdId = (int)preg_replace('/\D/', '', (string)$rawProdId);
+                if ($realProdId <= 0) {
+                    $realProdId = 1;
+                }
+
+                $variantParts = [];
+                if (!empty($item['size']['name'])) {
+                    $variantParts[] = $item['size']['name'];
+                }
+                if (!empty($item['toppings']) && is_array($item['toppings'])) {
+                    $tNames = array_filter(array_map(fn($t) => $t['name'] ?? '', $item['toppings']));
+                    if (!empty($tNames)) {
+                        $variantParts[] = implode(', ', $tNames);
+                    }
+                }
+                if (!empty($item['attributes']) && is_array($item['attributes'])) {
+                    $aVals = array_filter(array_map(fn($a) => $a['value'] ?? '', $item['attributes']));
+                    if (!empty($aVals)) {
+                        $variantParts[] = implode(', ', $aVals);
+                    }
+                }
+                $specText = !empty($variantParts) ? mb_substr(implode(' • ', $variantParts), 0, 250, 'UTF-8') : null;
+
                 $itemStmt->execute([
                     $orderId,
-                    is_numeric($id) ? (int)$id : 1,
+                    $realProdId,
                     $item['name'],
                     $item['qty'],
                     $item['price'],
-                    $itemSub
+                    $itemSub,
+                    $specText
                 ]);
                 $orderItemsData[] = [
-                    'id'    => $id,
-                    'name'  => $item['name'],
-                    'price' => $item['price'],
-                    'qty'   => $item['qty'],
-                    'image' => $item['image'] ?? '',
+                    'id'        => $id,
+                    'productId' => $realProdId,
+                    'name'      => $item['name'],
+                    'price'     => $item['price'],
+                    'qty'       => $item['qty'],
+                    'image'     => $item['image'] ?? '',
                 ];
             }
 

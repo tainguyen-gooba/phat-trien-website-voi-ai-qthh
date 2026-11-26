@@ -100,8 +100,11 @@ $fPolicyLinks  = !empty($footerData['policy_links']) && is_array($footerData['po
   <!-- Tích hợp Khung Chat Nhân Viên Hỗ Trợ AI -->
   <?php require_once __DIR__ . '/chatbot.php'; ?>
 
-  <!-- Tích hợp Modal Nhập Thông Tin Khách Hàng Nhận Voucher 50.000đ & Chống Trùng Lặp -->
+  <!-- Tích hợp Modal Chọn Voucher tại Giỏ hàng / Thanh toán -->
   <?php require_once __DIR__ . '/voucher-modal.php'; ?>
+
+  <!-- Tích hợp Modal Nhập Thông Tin Khách Hàng Nhận Voucher 50.000đ sau khi Đăng Ký -->
+  <?php require_once __DIR__ . '/welcome-voucher-modal.php'; ?>
 
   <?php
   // ===================================================================
@@ -171,6 +174,20 @@ $fPolicyLinks  = !empty($footerData['policy_links']) && is_array($footerData['po
   <script src="<?= getAssetUrl('js/storage.js') ?>"></script>
   <script src="<?= getAssetUrl('js/components.js') ?>"></script>
   <script src="<?= getAssetUrl('js/realtime.js') ?>"></script>
+  <?php
+  if (!empty($_SESSION['new_user_broadcast'])) {
+      $newUserBroadcast = $_SESSION['new_user_broadcast'];
+      unset($_SESSION['new_user_broadcast']);
+  ?>
+  <script>
+    try {
+      new BroadcastChannel('fastfood_realtime').postMessage({
+        type: 'user:new',
+        data: { user: <?= json_encode($newUserBroadcast, JSON_UNESCAPED_UNICODE) ?> }
+      });
+    } catch (e) {}
+  </script>
+  <?php } ?>
   <script src="<?= getAssetUrl('js/chatbot.js') ?>"></script>
   <?php if (!empty($extraJs)): ?>
     <?php foreach ((array)$extraJs as $js): ?>

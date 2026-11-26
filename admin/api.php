@@ -90,7 +90,7 @@ switch ($action) {
 
         // Update orders table with timestamp fields
         if ($orderDbStatus === 'completed') {
-            $upStmt = $db->prepare("UPDATE orders SET order_status = ?, completed_at = IFNULL(completed_at, NOW()), updated_at = NOW() WHERE id = ?");
+            $upStmt = $db->prepare("UPDATE orders SET order_status = ?, payment_status = CASE WHEN LOWER(payment_method) = 'cod' THEN 'completed' ELSE payment_status END, completed_at = IFNULL(completed_at, NOW()), updated_at = NOW() WHERE id = ?");
         } elseif ($orderDbStatus === 'cancelled') {
             $upStmt = $db->prepare("UPDATE orders SET order_status = ?, cancelled_at = IFNULL(cancelled_at, NOW()), cancellation_reason = IFNULL(cancellation_reason, 'Quản trị viên hủy đơn hàng'), updated_at = NOW() WHERE id = ?");
         } else {
@@ -523,6 +523,35 @@ switch ($action) {
         ]);
         break;
 
+    case 'update_member_loyalty':
+        // RBAC: Strictly Admin only (role_id === 1)
+        if (!isAdmin()) {
+            jsonError('Chỉ Quản trị viên cấp cao (Admin) mới có quyền sửa hoặc thăng hạng thành viên.', 403);
+        }
+
+        require_once ROOT_PATH . '/helpers/loyalty.php';
+
+        $targetUserId = (int)($body['user_id'] ?? $_POST['user_id'] ?? 0);
+        if ($targetUserId <= 0) {
+            jsonError('Thiếu ID thành viên hợp lệ.', 400);
+        }
+
+        $payload = [
+            'member_tier'    => trim((string)($body['member_tier'] ?? $_POST['member_tier'] ?? '')),
+            'points_balance' => isset($body['points_balance']) ? $body['points_balance'] : ($_POST['points_balance'] ?? null),
+            'total_spent'    => isset($body['total_spent']) ? $body['total_spent'] : ($_POST['total_spent'] ?? null),
+            'sync_min_spent' => !empty($body['sync_min_spent'] ?? $_POST['sync_min_spent'] ?? false),
+            'reason'         => trim((string)($body['reason'] ?? $_POST['reason'] ?? '')),
+        ];
+
+        $res = adminUpdateMemberLoyalty($targetUserId, $payload);
+        if (empty($res['success'])) {
+            jsonError($res['error'] ?? 'Không thể cập nhật thông tin thành viên.', (int)($res['status'] ?? 400));
+        }
+
+        jsonSuccess($res['message'] ?? 'Cập nhật thành viên thành công!', $res['member'] ?? []);
+        break;
+
     case 'save_loyalty_config':
         // RBAC: Strictly Admin only (role_id === 1)
         if (!isAdmin()) {
@@ -752,6 +781,60 @@ switch ($action) {
         require_once ROOT_PATH . '/helpers/voucher.php';
         $cronRes = runDailyBirthdayVouchers();
         jsonSuccess("Đã quét và tặng thành công {$cronRes['total_gifted']}/{$cronRes['total_candidates']} voucher sinh nhật.", $cronRes);
+        break;
+
+    // =========================================================================
+    // PRODUCT REVIEWS MANAGEMENT ACTIONS (ADMIN & STAFF)
+    // =========================================================================
+    case 'get_product_reviews':
+        require_once ROOT_PATH . '/helpers/reviews.php';
+        ensureProductReviewsSchema($db);
+        $pReviews = $db->query("
+            SELECT pr.*, p.name AS product_name, p.image_url AS product_image, u.full_name AS customer_name
+            FROM product_reviews pr
+            LEFT JOIN products p ON pr.product_id = p.id
+            LEFT JOIN users u ON pr.user_id = u.id
+            ORDER BY pr.created_at DESC, pr.id DESC
+            LIMIT 200
+        ")->fetchAll(PDO::FETCH_ASSOC);
+        jsonSuccess('Lấy danh sách đánh giá sản phẩm thành công!', ['product_reviews' => $pReviews]);
+        break;
+
+    case 'reply_product_review':
+        require_once ROOT_PATH . '/helpers/reviews.php';
+        ensureProductReviewsSchema($db);
+        $revId = (int)($body['id'] ?? $body['review_id'] ?? 0);
+        $reply = trim((string)($body['reply_content'] ?? ''));
+        if ($revId <= 0 || $reply === '') {
+            jsonError('Thiếu ID đánh giá hoặc nội dung phản hồi.');
+        }
+        $stmt = $db->prepare("UPDATE product_reviews SET reply_content = ?, replied_by = ?, replied_at = NOW(), updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$reply, (int)$currentUser['id'], $revId]);
+        jsonSuccess('Đã gửi phản hồi tới khách hàng!', ['reply_content' => $reply]);
+        break;
+
+    case 'toggle_product_review':
+        require_once ROOT_PATH . '/helpers/reviews.php';
+        ensureProductReviewsSchema($db);
+        $revId = (int)($body['id'] ?? $body['review_id'] ?? 0);
+        if ($revId <= 0) jsonError('Thiếu ID đánh giá.');
+        $row = $db->query("SELECT product_id, is_approved FROM product_reviews WHERE id = $revId LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+        if (!$row) jsonError('Không tìm thấy đánh giá.', 404);
+        $newVal = ((int)$row['is_approved'] === 1) ? 0 : 1;
+        $db->prepare("UPDATE product_reviews SET is_approved = ? WHERE id = ?")->execute([$newVal, $revId]);
+        recalculateProductRating($db, (int)$row['product_id']);
+        jsonSuccess($newVal ? 'Đã hiển thị đánh giá.' : 'Đã ẩn đánh giá.', ['is_approved' => $newVal]);
+        break;
+
+    case 'delete_product_review':
+        require_once ROOT_PATH . '/helpers/reviews.php';
+        ensureProductReviewsSchema($db);
+        $revId = (int)($body['id'] ?? $body['review_id'] ?? 0);
+        if ($revId <= 0) jsonError('Thiếu ID đánh giá.');
+        $prodId = (int)$db->query("SELECT product_id FROM product_reviews WHERE id = $revId LIMIT 1")->fetchColumn();
+        $db->prepare("DELETE FROM product_reviews WHERE id = ?")->execute([$revId]);
+        if ($prodId > 0) recalculateProductRating($db, $prodId);
+        jsonSuccess('Đã xóa đánh giá sản phẩm!');
         break;
 
     case 'get_conversations':

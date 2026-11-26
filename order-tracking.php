@@ -53,6 +53,14 @@ $itemStmt = $db->prepare("SELECT * FROM order_items WHERE order_id = ?");
 $itemStmt->execute([$order['id']]);
 $items = $itemStmt->fetchAll();
 
+// Kiểm tra xem đơn hàng đã được đánh giá chưa
+$existingReview = null;
+try {
+    $revStmt = $db->prepare("SELECT id, rating, comment FROM reviews WHERE order_id = ? LIMIT 1");
+    $revStmt->execute([(int)$order['id']]);
+    $existingReview = $revStmt->fetch() ?: null;
+} catch (Exception $e) {}
+
 $pageTitle = "Theo dõi đơn hàng $orderCode - FASTFOOD";
 $activeNav = 'orders';
 $extraCss  = ['css/pages.css'];
@@ -117,10 +125,24 @@ require_once ROOT_PATH . '/includes/header.php';
           <div class="tracking-dot"><?= $currentStep > 3 ? '✓' : '3' ?></div>
           <span class="tracking-step-label">Đang giao hàng</span>
         </div>
-        <div class="tracking-step <?= $currentStep >= 4 ? 'active' : '' ?>">
-          <div class="tracking-dot">4</div>
+        <div class="tracking-step <?= $currentStep >= 4 ? 'done' : '' ?>">
+          <div class="tracking-dot"><?= $currentStep >= 4 ? '✓' : '4' ?></div>
           <span class="tracking-step-label">Giao thành công</span>
         </div>
+      </div>
+
+      <!-- Banner trạng thái Giao hàng thành công -->
+      <div id="tracking-delivered-banner" style="<?= $currentStep >= 4 ? '' : 'display:none;' ?> background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:1rem 1.25rem; margin-bottom:1.25rem; display:<?= $currentStep >= 4 ? 'flex' : 'none' ?>; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:0.75rem;">
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+          <span style="font-size:1.6rem;">🎉</span>
+          <div>
+            <strong style="color:#065f46; font-size:1.05rem; display:block;">Giao hàng thành công</strong>
+            <span style="color:#047857; font-size:0.88rem;">Đơn hàng #<?= escapeHtml($orderCode) ?> đã được giao đến bạn. Chúc bạn ngon miệng!</span>
+          </div>
+        </div>
+        <button type="button" id="btn-open-review-modal" class="btn btn-primary btn-sm" style="white-space:nowrap;">
+          <?= $existingReview ? '⭐ Xem / Sửa đánh giá (' . (int)$existingReview['rating'] . '★)' : '⭐ Đánh giá đơn hàng' ?>
+        </button>
       </div>
     <?php endif; ?>
 
@@ -137,7 +159,7 @@ require_once ROOT_PATH . '/includes/header.php';
         <strong style="color:#0f172a;"><?= strtoupper($order['payment_method']) ?></strong>
         <span style="color:#64748b; font-size:0.85rem; display:block; margin-top:0.75rem; margin-bottom:3px;">Trạng thái thanh toán:</span>
         <div id="tracking-payment-status">
-        <?php if ($order['payment_status'] === 'completed' || ($order['realtime_payment_status'] ?? '') === 'completed'): ?>
+        <?php if ($order['payment_status'] === 'completed' || ($order['realtime_payment_status'] ?? '') === 'completed' || $currentStep >= 4): ?>
           <strong style="color:#10b981;">Đã thanh toán thành công</strong>
         <?php else: ?>
           <strong style="color:#ea580c;">Chưa thanh toán (Chờ thanh toán)</strong>
@@ -255,6 +277,41 @@ require_once ROOT_PATH . '/includes/header.php';
   </div>
 </main>
 
+<!-- Pop-up Đánh Giá Đơn Hàng khi Giao hàng thành công -->
+<div id="order-review-modal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(15,23,42,0.55); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:1rem;">
+  <div style="background:#fff; width:100%; max-width:460px; border-radius:18px; padding:1.75rem; box-shadow:0 20px 50px rgba(0,0,0,0.2); position:relative; animation:fadeIn .2s ease;">
+    <button type="button" id="btn-close-review-modal" aria-label="Đóng" style="position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:50%; border:none; background:#f1f5f9; color:#475569; font-size:1.1rem; cursor:pointer;">✕</button>
+    <div style="text-align:center; margin-bottom:1.25rem;">
+      <div style="font-size:2.4rem; margin-bottom:0.35rem;">🎉</div>
+      <h3 style="margin:0 0 0.35rem; font-size:1.25rem; font-weight:800; color:#0f172a;">Giao hàng thành công!</h3>
+      <p style="margin:0; color:#64748b; font-size:0.9rem;">Hãy chia sẻ cảm nhận của bạn về đơn hàng <strong>#<?= escapeHtml($orderCode) ?></strong></p>
+    </div>
+
+    <form id="order-review-form">
+      <div style="text-align:center; margin-bottom:1.1rem;">
+        <div id="review-stars-picker" style="display:inline-flex; gap:0.45rem; font-size:2rem; cursor:pointer; user-select:none;">
+          <?php $initRating = $existingReview ? (int)$existingReview['rating'] : 5; ?>
+          <?php for ($s = 1; $s <= 5; $s++): ?>
+            <span class="review-star-item" data-star="<?= $s ?>" style="color:<?= $s <= $initRating ? '#f59e0b' : '#cbd5e1' ?>; transition:transform .15s;">★</span>
+          <?php endfor; ?>
+        </div>
+        <div id="review-rating-label" style="font-size:0.85rem; font-weight:700; color:#ea580c; margin-top:0.25rem;">Tuyệt vời (5/5 sao)</div>
+        <input type="hidden" id="review-rating-input" value="<?= $initRating ?>">
+      </div>
+
+      <div style="margin-bottom:1.1rem;">
+        <label for="review-comment-input" style="display:block; font-size:0.88rem; font-weight:700; color:#334155; margin-bottom:0.4rem;">Nhận xét của bạn:</label>
+        <textarea id="review-comment-input" rows="3" placeholder="Món ăn nóng hổi, giao hàng nhanh chóng..." style="width:100%; padding:0.75rem; border:1px solid #cbd5e1; border-radius:10px; font-family:inherit; font-size:0.92rem; resize:vertical;"><?= escapeHtml($existingReview['comment'] ?? '') ?></textarea>
+      </div>
+
+      <div style="display:flex; gap:0.65rem; justify-content:flex-end;">
+        <button type="button" id="btn-skip-review-modal" class="btn btn-outline btn-sm">Để sau</button>
+        <button type="submit" id="btn-submit-review" class="btn btn-primary btn-sm">Gửi đánh giá</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <script>
   window.TRACKED_ORDER_CODE = '<?= escapeHtml($orderCode) ?>';
 
@@ -338,6 +395,16 @@ require_once ROOT_PATH . '/includes/header.php';
         const cancelWrap = document.getElementById('tracking-cancel-wrap');
         if (cancelWrap) cancelWrap.style.display = 'none';
       }
+      if (targetStep >= 4) {
+        const deliveredBanner = document.getElementById('tracking-delivered-banner');
+        if (deliveredBanner) deliveredBanner.style.display = 'flex';
+        const payEl = document.getElementById('tracking-payment-status');
+        if (payEl) payEl.innerHTML = '<strong style="color:#10b981;">Đã thanh toán thành công</strong>';
+        if (!window.__orderReviewed && !window.__reviewModalOpenedOnce) {
+          window.__reviewModalOpenedOnce = true;
+          setTimeout(() => openReviewModal(), 350);
+        }
+      }
       if (targetStep === currentStepVal) return;
       currentStepVal = targetStep;
 
@@ -420,6 +487,86 @@ require_once ROOT_PATH . '/includes/header.php';
     }
 
     const trackingTimer = setInterval(checkOrderStatus, 1500);
+
+    // 5. Logic Pop-up Đánh Giá Đơn Hàng
+    window.__orderReviewed = <?= $existingReview ? 'true' : 'false' ?>;
+    window.__reviewModalOpenedOnce = false;
+    const reviewModal = document.getElementById('order-review-modal');
+    const starLabels = { 1: 'Rất tệ (1/5 sao)', 2: 'Không hài lòng (2/5 sao)', 3: 'Bình thường (3/5 sao)', 4: 'Hài lòng (4/5 sao)', 5: 'Tuyệt vời (5/5 sao)' };
+
+    function openReviewModal() {
+      if (reviewModal) reviewModal.style.display = 'flex';
+    }
+    function closeReviewModal() {
+      if (reviewModal) reviewModal.style.display = 'none';
+    }
+    function setStars(val) {
+      const n = Math.max(1, Math.min(5, Number(val) || 5));
+      document.getElementById('review-rating-input').value = String(n);
+      document.getElementById('review-rating-label').textContent = starLabels[n] || '';
+      document.querySelectorAll('.review-star-item').forEach(el => {
+        const s = Number(el.dataset.star);
+        el.style.color = s <= n ? '#f59e0b' : '#cbd5e1';
+      });
+    }
+
+    document.querySelectorAll('.review-star-item').forEach(el => {
+      el.addEventListener('click', () => setStars(el.dataset.star));
+    });
+    document.getElementById('btn-open-review-modal')?.addEventListener('click', openReviewModal);
+    document.getElementById('btn-close-review-modal')?.addEventListener('click', closeReviewModal);
+    document.getElementById('btn-skip-review-modal')?.addEventListener('click', closeReviewModal);
+    reviewModal?.addEventListener('click', (e) => { if (e.target === reviewModal) closeReviewModal(); });
+
+    setStars(document.getElementById('review-rating-input')?.value || 5);
+    if (currentStepVal >= 4 && !window.__orderReviewed) {
+      window.__reviewModalOpenedOnce = true;
+      setTimeout(openReviewModal, 400);
+    }
+
+    document.getElementById('order-review-form')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btn-submit-review');
+      const rating = Number(document.getElementById('review-rating-input').value || 5);
+      const comment = document.getElementById('review-comment-input').value.trim();
+      btn.disabled = true;
+      btn.textContent = 'Đang gửi...';
+      try {
+        const apiUrl = (typeof window.getApiUrl === 'function')
+          ? window.getApiUrl('api/realtime.php')
+          : ((window.BASE_URL || '').replace(/\/+$/, '') + '/api/realtime.php');
+        const res = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'submit_review',
+            orderCode: window.TRACKED_ORDER_CODE,
+            rating,
+            comment
+          })
+        });
+        const json = await res.json();
+        if (json.success) {
+          window.__orderReviewed = true;
+          closeReviewModal();
+          const openBtn = document.getElementById('btn-open-review-modal');
+          if (openBtn) openBtn.textContent = `⭐ Xem / Sửa đánh giá (${rating}★)`;
+          if (channel && json.data?.review) {
+            channel.postMessage({ type: 'review:new', data: json.data.review });
+          }
+          if (window.UIComponents?.showToast) {
+            window.UIComponents.showToast('Cảm ơn bạn đã đánh giá đơn hàng!', 'success');
+          }
+        } else {
+          alert(json.message || 'Không thể gửi đánh giá.');
+        }
+      } catch (err) {
+        alert('Lỗi kết nối: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Gửi đánh giá';
+      }
+    });
 
   })();
 </script>

@@ -167,16 +167,29 @@ $restaurants = array_map(function($r) {
     ];
 }, $restaurantsRaw);
 
-// 6. Reviews
-$reviews = $db->query("SELECT r.*, u.full_name AS customer_name FROM reviews r LEFT JOIN users u ON r.user_id = u.id ORDER BY r.id DESC LIMIT 100")->fetchAll();
+// 6. Reviews (Order reviews + Product reviews)
+require_once ROOT_PATH . '/helpers/reviews.php';
+ensureProductReviewsSchema($db);
+$reviews = $db->query("SELECT r.*, o.order_code, res.name AS restaurant_name, u.full_name AS customer_name 
+                       FROM reviews r 
+                       LEFT JOIN orders o ON r.order_id = o.id
+                       LEFT JOIN restaurants res ON r.restaurant_id = res.id
+                       LEFT JOIN users u ON r.user_id = u.id 
+                       ORDER BY r.id DESC LIMIT 100")->fetchAll();
+$productReviews = $db->query("SELECT pr.*, p.name AS product_name, u.full_name AS customer_name 
+                              FROM product_reviews pr 
+                              LEFT JOIN products p ON pr.product_id = p.id 
+                              LEFT JOIN users u ON pr.user_id = u.id 
+                              ORDER BY pr.created_at DESC, pr.id DESC LIMIT 200")->fetchAll();
 
 $initialData = [
-    'categories'  => $categories,
-    'products'    => $products,
-    'orders'      => $orders,
-    'users'       => $users,
-    'restaurants' => $restaurants,
-    'reviews'     => $reviews,
+    'categories'     => $categories,
+    'products'       => $products,
+    'orders'         => $orders,
+    'users'          => $users,
+    'restaurants'    => $restaurants,
+    'reviews'        => $reviews,
+    'productReviews' => $productReviews,
     'currentUser' => [
         'id'        => $currentUser['id'],
         'fullName'  => $currentUser['full_name'],
@@ -6491,6 +6504,80 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     }
     .loyalty-role-notice strong { display: block; font-size: 13px; margin-bottom: 2px; }
     .loyalty-role-notice p { margin: 0; color: #3b82f6; }
+
+    /* Member Edit / Tier Promotion Modal & Action Button */
+    .action-button.edit-tier {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+    }
+    .action-button.edit-tier:hover {
+      background: #ea580c;
+      color: #ffffff;
+      border-color: #ea580c;
+    }
+    .tier-selector-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .tier-select-card {
+      position: relative;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 12px 10px;
+      background: #ffffff;
+      cursor: pointer;
+      text-align: center;
+      transition: all .18s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .tier-select-card:hover {
+      border-color: #fdba74;
+      background: #fffaf5;
+      transform: translateY(-1px);
+    }
+    .tier-select-card.is-selected {
+      border-color: #ea580c;
+      background: #fff7ed;
+      box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.14);
+    }
+    .tier-select-card.tier-bronze.is-selected { border-color: #cd7f32; background: #fff7ed; }
+    .tier-select-card.tier-silver.is-selected { border-color: #64748b; background: #f8fafc; box-shadow: 0 0 0 3px rgba(100, 116, 139, 0.14); }
+    .tier-select-card.tier-gold.is-selected { border-color: #eab308; background: #fefce8; box-shadow: 0 0 0 3px rgba(234, 179, 8, 0.18); }
+    .tier-select-card.tier-diamond.is-selected { border-color: #06b6d4; background: #ecfeff; box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.16); }
+    .tier-select-icon { font-size: 22px; line-height: 1; }
+    .tier-select-name { font-size: 12.5px; font-weight: 800; color: #0f172a; }
+    .tier-select-meta { font-size: 10px; color: #64748b; font-weight: 600; }
+    .quick-pts-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 6px;
+      flex-wrap: wrap;
+    }
+    .quick-pts-btn {
+      background: #fff7ed;
+      color: #c2410c;
+      border: 1px solid #fed7aa;
+      border-radius: 6px;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 750;
+      cursor: pointer;
+      transition: all .15s ease;
+    }
+    .quick-pts-btn:hover {
+      background: #ea580c;
+      color: #fff;
+      border-color: #ea580c;
+    }
+    @media (max-width: 600px) {
+      .tier-selector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
   </style>
 </head>
 
@@ -6583,7 +6670,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           <span class="nav-badge nav-badge-ai">AI</span>
         </button>
         <?php
-          $totalReviewsCount = (int)($db->query("SELECT COUNT(*) FROM reviews")->fetchColumn() ?: 0);
+          $totalReviewsCount = (int)($db->query("SELECT COUNT(*) FROM reviews")->fetchColumn() ?: 0)
+                             + (int)($db->query("SELECT COUNT(*) FROM product_reviews")->fetchColumn() ?: 0);
         ?>
         <button class="nav-item" type="button" data-section="reviews">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -7090,14 +7178,15 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         <section class="reviews-panel" id="reviews-section" aria-label="Đánh giá khách hàng" hidden>
           <header class="reviews-panel-heading">
             <div>
-              <h2>Nhận xét &amp; đánh giá gần đây</h2>
-              <p>Đánh giá từ khách sau khi hoàn thành đơn hàng (tự động cập nhật thời gian thực)</p>
+              <h2>Nhận xét &amp; đánh giá khách hàng</h2>
+              <p>Đánh giá chi tiết từng món ăn và đánh giá sau khi hoàn thành đơn hàng</p>
             </div>
             <div class="reviews-controls">
               <select class="filter-select reviews-filter-select" id="reviews-filter" aria-label="Lọc đánh giá">
                 <option value="all">Tất cả đánh giá</option>
+                <option value="product">Đánh giá món ăn</option>
+                <option value="restaurant">Đơn hàng / Quán ăn</option>
                 <option value="driver">Tài xế</option>
-                <option value="restaurant">Quán ăn</option>
                 <option value="5">5 sao ★★★★★</option>
                 <option value="4">4 sao ★★★★☆</option>
                 <option value="3">3 sao ★★★☆☆</option>
@@ -7499,7 +7588,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                       <th>Điểm khả dụng</th>
                       <th>Tổng chi tiêu</th>
                       <th>Ngày tham gia</th>
-                      <th style="text-align: right; width: 140px;">Thao tác</th>
+                      <th style="text-align: right; min-width: 220px;">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody id="membership-table-body">
@@ -8073,6 +8162,105 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     </div>
   </dialog>
 
+  <!-- MEMBER LOYALTY EDIT / TIER PROMOTION MODAL -->
+  <dialog id="member-loyalty-edit-dialog" class="points-modal-dialog" style="width: min(640px, calc(100vw - 32px));">
+    <form id="form-edit-member-loyalty" method="dialog">
+      <div class="modal-head">
+        <div>
+          <h2 style="margin:0; font-size:1.15rem; font-weight:800; color:#0f172a; display:flex; align-items:center; gap:8px;">
+            <span>👑</span> Sửa &amp; Thăng Hạng Thành Viên
+          </h2>
+          <p style="margin:2px 0 0; font-size:0.8rem; color:#64748b;">Nâng hạng thành viên, điều chỉnh điểm thưởng hoặc tổng chi tiêu tích lũy.</p>
+        </div>
+        <button class="modal-close" type="button" id="btn-close-edit-member-dialog" aria-label="Đóng">×</button>
+      </div>
+
+      <div class="points-modal-body" style="display:flex; flex-direction:column; gap:14px;">
+        <input type="hidden" id="edit-mem-user-id" value="">
+        <input type="hidden" id="edit-mem-tier-value" value="BRONZE">
+
+        <!-- Member Summary Strip -->
+        <div class="mem-summary-strip">
+          <div class="mem-avatar-box" id="edit-mem-avatar">--</div>
+          <div class="mem-info-box" style="flex:1; min-width:150px;">
+            <strong id="edit-mem-name">Thành viên</strong>
+            <span id="edit-mem-email">email@example.com</span>
+          </div>
+          <div class="mem-stat-pill-sm">
+            <span>Hạng hiện tại:</span>
+            <span id="edit-mem-current-tier-badge" class="tier-badge tier-badge-bronze">--</span>
+          </div>
+        </div>
+
+        <!-- Tier Selector Cards -->
+        <div>
+          <label class="bs-label" style="font-weight:800; color:#0f172a; display:block; margin-bottom:4px;">
+            Chọn Hạng Thành Viên Mới <span style="color:#ea580c;">*</span>
+          </label>
+          <div class="tier-selector-grid" id="edit-mem-tier-grid">
+            <button type="button" class="tier-select-card tier-bronze" data-tier="BRONZE" data-min-spent="0">
+              <span class="tier-select-icon">🥉</span>
+              <span class="tier-select-name">Đồng</span>
+              <span class="tier-select-meta">x1 điểm • 0đ</span>
+            </button>
+            <button type="button" class="tier-select-card tier-silver" data-tier="SILVER" data-min-spent="1000000">
+              <span class="tier-select-icon">🥈</span>
+              <span class="tier-select-name">Bạc</span>
+              <span class="tier-select-meta">x1.5 điểm • 1Tr</span>
+            </button>
+            <button type="button" class="tier-select-card tier-gold" data-tier="GOLD" data-min-spent="3000000">
+              <span class="tier-select-icon">🥇</span>
+              <span class="tier-select-name">Vàng</span>
+              <span class="tier-select-meta">x2 điểm • 3Tr</span>
+            </button>
+            <button type="button" class="tier-select-card tier-diamond" data-tier="DIAMOND" data-min-spent="5000000">
+              <span class="tier-select-icon">💎</span>
+              <span class="tier-select-name">Kim Cương</span>
+              <span class="tier-select-meta">x3 điểm • 5Tr</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Sync Min Spent Checkbox -->
+        <label style="display:flex; align-items:center; gap:8px; background:#fff7ed; border:1px solid #fed7aa; padding:9px 12px; border-radius:10px; cursor:pointer; font-size:12px; font-weight:650; color:#9a3412;">
+          <input type="checkbox" id="edit-mem-sync-spent" style="width:16px; height:16px; accent-color:#ea580c; cursor:pointer;">
+          <span>Tự động nâng Tổng chi tiêu đạt mốc tối thiểu của hạng mới (nếu đang thấp hơn)</span>
+        </label>
+
+        <!-- Points & Total Spent Inputs -->
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+          <div class="bs-field" style="margin:0;">
+            <label class="bs-label" for="edit-mem-points" style="font-weight:750;">Điểm khả dụng (🪙)</label>
+            <input type="number" id="edit-mem-points" class="bs-input" min="0" step="1" required style="width:100%;">
+            <div class="quick-pts-row">
+              <button type="button" class="quick-pts-btn" data-add-pts="100">+100 🪙</button>
+              <button type="button" class="quick-pts-btn" data-add-pts="500">+500 🪙</button>
+              <button type="button" class="quick-pts-btn" data-add-pts="1000">+1.000 🪙</button>
+            </div>
+          </div>
+          <div class="bs-field" style="margin:0;">
+            <label class="bs-label" for="edit-mem-spent" style="font-weight:750;">Tổng chi tiêu tích lũy (VNĐ)</label>
+            <input type="number" id="edit-mem-spent" class="bs-input" min="0" step="1000" required style="width:100%;">
+            <small id="edit-mem-spent-hint" style="display:block; margin-top:5px; font-size:11px; color:#64748b;">Hiện tại: 0 đ</small>
+          </div>
+        </div>
+
+        <!-- Reason / Note -->
+        <div class="bs-field" style="margin:0;">
+          <label class="bs-label" for="edit-mem-reason" style="font-weight:750;">Ghi chú / Lý do điều chỉnh (lưu vào Lịch sử điểm)</label>
+          <input type="text" id="edit-mem-reason" class="bs-input" maxlength="200" placeholder="Ví dụ: Admin thăng hạng VIP khách hàng thân thiết" style="width:100%;">
+        </div>
+      </div>
+
+      <div class="modal-actions" style="padding: 14px 20px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; gap:10px;">
+        <button class="secondary-button" type="button" id="btn-cancel-edit-member-dialog">Hủy</button>
+        <button class="primary-button" type="submit" id="btn-save-edit-member" style="background:#ea580c; border-color:#ea580c; font-weight:800;">
+          <span>💾</span> Lưu Thay Đổi
+        </button>
+      </div>
+    </form>
+  </dialog>
+
   <script>
     // Global Admin Messages Nav Badge API
     (function () {
@@ -8268,6 +8456,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           }
           handleOrderUpdate(update);
         });
+        liveSocket.on('user:new', ({ user } = {}) => {
+          handleNewUser(user);
+        });
         liveSocket.on('payment:updated', (update) => {
           if (!dashboardReady) {
             pendingPaymentEvents.push(update);
@@ -8438,16 +8629,55 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       async function loadOrderReviews(options = {}) {
         const requestId = ++reviewsRequestId;
-        const rawReviews = (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.reviews)) ? window.FASTFOOD_DATA.reviews : [];
-        renderedReviews = rawReviews.map(r => ({
-          id: r.id,
-          orderCode: r.order_id || r.order_code || '',
+        const rawOrderReviews = (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.reviews)) ? window.FASTFOOD_DATA.reviews : [];
+        let rawProdReviews = (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.productReviews)) ? window.FASTFOOD_DATA.productReviews : [];
+
+        if (!options.skipFetch) {
+          try {
+            const res = await fetch('api.php?action=get_product_reviews');
+            const json = await res.json();
+            if (json.success && json.data && Array.isArray(json.data.product_reviews)) {
+              rawProdReviews = json.data.product_reviews;
+              if (window.FASTFOOD_DATA) window.FASTFOOD_DATA.productReviews = rawProdReviews;
+            }
+          } catch {}
+        }
+        if (requestId !== reviewsRequestId) return;
+
+        const mappedOrders = rawOrderReviews.map(r => ({
+          id: 'ord_' + r.id,
+          rawId: r.id,
+          orderCode: r.order_code || r.order_id || '',
           customerName: r.customer_name || 'Khách hàng',
+          restaurantName: r.restaurant_name || '',
           target: r.target || 'restaurant',
           rating: Number(r.rating || 5),
           comment: r.comment || '',
+          replyContent: r.reply_from_restaurant || '',
           submittedAt: r.created_at || new Date().toISOString()
         }));
+
+        const mappedProducts = rawProdReviews.map(pr => ({
+          id: 'prod_' + pr.id,
+          rawId: Number(pr.id),
+          productId: Number(pr.product_id),
+          productName: pr.product_name || ('Món #' + pr.product_id),
+          customerName: pr.customer_name || 'Thực khách FASTFOOD',
+          target: 'product',
+          rating: Number(pr.rating || 5),
+          comment: pr.comment || '',
+          variantInfo: pr.variant_info || '',
+          replyContent: pr.reply_content || '',
+          isVerifiedPurchase: Number(pr.is_verified_purchase) === 1,
+          isApproved: Number(pr.is_approved ?? 1) === 1,
+          helpfulCount: Number(pr.helpful_count || 0),
+          submittedAt: pr.created_at || new Date().toISOString()
+        }));
+
+        renderedReviews = [...mappedProducts, ...mappedOrders].sort((a, b) => (
+          new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime()
+        ));
+
         reviewsLoaded = true;
         updateReviewsBadge(renderedReviews.length);
         if (activeSection === 'reviews' || options.forceRender) {
@@ -8456,12 +8686,14 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       function mergeReviews(...groups) {
-        const byOrderAndTarget = new Map();
+        const byKey = new Map();
         groups.flat().forEach((review) => {
-          if (review?.orderCode && ['driver', 'restaurant'].includes(review.target)) {
+          if (review?.target === 'product' && review?.rawId) {
+            byKey.set(`product:${review.rawId}`, review);
+          } else if (review?.orderCode && ['driver', 'restaurant'].includes(review.target)) {
             const cleanCode = String(review.orderCode).replace(/^#/, '');
-            const existing = byOrderAndTarget.get(`${cleanCode}:${review.target}`);
-            byOrderAndTarget.set(`${cleanCode}:${review.target}`, {
+            const existing = byKey.get(`${cleanCode}:${review.target}`);
+            byKey.set(`${cleanCode}:${review.target}`, {
               ...existing,
               ...review,
               orderCode: cleanCode,
@@ -8469,7 +8701,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             });
           }
         });
-        return [...byOrderAndTarget.values()].sort((first, second) => (
+        return [...byKey.values()].sort((first, second) => (
           new Date(second.submittedAt || 0).getTime() - new Date(first.submittedAt || 0).getTime()
         ));
       }
@@ -8477,7 +8709,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       function renderOrderReviews(reviews) {
         renderedReviews = reviews;
         let filtered = reviews;
-        if (reviewFilterValue === 'driver' || reviewFilterValue === 'restaurant') {
+        if (reviewFilterValue === 'product' || reviewFilterValue === 'driver' || reviewFilterValue === 'restaurant') {
           filtered = filtered.filter((r) => r.target === reviewFilterValue);
         } else if (['1', '2', '3', '4', '5'].includes(reviewFilterValue)) {
           filtered = filtered.filter((r) => Number(r.rating) === Number(reviewFilterValue));
@@ -8485,6 +8717,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (reviewSearchTerm) {
           filtered = filtered.filter((r) =>
             String(r.orderCode || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
+            || String(r.productName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
             || String(r.customerName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
             || String(r.restaurantName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
             || String(r.comment || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
@@ -8506,6 +8739,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         filtered.forEach((review) => {
           const card = document.createElement('article');
           card.className = `review-card${review.isNew ? ' just-added' : ''}`;
+          if (review.target === 'product' && review.isApproved === false) {
+            card.style.opacity = '0.62';
+            card.style.borderStyle = 'dashed';
+          }
+
           const top = document.createElement('div');
           top.className = 'review-card-top';
           const customer = document.createElement('div');
@@ -8518,28 +8756,126 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             newTag.textContent = 'MỚI';
             name.appendChild(newTag);
           }
-          const order = document.createElement('span');
-          order.textContent = `Đơn #${review.orderCode || ''}`;
-          customer.append(name, order);
+          const subMeta = document.createElement('span');
+          if (review.target === 'product') {
+            subMeta.textContent = review.isVerifiedPurchase ? '✓ Đã mua hàng' : 'Đánh giá trực tiếp';
+            if (review.isApproved === false) subMeta.textContent += ' · Đang ẩn';
+          } else {
+            subMeta.textContent = `Đơn #${review.orderCode || ''}`;
+          }
+          customer.append(name, subMeta);
+
           const target = document.createElement('span');
           target.className = 'review-target';
-          target.textContent = review.target === 'driver' ? '🛵 Tài xế' : `🏪 Quán · ${review.restaurantName || ''}`;
+          if (review.target === 'product') {
+            const link = document.createElement('a');
+            link.href = `../food-detail.php?id=${review.productId}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.style.color = '#ea580c';
+            link.style.fontWeight = '700';
+            link.style.textDecoration = 'none';
+            link.textContent = `🍽️ ${review.productName}`;
+            target.appendChild(link);
+          } else {
+            target.textContent = review.target === 'driver' ? '🛵 Tài xế' : `🏪 Quán · ${review.restaurantName || ''}`;
+          }
           top.append(customer, target);
 
           const stars = document.createElement('div');
           stars.className = 'review-stars';
           stars.setAttribute('aria-label', `${review.rating} trên 5 sao`);
           stars.textContent = `${'★'.repeat(Math.max(0, Math.min(5, Number(review.rating) || 0)))}${'☆'.repeat(5 - Math.max(0, Math.min(5, Number(review.rating) || 0)))}`;
+
           const comment = document.createElement('p');
           comment.className = 'review-comment';
-          comment.textContent = review.comment || 'Khách hàng không để lại nhận xét.';
+          comment.textContent = (review.variantInfo ? `[${review.variantInfo}] ` : '') + (review.comment || 'Khách hàng không để lại nhận xét.');
+
+          card.append(top, stars, comment);
+
+          if (review.replyContent) {
+            const replyBox = document.createElement('div');
+            replyBox.style.cssText = 'background:#fff7ed;border-left:3px solid #ea580c;padding:8px 12px;border-radius:0 8px 8px 0;margin:8px 0;font-size:13px;color:#431407;';
+            const replyStrong = document.createElement('strong');
+            replyStrong.style.color = '#c2410c';
+            replyStrong.textContent = '🏪 Phản hồi của quán: ';
+            replyBox.append(replyStrong, document.createTextNode(review.replyContent));
+            card.appendChild(replyBox);
+          }
+
           const meta = document.createElement('div');
           meta.className = 'review-card-meta';
+          meta.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;';
           const submittedAt = new Date(review.submittedAt || '');
-          meta.textContent = Number.isNaN(submittedAt.getTime())
+          const timeText = document.createElement('span');
+          timeText.textContent = Number.isNaN(submittedAt.getTime())
             ? ''
             : submittedAt.toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
-          card.append(top, stars, comment, meta);
+          meta.appendChild(timeText);
+
+          if (review.target === 'product') {
+            const actions = document.createElement('div');
+            actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+
+            const replyBtn = document.createElement('button');
+            replyBtn.type = 'button';
+            replyBtn.className = 'action-button';
+            replyBtn.textContent = review.replyContent ? '✏️ Sửa phản hồi' : '💬 Phản hồi';
+            replyBtn.onclick = async () => {
+              const txt = prompt(`Nhập phản hồi cho nhận xét của ${review.customerName}:`, review.replyContent || '');
+              if (txt === null || !txt.trim()) return;
+              const r = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reply_product_review', review_id: review.rawId, reply_content: txt.trim() })
+              });
+              const j = await r.json();
+              if (j.success) {
+                showToast(j.message);
+                loadOrderReviews({ forceRender: true });
+              } else showToast(j.message || 'Lỗi gửi phản hồi.', true);
+            };
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'action-button';
+            toggleBtn.textContent = review.isApproved ? '🙈 Ẩn' : '👁️ Hiện';
+            toggleBtn.onclick = async () => {
+              const r = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'toggle_product_review', review_id: review.rawId })
+              });
+              const j = await r.json();
+              if (j.success) {
+                showToast(j.message);
+                loadOrderReviews({ forceRender: true });
+              } else showToast(j.message || 'Lỗi cập nhật.', true);
+            };
+
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'action-button delete';
+            delBtn.textContent = '🗑️ Xóa';
+            delBtn.onclick = async () => {
+              if (!confirm('Xóa đánh giá món ăn này?')) return;
+              const r = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_product_review', review_id: review.rawId })
+              });
+              const j = await r.json();
+              if (j.success) {
+                showToast(j.message);
+                loadOrderReviews({ forceRender: true });
+              } else showToast(j.message || 'Lỗi khi xóa.', true);
+            };
+
+            actions.append(replyBtn, toggleBtn, delBtn);
+            meta.appendChild(actions);
+          }
+
+          card.appendChild(meta);
           reviewsList.appendChild(card);
         });
       }
@@ -8909,6 +9245,36 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           orderCode: orderId,
           createdAt: order.createdAt || new Date().toISOString(),
         });
+      }
+
+      function handleNewUser(user) {
+        if (!user || !user.id) return;
+        const uid = String(user.id);
+        const exists = data.users.some((u) => String(u.id) === uid);
+        if (!exists) {
+          data.users.push({
+            id: uid,
+            name: user.name || user.full_name || 'Khách hàng',
+            email: user.email || '',
+            phone: user.phone || 'Chưa cập nhật',
+            role: user.role || 'Khách hàng',
+            roleId: Number(user.roleId || 2),
+            status: user.status || 'Đang hoạt động'
+          });
+          saveRealtimeSnapshot();
+          renderAll();
+          if (typeof membershipLoaded !== 'undefined' && membershipLoaded && typeof loadMembershipMembers === 'function') {
+            loadMembershipMembers();
+          }
+          showToast(`Khách hàng mới đăng ký: ${user.name || user.email}`);
+          handleIncomingNotification({
+            id: `user_${uid}_${Date.now()}`,
+            title: 'Khách hàng mới đăng ký',
+            content: `${user.name || 'Khách hàng'} (${user.email || ''}) vừa tạo tài khoản mới.`,
+            type: 'user',
+            createdAt: new Date().toISOString()
+          });
+        }
       }
 
       function handleOrderUpdate(update) {
@@ -10978,9 +11344,16 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               <td><strong>${money(m.total_spent || 0)}</strong></td>
               <td style="color:#64748b; font-size:11px;">${m.created_at ? formatVietnamDateTime(m.created_at) : '—'}</td>
               <td style="text-align: right;">
-                <button type="button" class="action-button" onclick="window.openPointsHistoryModal(${m.id})">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Lịch sử điểm
-                </button>
+                <div class="row-actions" style="justify-content: flex-end;">
+                  ${isAdminUser ? `
+                    <button type="button" class="action-button edit-tier" onclick="window.openEditMemberLoyaltyModal(${m.id})" title="Sửa thông tin &amp; Thăng hạng thành viên">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m14 5 5 5M4 20l4.5-1 11-11a2.1 2.1 0 0 0-3-3l-11 11z"/></svg>Sửa
+                    </button>
+                  ` : ''}
+                  <button type="button" class="action-button" onclick="window.openPointsHistoryModal(${m.id})">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 8v4l3 3m6-3a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"/></svg>Lịch sử điểm
+                  </button>
+                </div>
               </td>
             </tr>
           `;
@@ -11059,7 +11432,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             tbody.innerHTML = txs.map((tx) => {
               const typeInfo = txTypeMap[tx.transaction_type] || { label: tx.transaction_type, cls: 'tx-type-adjust' };
               const pts = Number(tx.points) || 0;
-              const ptsDisplay = pts > 0 ? `<span class="pts-positive">+${pts}</span>` : `<span class="pts-negative">${pts}</span>`;
+              const ptsDisplay = pts > 0
+                ? `<span class="pts-positive">+${pts}</span>`
+                : (pts < 0 ? `<span class="pts-negative">${pts}</span>` : `<span style="color:#64748b; font-weight:700;">0</span>`);
 
               return `
                 <tr>
@@ -11256,6 +11631,171 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       document.getElementById('btn-close-points-dialog')?.addEventListener('click', () => ptsDialog?.close());
       document.getElementById('btn-cancel-points-dialog')?.addEventListener('click', () => ptsDialog?.close());
       ptsDialog?.addEventListener('click', (e) => { if (e.target === ptsDialog) ptsDialog.close(); });
+
+      // Member Edit / Tier Promotion Modal Logic
+      const editMemDialog = document.getElementById('member-loyalty-edit-dialog');
+      const editMemForm = document.getElementById('form-edit-member-loyalty');
+      let currentEditingMember = null;
+
+      function selectEditMemberTier(tierCode) {
+        const code = String(tierCode || 'BRONZE').toUpperCase();
+        const hiddenInput = document.getElementById('edit-mem-tier-value');
+        if (hiddenInput) hiddenInput.value = code;
+
+        const cards = document.querySelectorAll('#edit-mem-tier-grid .tier-select-card');
+        let matchedMinSpent = 0;
+        cards.forEach((btn) => {
+          const isMatch = (btn.dataset.tier || '').toUpperCase() === code;
+          btn.classList.toggle('is-selected', isMatch);
+          if (isMatch) {
+            matchedMinSpent = Number(btn.dataset.minSpent || 0);
+          }
+        });
+
+        const syncChk = document.getElementById('edit-mem-sync-spent');
+        const spentInput = document.getElementById('edit-mem-spent');
+        const hintEl = document.getElementById('edit-mem-spent-hint');
+        if (hintEl) {
+          hintEl.textContent = `Mốc chuẩn của hạng ${code}: ${money(matchedMinSpent)}`;
+        }
+        if (syncChk?.checked && spentInput) {
+          const baseSpent = Number(currentEditingMember?.total_spent || 0);
+          spentInput.value = String(Math.max(baseSpent, matchedMinSpent));
+        }
+      }
+
+      document.querySelectorAll('#edit-mem-tier-grid .tier-select-card').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          selectEditMemberTier(btn.dataset.tier);
+        });
+      });
+
+      document.getElementById('edit-mem-sync-spent')?.addEventListener('change', (e) => {
+        const tierCode = document.getElementById('edit-mem-tier-value')?.value || 'BRONZE';
+        const activeCard = document.querySelector(`#edit-mem-tier-grid .tier-select-card[data-tier="${tierCode}"]`);
+        const minSpent = Number(activeCard?.dataset.minSpent || 0);
+        const spentInput = document.getElementById('edit-mem-spent');
+        if (spentInput) {
+          const baseSpent = Number(currentEditingMember?.total_spent || 0);
+          if (e.target.checked) {
+            spentInput.value = String(Math.max(baseSpent, minSpent));
+          } else {
+            spentInput.value = String(Math.round(baseSpent));
+          }
+        }
+      });
+
+      document.querySelectorAll('#member-loyalty-edit-dialog .quick-pts-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const add = Number(btn.dataset.addPts || 0);
+          const ptsInput = document.getElementById('edit-mem-points');
+          if (ptsInput) {
+            ptsInput.value = String(Math.max(0, (Number(ptsInput.value) || 0) + add));
+          }
+        });
+      });
+
+      window.openEditMemberLoyaltyModal = async function(userId) {
+        if (!editMemDialog) return;
+        const member = membershipMembers.find((m) => Number(m.id) === Number(userId));
+        if (!member) {
+          showToast('Không tìm thấy dữ liệu thành viên.', true);
+          return;
+        }
+        currentEditingMember = member;
+
+        // Cập nhật mốc min_spent từ cấu hình hiện tại (nếu có)
+        try {
+          const cfgRes = await fetch('api.php?action=get_loyalty_config');
+          const cfgJson = await cfgRes.json();
+          if (cfgJson.success && cfgJson.data?.tiers) {
+            const tiers = cfgJson.data.tiers;
+            document.querySelectorAll('#edit-mem-tier-grid .tier-select-card').forEach((btn) => {
+              const tc = (btn.dataset.tier || '').toUpperCase();
+              if (tiers[tc]) {
+                const ms = Number(tiers[tc].min_spent || 0);
+                const ratio = Number(tiers[tc].point_ratio || 1);
+                btn.dataset.minSpent = String(ms);
+                const metaEl = btn.querySelector('.tier-select-meta');
+                if (metaEl) {
+                  metaEl.textContent = `x${ratio} điểm • ${ms >= 1000000 ? (ms / 1000000) + 'Tr' : money(ms)}`;
+                }
+              }
+            });
+          }
+        } catch (e) {}
+
+        document.getElementById('edit-mem-user-id').value = String(member.id);
+        document.getElementById('edit-mem-avatar').textContent = (member.full_name || 'U').trim().charAt(0).toUpperCase();
+        document.getElementById('edit-mem-name').textContent = member.full_name || 'Chưa đặt tên';
+        document.getElementById('edit-mem-email').textContent = `${member.phone || 'Chưa có SĐT'} • ${member.email || ''}`;
+        const curBadge = document.getElementById('edit-mem-current-tier-badge');
+        if (curBadge) curBadge.outerHTML = `<span id="edit-mem-current-tier-badge">${getTierBadgeHtml(member.member_tier)}</span>`;
+
+        document.getElementById('edit-mem-sync-spent').checked = false;
+        document.getElementById('edit-mem-points').value = String(member.points_balance || 0);
+        document.getElementById('edit-mem-spent').value = String(Math.round(Number(member.total_spent || 0)));
+        document.getElementById('edit-mem-reason').value = '';
+
+        selectEditMemberTier(member.member_tier || 'BRONZE');
+        editMemDialog.showModal();
+      };
+
+      document.getElementById('btn-close-edit-member-dialog')?.addEventListener('click', () => editMemDialog?.close());
+      document.getElementById('btn-cancel-edit-member-dialog')?.addEventListener('click', () => editMemDialog?.close());
+      editMemDialog?.addEventListener('click', (e) => { if (e.target === editMemDialog) editMemDialog.close(); });
+
+      editMemForm?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const saveBtn = document.getElementById('btn-save-edit-member');
+        const userId = Number(document.getElementById('edit-mem-user-id')?.value || 0);
+        const memberTier = document.getElementById('edit-mem-tier-value')?.value || 'BRONZE';
+        const pointsBalance = Number(document.getElementById('edit-mem-points')?.value || 0);
+        const totalSpent = Number(document.getElementById('edit-mem-spent')?.value || 0);
+        const syncMinSpent = !!document.getElementById('edit-mem-sync-spent')?.checked;
+        const reason = document.getElementById('edit-mem-reason')?.value.trim() || '';
+
+        if (!userId) return;
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = '<span>⏳</span> Đang lưu...';
+        }
+
+        try {
+          const res = await fetch('api.php?action=update_member_loyalty', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'update_member_loyalty',
+              user_id: userId,
+              member_tier: memberTier,
+              points_balance: pointsBalance,
+              total_spent: totalSpent,
+              sync_min_spent: syncMinSpent,
+              reason
+            })
+          });
+          const result = await res.json();
+
+          if (result.success) {
+            showToast(`✅ ${result.message || 'Cập nhật hạng thành viên thành công!'}`);
+            editMemDialog?.close();
+            await window.loadMembershipData(membershipPage);
+            try {
+              new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'loyalty', userId });
+            } catch (err) {}
+          } else {
+            showToast(result.message || 'Không thể cập nhật thông tin thành viên.', true);
+          }
+        } catch (err) {
+          showToast('Lỗi kết nối: ' + err.message, true);
+        } finally {
+          if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = '<span>💾</span> Lưu Thay Đổi';
+          }
+        }
+      });
 
       // Save loyalty config button
       document.getElementById('btn-save-loyalty-config')?.addEventListener('click', saveLoyaltyConfig);

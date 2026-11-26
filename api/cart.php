@@ -269,12 +269,18 @@ if ($method === 'POST') {
 
             // Kiểm tra voucher chào mừng khách hàng mới
             if ($couponCode === 'NEW50' || $couponCode === 'NEW50K' || strpos($couponCode, 'NEW50K-') === 0) {
-                if ($cUser) {
-                    $ordCheck = $db->prepare("SELECT COUNT(*) FROM orders WHERE customer_id = ? AND order_status != 'cancelled'");
-                    $ordCheck->execute([$cUser['id']]);
-                    if ((int)$ordCheck->fetchColumn() > 0) {
-                        jsonError('Voucher chào mừng ' . $couponCode . ' chỉ áp dụng cho đơn hàng đầu tiên của khách hàng mới.');
-                    }
+                if (!$cUser) {
+                    jsonError('Vui lòng đăng nhập và xác thực thông tin khách hàng mới để sử dụng Voucher 50.000đ.');
+                }
+                $claimChk = $db->prepare("SELECT id FROM customer_voucher_claims WHERE user_id = ? LIMIT 1");
+                $claimChk->execute([$cUser['id']]);
+                if (!$claimChk->fetch()) {
+                    jsonError('Bạn chưa nhập thông tin xác thực bạn mới nên chưa nhận được Voucher 50.000đ này.');
+                }
+                $ordCheck = $db->prepare("SELECT COUNT(*) FROM orders WHERE customer_id = ? AND order_status != 'cancelled'");
+                $ordCheck->execute([$cUser['id']]);
+                if ((int)$ordCheck->fetchColumn() > 0) {
+                    jsonError('Voucher chào mừng ' . $couponCode . ' chỉ áp dụng cho đơn hàng đầu tiên của khách hàng mới.');
                 }
             }
 

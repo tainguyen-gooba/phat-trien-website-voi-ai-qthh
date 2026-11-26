@@ -219,6 +219,21 @@ function getMembershipTiers(): array {
 }
 
 /**
+ * Compare two membership tier codes and return the higher rank
+ */
+function getHigherMembershipTier(string $tierA, string $tierB): string {
+    $rank = ['BRONZE' => 1, 'SILVER' => 2, 'GOLD' => 3, 'DIAMOND' => 4];
+    $a = strtoupper(trim($tierA));
+    $b = strtoupper(trim($tierB));
+    $rankA = $rank[$a] ?? 1;
+    $rankB = $rank[$b] ?? 1;
+    if ($rankA >= $rankB) {
+        return isset($rank[$a]) ? $a : 'BRONZE';
+    }
+    return isset($rank[$b]) ? $b : 'BRONZE';
+}
+
+/**
  * 3. Calculate tier code from total spent amount
  */
 function calculateTier(float $totalSpent): string {
@@ -354,10 +369,11 @@ function processOrderEarnPoints(int $orderId): array {
         $orderTotal = (float)$order['total_amount'];
         $pointsEarned = calculateEarnPoints($orderTotal, $currentTier);
 
-        // Update user: balance, total_spent, auto-upgrade tier
+        // Update user: balance, total_spent, upgrade tier (preserve manually promoted higher tier)
         $newBalance = (int)$user['points_balance'] + $pointsEarned;
         $newTotalSpent = (float)$user['total_spent'] + $orderTotal;
-        $newTier = calculateTier($newTotalSpent);
+        $calculatedTier = calculateTier($newTotalSpent);
+        $newTier = getHigherMembershipTier((string)$currentTier, $calculatedTier);
 
         $upUser = $db->prepare("UPDATE users SET points_balance = ?, total_spent = ?, member_tier = ? WHERE id = ?");
         $upUser->execute([$newBalance, $newTotalSpent, $newTier, $userId]);
@@ -708,4 +724,125 @@ function updateLoyaltySettings(array $settings): bool {
 
     clearLoyaltyCache();
     return true;
+}
+
+/**
+ * 12. Admin manual update / tier promotion for a member
+ */
+function adminUpdateMemberLoyalty(int $userId, array $input): array {
+    $allowedTiers = ['BRONZE', 'SILVER', 'GOLD', 'DIAMOND'];
+    $newTier = strtoupper(trim((string)($input['member_tier'] ?? '')));
+    if (!in_array($newTier, $allowedTiers, true)) {
+        return ['success' => false, 'status' => 400, 'error' => 'Hạng thành viên không hợp lệ (chỉ hỗ trợ BRONZE, SILVER, GOLD, DIAMOND).'];
+    }
+
+    if (isset($input['points_balance']) && $input['points_balance'] !== '' && $input['points_balance'] !== null) {
+        if (!is_numeric($input['points_balance']) || (int)$input['points_balance'] < 0) {
+            return ['success' => false, 'status' => 400, 'error' => 'Điểm khả dụng phải là số nguyên không âm (>= 0).'];
+        }
+    }
+
+    if (isset($input['total_spent']) && $input['total_spent'] !== '' && $input['total_spent'] !== null) {
+        if (!is_numeric($input['total_spent']) || (float)$input['total_spent'] < 0) {
+            return ['success' => false, 'status' => 400, 'error' => 'Tổng chi tiêu không được là số âm (>= 0).'];
+        }
+    }
+
+    $tierMeta = getMembershipTiers();
+    $syncMinSpent = !empty($input['sync_min_spent']);
+    $reason = mb_substr(trim((string)($input['reason'] ?? '')), 0, 200);
+
+    $db = getDB();
+    $ownsTx = false;
+    if (!$db->inTransaction()) {
+        $db->beginTransaction();
+        $ownsTx = true;
+    }
+
+    try {
+        $uStmt = $db->prepare("SELECT id, full_name, email, phone, member_tier, points_balance, total_spent FROM users WHERE id = ? FOR UPDATE");
+        $uStmt->execute([$userId]);
+        $user = $uStmt->fetch();
+
+        if (!$user) {
+            if ($ownsTx) $db->rollBack();
+            return ['success' => false, 'status' => 404, 'error' => 'Không tìm thấy thành viên này.'];
+        }
+
+        $oldTier = strtoupper($user['member_tier'] ?? 'BRONZE');
+        $oldPoints = (int)($user['points_balance'] ?? 0);
+        $oldSpent = (float)($user['total_spent'] ?? 0.0);
+
+        $newPoints = (isset($input['points_balance']) && $input['points_balance'] !== '' && $input['points_balance'] !== null)
+            ? (int)$input['points_balance']
+            : $oldPoints;
+
+        $newSpent = (isset($input['total_spent']) && $input['total_spent'] !== '' && $input['total_spent'] !== null)
+            ? (float)$input['total_spent']
+            : $oldSpent;
+
+        if ($syncMinSpent) {
+            $tierMin = (float)($tierMeta[$newTier]['min_spent'] ?? 0.0);
+            if ($newSpent < $tierMin) {
+                $newSpent = $tierMin;
+            }
+        }
+
+        $upStmt = $db->prepare("UPDATE users SET member_tier = ?, points_balance = ?, total_spent = ? WHERE id = ?");
+        $upStmt->execute([$newTier, $newPoints, $newSpent, $userId]);
+
+        $pointsDelta = $newPoints - $oldPoints;
+        $tierChanged = ($newTier !== $oldTier);
+        $spentChanged = (abs($newSpent - $oldSpent) >= 0.01);
+
+        if ($tierChanged || $pointsDelta !== 0 || $spentChanged) {
+            $oldLabel = $tierMeta[$oldTier]['tier_name'] ?? $oldTier;
+            $newLabel = $tierMeta[$newTier]['tier_name'] ?? $newTier;
+            $parts = [];
+            if ($tierChanged) {
+                $parts[] = "Hạng: {$oldLabel} -> {$newLabel}";
+            }
+            if ($pointsDelta !== 0) {
+                $sign = $pointsDelta > 0 ? '+' : '';
+                $parts[] = "Điểm: {$oldPoints} -> {$newPoints} ({$sign}{$pointsDelta})";
+            }
+            if ($spentChanged) {
+                $parts[] = 'Chi tiêu: ' . number_format($newSpent, 0, ',', '.') . 'đ';
+            }
+            $desc = 'Admin điều chỉnh (' . implode('; ', $parts) . ')';
+            if ($reason !== '') {
+                $desc .= ' - ' . $reason;
+            }
+            $desc = mb_substr($desc, 0, 255);
+
+            $txStmt = $db->prepare("INSERT INTO point_transactions (user_id, order_id, points, balance_after, transaction_type, description, created_at)
+                                    VALUES (?, NULL, ?, ?, 'ADMIN_ADJUST', ?, NOW())");
+            $txStmt->execute([$userId, $pointsDelta, $newPoints, $desc]);
+        }
+
+        if ($ownsTx) {
+            $db->commit();
+        }
+
+        $tInfo = $tierMeta[$newTier] ?? [];
+        return [
+            'success' => true,
+            'message' => $tierChanged
+                ? "Đã cập nhật hạng thành viên {$user['full_name']} sang {$tInfo['badge_icon']} {$tInfo['tier_name']}!"
+                : "Đã cập nhật thông tin thành viên {$user['full_name']} thành công!",
+            'member'  => [
+                'id'             => (int)$user['id'],
+                'full_name'      => $user['full_name'],
+                'email'          => $user['email'],
+                'member_tier'    => $newTier,
+                'tier_name'      => $tInfo['tier_name'] ?? $newTier,
+                'badge_icon'     => $tInfo['badge_icon'] ?? '🥉',
+                'points_balance' => $newPoints,
+                'total_spent'    => $newSpent,
+            ]
+        ];
+    } catch (Exception $e) {
+        if ($ownsTx) $db->rollBack();
+        return ['success' => false, 'status' => 500, 'error' => 'Lỗi cập nhật thành viên: ' . $e->getMessage()];
+    }
 }

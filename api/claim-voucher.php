@@ -37,7 +37,7 @@ if ($action === 'skip_welcome' || $action === 'skip' || $action === 'dismiss') {
 $fullName = trim($input['fullName'] ?? $input['full_name'] ?? $_POST['fullName'] ?? $_POST['full_name'] ?? $user['full_name'] ?? '');
 $phone    = trim($input['phone'] ?? $_POST['phone'] ?? $user['phone'] ?? '');
 $address  = trim($input['address'] ?? $_POST['address'] ?? '');
-$cccd     = trim($input['cccd'] ?? $input['identity_number'] ?? $_POST['cccd'] ?? $_POST['identity_number'] ?? '');
+$dob      = trim($input['date_of_birth'] ?? $input['dob'] ?? $_POST['date_of_birth'] ?? $_POST['dob'] ?? '');
 
 // 3. Kiểm tra định dạng đầu vào cơ bản
 if (mb_strlen($fullName) < 2) {
@@ -53,10 +53,18 @@ if (strlen($cleanPhone) < 9 || strlen($cleanPhone) > 11) {
     jsonError('Số điện thoại không hợp lệ (yêu cầu từ 9 đến 11 chữ số).', 400);
 }
 
-// Chuẩn hóa CCCD / CMND (Việt Nam: CMND 9 số, CCCD 12 số)
-$cleanCccd = preg_replace('/[^0-9]/', '', $cccd);
-if (strlen($cleanCccd) !== 9 && strlen($cleanCccd) !== 12) {
-    jsonError('Số Căn cước công dân (CCCD/CMND) không hợp lệ (yêu cầu đúng 9 hoặc 12 chữ số).', 400);
+// Kiểm tra Ngày sinh hợp lệ (YYYY-MM-DD, không ở tương lai, năm >= 1920)
+if ($dob === '' || !preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $dob, $dobMatches)) {
+    jsonError('Vui lòng chọn Ngày sinh hợp lệ.', 400);
+}
+if (!checkdate((int)$dobMatches[2], (int)$dobMatches[3], (int)$dobMatches[1])) {
+    jsonError('Ngày sinh không tồn tại trên lịch. Vui lòng kiểm tra lại.', 400);
+}
+if (strtotime($dob) > strtotime(date('Y-m-d'))) {
+    jsonError('Ngày sinh không thể là một ngày trong tương lai.', 400);
+}
+if (strtotime($dob) < strtotime('1920-01-01')) {
+    jsonError('Năm sinh không hợp lệ (tối thiểu từ năm 1920).', 400);
 }
 
 if (mb_strlen($address) < 5) {
@@ -66,7 +74,7 @@ if (mb_strlen($address) < 5) {
 $db = getDB();
 
 // ===================================================================
-// 4-TIER ANTI-DUPLICATION VALIDATION (KIỂM TRA CHỐNG TRÙNG LẶP)
+// KIỂM TRA CHỐNG TRÙNG LẶP (ANTI-DUPLICATION VALIDATION)
 // ===================================================================
 
 // Tier 1: Kiểm tra tài khoản hiện tại đã nhận voucher chào mừng chưa
@@ -80,19 +88,6 @@ $tier1Coupons = $db->prepare("SELECT id FROM coupons WHERE user_id = ? AND (code
 $tier1Coupons->execute([$userId]);
 if ($tier1Coupons->fetch()) {
     jsonError('Tài khoản của bạn đã sở hữu voucher chào mừng bạn mới trên hệ thống.', 400);
-}
-
-// Tier 2: Kiểm tra số CCCD / CMND có bị trùng lặp trên toàn hệ thống không
-$tier2Claims = $db->prepare("SELECT id, user_id FROM customer_voucher_claims WHERE identity_number = ? LIMIT 1");
-$tier2Claims->execute([$cleanCccd]);
-if ($tier2Claims->fetch()) {
-    jsonError('Số Căn cước công dân (CCCD/CMND) này đã được sử dụng để nhận voucher chào mừng trên hệ thống. Mỗi khách hàng chỉ được nhận ưu đãi 1 lần duy nhất.', 400);
-}
-
-$tier2Users = $db->prepare("SELECT id FROM users WHERE cccd = ? AND id != ? LIMIT 1");
-$tier2Users->execute([$cleanCccd, $userId]);
-if ($tier2Users->fetch()) {
-    jsonError('Số CCCD/CMND này đã được liên kết với một tài khoản khác trên hệ thống.', 400);
 }
 
 // Tier 3: Kiểm tra số điện thoại có bị trùng lặp nhận voucher không
@@ -117,9 +112,11 @@ if ((int)$tier4Orders->fetchColumn() > 0) {
 try {
     $db->beginTransaction();
 
-    // 1. Cập nhật thông tin khách hàng trong bảng users
-    $updateUser = $db->prepare("UPDATE users SET full_name = ?, phone = ?, address = ?, cccd = ?, updated_at = NOW() WHERE id = ?");
-    $updateUser->execute([$fullName, $cleanPhone, $address, $cleanCccd, $userId]);
+    // 1. Cập nhật thông tin khách hàng và ngày sinh trong bảng users
+    $updateUser = $db->prepare("UPDATE users SET full_name = ?, phone = ?, address = ?, date_of_birth = ?, updated_at = NOW() WHERE id = ?");
+    $updateUser->execute([$fullName, $cleanPhone, $address, $dob, $userId]);
+
+    $claimIdentityKey = "DOB:{$dob}:U{$userId}";
 
     // 2. Tạo mã voucher ngẫu nhiên độc nhất dạng NEW50K-XXXXXX
     $userVoucherCode = 'NEW50K-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
@@ -137,16 +134,37 @@ try {
 
     // 3. Thêm bản ghi voucher giảm cố định 50.000đ vào bảng coupons
     $insertCoupon = $db->prepare("INSERT INTO coupons 
-        (user_id, code, title, discount_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, start_date, end_date, is_active, created_at)
-        VALUES (?, ?, 'Voucher chào mừng bạn mới - Giảm ngay 50.000đ', 'fixed', 50000.00, 0.00, 50000.00, 1, 0, ?, ?, 1, NOW())");
+        (user_id, code, title, discount_type, voucher_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, min_member_tier, start_date, end_date, is_active, created_at)
+        VALUES (?, ?, 'Voucher chào mừng bạn mới - Giảm ngay 50.000đ', 'fixed', 'fixed', 50000.00, 0.00, 50000.00, 1, 0, 'ALL', ?, ?, 1, NOW())");
     $insertCoupon->execute([$userId, $userVoucherCode, $startDate, $endDate]);
     $couponId = (int)$db->lastInsertId();
+
+    // 3b. Đồng bộ vào bảng vouchers & ví user_vouchers để hiển thị trong Voucher của tôi & Modal Giỏ hàng
+    try {
+        $voucherId = $couponId;
+        $chkV = $db->prepare("SELECT id FROM vouchers WHERE id = ? LIMIT 1");
+        $chkV->execute([$couponId]);
+        $welcomeDesc = 'Ưu đãi chào mừng bạn mới sau khi xác thực thông tin - Giảm 50.000đ cho đơn đầu tiên.';
+        if ($chkV->fetch()) {
+            $insV = $db->prepare("INSERT INTO vouchers (code, title, description, voucher_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, user_limit, min_member_tier, is_public, start_date, end_date, is_active)
+                                  VALUES (?, 'Voucher chào mừng bạn mới - Giảm ngay 50.000đ', ?, 'fixed', 50000.00, 0.00, 50000.00, 1, 0, 1, 'ALL', 0, ?, ?, 1)");
+            $insV->execute([$userVoucherCode, $welcomeDesc, $startDate, $endDate]);
+            $voucherId = (int)$db->lastInsertId();
+        } else {
+            $insV = $db->prepare("INSERT INTO vouchers (id, code, title, description, voucher_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, user_limit, min_member_tier, is_public, start_date, end_date, is_active)
+                                  VALUES (?, ?, 'Voucher chào mừng bạn mới - Giảm ngay 50.000đ', ?, 'fixed', 50000.00, 0.00, 50000.00, 1, 0, 1, 'ALL', 0, ?, ?, 1)");
+            $insV->execute([$couponId, $userVoucherCode, $welcomeDesc, $startDate, $endDate]);
+        }
+
+        $insUV = $db->prepare("INSERT INTO user_vouchers (user_id, voucher_id, source, is_used, expires_at) VALUES (?, ?, 'admin', 0, ?)");
+        $insUV->execute([$userId, $voucherId, $endDate]);
+    } catch (Exception $e) {}
 
     // 4. Ghi nhận vào bảng kiểm soát trùng lặp customer_voucher_claims
     $insertClaim = $db->prepare("INSERT INTO customer_voucher_claims 
         (user_id, full_name, phone, identity_number, address, coupon_id, coupon_code, claimed_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, NOW())");
-    $insertClaim->execute([$userId, $fullName, $cleanPhone, $cleanCccd, $address, $couponId, $userVoucherCode]);
+    $insertClaim->execute([$userId, $fullName, $cleanPhone, $claimIdentityKey, $address, $couponId, $userVoucherCode]);
 
     // 5. Gửi thông báo trong hệ thống
     try {
@@ -166,15 +184,21 @@ try {
         'id'                  => $couponId,
         'code'                => $userVoucherCode,
         'title'               => 'Voucher chào mừng bạn mới - Giảm ngay 50.000đ',
+        'voucher_type'        => 'fixed',
         'discount_type'       => 'fixed',
         'discount_value'      => 50000.00,
         'min_order_value'     => 0.00,
         'max_discount_amount' => 50000.00
     ];
 
-    // Cập nhật thông tin trong session người dùng
+    // Cập nhật thông tin trong session người dùng (cả customer_user và legacy keys)
     $_SESSION['user_name']  = $fullName;
     $_SESSION['user_phone'] = $cleanPhone;
+    if (!empty($_SESSION['customer_user']) && is_array($_SESSION['customer_user'])) {
+        $_SESSION['customer_user']['full_name'] = $fullName;
+        $_SESSION['customer_user']['name']      = $fullName;
+        $_SESSION['customer_user']['phone']     = $cleanPhone;
+    }
 
     // Xóa cờ modal để không hiển thị lại sau khi đã nhận thành công
     unset($_SESSION['show_voucher_claim_modal']);

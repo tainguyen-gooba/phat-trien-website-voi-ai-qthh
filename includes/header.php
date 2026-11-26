@@ -101,7 +101,7 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
         <?php if ($currentUser): ?>
           <div class="user-dropdown-wrap" id="user-dropdown-wrap">
             <button type="button" class="user-menu-pill" id="user-menu-trigger" aria-expanded="false" aria-haspopup="true" onclick="toggleUserDropdown(event)" title="Tài khoản: <?= escapeHtml($currentUser['full_name']) ?>">
-              <img src="<?= escapeHtml($currentUser['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80') ?>" alt="Avatar" class="user-avatar-mini" style="object-fit:cover;">
+              <img src="<?= escapeHtml(getAvatarUrl($currentUser['avatar_url'] ?? $currentUser['avatar'] ?? '', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80')) ?>" alt="Avatar" class="user-avatar-mini" style="object-fit:cover;">
               <span><?= escapeHtml(explode(' ', $currentUser['full_name'])[count(explode(' ', $currentUser['full_name'])) - 1] ?? 'Tài Khoản') ?></span>
               <svg class="dropdown-arrow-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
             </button>
@@ -109,7 +109,7 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
             <div class="user-dropdown-menu" id="user-dropdown-menu">
               <!-- Header info in dropdown -->
               <div class="user-dropdown-header">
-                <img src="<?= escapeHtml($currentUser['avatar'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80') ?>" alt="Avatar" class="user-dropdown-avatar">
+                <img src="<?= escapeHtml(getAvatarUrl($currentUser['avatar_url'] ?? $currentUser['avatar'] ?? '', 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=80')) ?>" alt="Avatar" class="user-dropdown-avatar">
                 <div class="user-dropdown-info">
                   <strong class="user-dropdown-name"><?= escapeHtml($currentUser['full_name']) ?></strong>
                   <span class="user-dropdown-email"><?= escapeHtml($currentUser['email']) ?></span>

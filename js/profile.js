@@ -10,7 +10,158 @@
     initClipboardCopy();
     initVoucherExchange();
     initVipCardTilt();
+    initProfileAvatarUpload();
   });
+
+  // =========================================================================
+  // 0b. Profile Avatar File Preview & Instant AJAX Upload
+  // =========================================================================
+  function initProfileAvatarUpload() {
+    const fileInput = document.getElementById('profile-avatar-input');
+    const previewImg = document.getElementById('profile-avatar-preview');
+    const dropzone = document.getElementById('profile-avatar-dropzone');
+    const pendingBar = document.getElementById('profile-avatar-pending');
+    const fileNameEl = document.getElementById('profile-avatar-filename');
+    const saveNowBtn = document.getElementById('profile-avatar-save-now');
+    const cancelBtn = document.getElementById('profile-avatar-cancel');
+
+    if (!fileInput || !previewImg) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    const maxSizeBytes = 5 * 1024 * 1024;
+    let objectUrl = null;
+
+    function resetPendingState() {
+      fileInput.value = '';
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+        objectUrl = null;
+      }
+      const savedSrc = previewImg.getAttribute('data-saved-src');
+      if (savedSrc) previewImg.src = savedSrc;
+      if (pendingBar) pendingBar.hidden = true;
+    }
+
+    function applySelectedFile(file) {
+      if (!file) return;
+      if (allowedTypes.indexOf(file.type) === -1 && !/\.(jpe?g|png|webp|gif)$/i.test(file.name)) {
+        showNotification('Chỉ chấp nhận tệp ảnh JPG, PNG, WebP hoặc GIF.', 'danger');
+        resetPendingState();
+        return;
+      }
+      if (file.size <= 0 || file.size > maxSizeBytes) {
+        showNotification('Dung lượng ảnh vượt quá giới hạn tối đa 5MB.', 'danger');
+        resetPendingState();
+        return;
+      }
+
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      objectUrl = URL.createObjectURL(file);
+      previewImg.src = objectUrl;
+
+      if (fileNameEl) {
+        const kb = Math.max(1, Math.round(file.size / 1024));
+        fileNameEl.textContent = file.name + ' (' + kb + ' KB)';
+      }
+      if (pendingBar) pendingBar.hidden = false;
+    }
+
+    fileInput.addEventListener('change', function() {
+      const file = fileInput.files && fileInput.files[0];
+      if (!file) {
+        resetPendingState();
+        return;
+      }
+      applySelectedFile(file);
+    });
+
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', function() {
+        resetPendingState();
+      });
+    }
+
+    if (dropzone) {
+      ['dragenter', 'dragover'].forEach(function(evtName) {
+        dropzone.addEventListener(evtName, function(e) {
+          e.preventDefault();
+          dropzone.classList.add('is-dragover');
+        });
+      });
+      ['dragleave', 'drop'].forEach(function(evtName) {
+        dropzone.addEventListener(evtName, function(e) {
+          e.preventDefault();
+          dropzone.classList.remove('is-dragover');
+        });
+      });
+      dropzone.addEventListener('drop', function(e) {
+        const dtFiles = e.dataTransfer && e.dataTransfer.files;
+        if (dtFiles && dtFiles[0]) {
+          try {
+            const transfer = new DataTransfer();
+            transfer.items.add(dtFiles[0]);
+            fileInput.files = transfer.files;
+          } catch (err) {}
+          applySelectedFile(dtFiles[0]);
+        }
+      });
+    }
+
+    if (saveNowBtn) {
+      saveNowBtn.addEventListener('click', async function() {
+        const file = fileInput.files && fileInput.files[0];
+        if (!file) {
+          showNotification('Vui lòng chọn ảnh trước khi lưu.', 'warning');
+          return;
+        }
+
+        const originalLabel = saveNowBtn.textContent;
+        saveNowBtn.disabled = true;
+        saveNowBtn.textContent = 'Đang tải lên...';
+
+        try {
+          const fd = new FormData();
+          fd.append('action', 'upload_avatar');
+          fd.append('avatar_file', file);
+
+          const res = await fetch('profile.php', {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: fd
+          });
+          const data = await res.json();
+
+          if (!res.ok || !data.success) {
+            showNotification(data.error || 'Không thể cập nhật ảnh đại diện.', 'danger');
+            return;
+          }
+
+          const newUrl = data.full_url || data.avatar_url;
+          if (newUrl) {
+            const bustUrl = newUrl + (newUrl.indexOf('?') === -1 ? '?v=' : '&v=') + Date.now();
+            previewImg.setAttribute('data-saved-src', bustUrl);
+            document.querySelectorAll('.vip-avatar-img, .user-avatar-mini, .user-dropdown-avatar, #profile-avatar-preview').forEach(function(img) {
+              img.src = bustUrl;
+            });
+          }
+
+          fileInput.value = '';
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+          }
+          if (pendingBar) pendingBar.hidden = true;
+          showNotification(data.message || 'Cập nhật ảnh đại diện thành công!', 'success', 3500);
+        } catch (err) {
+          console.error('Avatar upload error:', err);
+          showNotification('Không thể kết nối máy chủ để tải ảnh lên.', 'danger');
+        } finally {
+          saveNowBtn.disabled = false;
+          saveNowBtn.textContent = originalLabel;
+        }
+      });
+    }
+  }
 
   // =========================================================================
   // 0. Subtle 3D Metallic Tilt & Specular Spotlight for VIP Card

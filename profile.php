@@ -16,7 +16,65 @@ $db = getDB();
 $message = '';
 $error = '';
 
-// 2. Handle Profile Info Update (Full Name, Phone, Address)
+/**
+ * Sync updated user fields across active PHP session stores
+ */
+function syncProfileSession(int $userId, array $fields): void {
+    if (isset($fields['full_name'])) {
+        $_SESSION['user_name'] = $fields['full_name'];
+    }
+    if (isset($fields['phone'])) {
+        $_SESSION['user_phone'] = $fields['phone'];
+    }
+    if (isset($fields['avatar_url'])) {
+        $_SESSION['user_avatar'] = $fields['avatar_url'];
+    }
+
+    foreach (['customer_user', 'admin_user'] as $bucket) {
+        if (!empty($_SESSION[$bucket]) && (int)($_SESSION[$bucket]['id'] ?? 0) === $userId) {
+            if (isset($fields['full_name'])) {
+                $_SESSION[$bucket]['full_name'] = $fields['full_name'];
+                $_SESSION[$bucket]['name'] = $fields['full_name'];
+            }
+            if (isset($fields['phone'])) {
+                $_SESSION[$bucket]['phone'] = $fields['phone'];
+            }
+            if (isset($fields['avatar_url'])) {
+                $_SESSION[$bucket]['avatar'] = $fields['avatar_url'];
+                $_SESSION[$bucket]['avatar_url'] = $fields['avatar_url'];
+            }
+        }
+    }
+}
+
+// 1b. Handle AJAX Immediate Avatar Upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'upload_avatar') {
+    header('Content-Type: application/json; charset=utf-8');
+    $curStmt = $db->prepare("SELECT avatar_url FROM users WHERE id = ? LIMIT 1");
+    $curStmt->execute([$userId]);
+    $oldAvatar = (string)($curStmt->fetchColumn() ?: '');
+
+    $upload = processProfileAvatarUpload($_FILES['avatar_file'] ?? [], $userId, $oldAvatar);
+    if (!$upload['success']) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => $upload['error']], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+
+    $upAvatarStmt = $db->prepare("UPDATE users SET avatar_url = ?, updated_at = NOW() WHERE id = ?");
+    $upAvatarStmt->execute([$upload['relative_url'], $userId]);
+    syncProfileSession($userId, ['avatar_url' => $upload['relative_url']]);
+
+    echo json_encode([
+        'success'    => true,
+        'message'    => 'Cập nhật ảnh đại diện thành công!',
+        'avatar_url' => $upload['relative_url'],
+        'full_url'   => $upload['full_url'],
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// 2. Handle Profile Info Update (Full Name, Phone, Address, optional Avatar)
 $isUpdateProfile = ($_SERVER['REQUEST_METHOD'] === 'POST' && (
     (isset($_POST['action']) && $_POST['action'] === 'update_profile') ||
     isset($_POST['fullName'])
@@ -39,21 +97,44 @@ if ($isUpdateProfile) {
     } elseif ($dob !== '' && strtotime($dob) < strtotime('1920-01-01')) {
         $error = 'Năm sinh không hợp lệ (tối thiểu từ năm 1920).';
     } else {
-        $cleanDob = ($dob !== '') ? $dob : null;
-        $upStmt = $db->prepare("UPDATE users SET full_name = ?, phone = ?, address = ?, date_of_birth = ?, updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$fullName, $phone, $address, $cleanDob, $userId]);
+        $newAvatarRel = null;
+        if (!empty($_FILES['avatar_file']) && ($_FILES['avatar_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+            $curStmt = $db->prepare("SELECT avatar_url FROM users WHERE id = ? LIMIT 1");
+            $curStmt->execute([$userId]);
+            $oldAvatar = (string)($curStmt->fetchColumn() ?: '');
 
-        $_SESSION['user_name']  = $fullName;
-        $_SESSION['user_phone'] = $phone;
-        $currentUser = currentUser();
-        $message = 'Cập nhật thông tin thành công!';
+            $upload = processProfileAvatarUpload($_FILES['avatar_file'], $userId, $oldAvatar);
+            if (!$upload['success']) {
+                $error = $upload['error'];
+            } else {
+                $newAvatarRel = $upload['relative_url'];
+            }
+        }
 
-        // Tự động kiểm tra và tặng voucher sinh nhật nếu hôm nay là sinh nhật
-        if ($cleanDob) {
-            require_once ROOT_PATH . '/helpers/voucher.php';
-            $gift = @checkAndGiftBirthdayVoucher($userId);
-            if ($gift) {
-                $message .= " 🎂 Chúc mừng sinh nhật! Bạn vừa nhận được voucher {$gift['code']} giảm {$gift['discount_percent']}%!";
+        if (!$error) {
+            $cleanDob = ($dob !== '') ? $dob : null;
+            if ($newAvatarRel !== null) {
+                $upStmt = $db->prepare("UPDATE users SET full_name = ?, phone = ?, address = ?, date_of_birth = ?, avatar_url = ?, updated_at = NOW() WHERE id = ?");
+                $upStmt->execute([$fullName, $phone, $address, $cleanDob, $newAvatarRel, $userId]);
+                syncProfileSession($userId, ['full_name' => $fullName, 'phone' => $phone, 'avatar_url' => $newAvatarRel]);
+            } else {
+                $upStmt = $db->prepare("UPDATE users SET full_name = ?, phone = ?, address = ?, date_of_birth = ?, updated_at = NOW() WHERE id = ?");
+                $upStmt->execute([$fullName, $phone, $address, $cleanDob, $userId]);
+                syncProfileSession($userId, ['full_name' => $fullName, 'phone' => $phone]);
+            }
+
+            $currentUser = currentUser();
+            $message = $newAvatarRel !== null
+                ? 'Cập nhật thông tin và ảnh đại diện thành công!'
+                : 'Cập nhật thông tin thành công!';
+
+            // Tự động kiểm tra và tặng voucher sinh nhật nếu hôm nay là sinh nhật
+            if ($cleanDob) {
+                require_once ROOT_PATH . '/helpers/voucher.php';
+                $gift = @checkAndGiftBirthdayVoucher($userId);
+                if ($gift) {
+                    $message .= " 🎂 Chúc mừng sinh nhật! Bạn vừa nhận được voucher {$gift['code']} giảm {$gift['discount_percent']}%!";
+                }
             }
         }
     }
@@ -248,7 +329,7 @@ require_once ROOT_PATH . '/includes/header.php';
       <div class="vip-card-footer">
         <div class="vip-user-info">
           <div class="vip-avatar-ring">
-            <img src="<?= escapeHtml($user['avatar_url'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80') ?>" 
+            <img src="<?= escapeHtml(getAvatarUrl($user['avatar_url'] ?? '')) ?>" 
                  alt="Avatar" class="vip-avatar-img">
           </div>
           <div class="vip-user-meta">
@@ -714,23 +795,7 @@ require_once ROOT_PATH . '/includes/header.php';
        ========================================================================= -->
   <div id="tab-profile" class="profile-tab-pane js-profile-panel" role="tabpanel">
     <div class="profile-edit-card">
-      <div class="profile-avatar-row">
-        <img src="<?= escapeHtml($user['avatar_url'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80') ?>" 
-             alt="Avatar" class="profile-avatar-img">
-        <div>
-          <h3 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 0.25rem; color: var(--ff-dark-slate);">
-            <?= escapeHtml($user['full_name']) ?>
-          </h3>
-          <span class="badge badge-secondary"><?= strtoupper($currentUser['role']) ?></span>
-          <span style="color: var(--ff-muted-slate); font-size: 0.85rem; margin-left: 0.5rem;">
-            <?= escapeHtml($user['email']) ?>
-          </span>
-          <div style="margin-top:0.35rem; font-size:0.85rem; color:#475569;">
-            🎂 <strong>Ngày sinh:</strong> 
-            <?= !empty($user['date_of_birth']) ? date('d/m/Y', strtotime($user['date_of_birth'])) : '<span style="color:#94a3b8; font-style:italic;">Chưa cập nhật ngày sinh</span>' ?>
-          </div>
-        </div>
-      </div>
+      <?php $resolvedProfileAvatar = getAvatarUrl($user['avatar_url'] ?? ''); ?>
 
       <?php if (!empty($birthdayStatus['is_birthday_today'])): ?>
         <div style="margin-bottom:1.25rem; background:linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%); border:1.5px solid #fb923c; border-radius:12px; padding:1rem 1.25rem; display:flex; align-items:center; gap:0.85rem;">
@@ -756,8 +821,67 @@ require_once ROOT_PATH . '/includes/header.php';
         </div>
       <?php endif; ?>
 
-      <form action="<?= getUrl('profile.php#tab-profile') ?>" method="POST">
+      <form action="<?= getUrl('profile.php#tab-profile') ?>" method="POST" enctype="multipart/form-data" id="profile-edit-form">
         <input type="hidden" name="action" value="update_profile">
+        <input type="file"
+               name="avatar_file"
+               id="profile-avatar-input"
+               class="profile-avatar-file-input"
+               accept="image/jpeg,image/png,image/webp,image/gif">
+
+        <div class="profile-avatar-row" id="profile-avatar-dropzone">
+          <label for="profile-avatar-input" class="profile-avatar-picker" title="Bấm hoặc kéo thả ảnh để đổi ảnh đại diện">
+            <img src="<?= escapeHtml($resolvedProfileAvatar) ?>"
+                 alt="Avatar"
+                 class="profile-avatar-img"
+                 id="profile-avatar-preview"
+                 data-saved-src="<?= escapeHtml($resolvedProfileAvatar) ?>">
+            <span class="profile-avatar-overlay" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                <circle cx="12" cy="13" r="4"></circle>
+              </svg>
+            </span>
+          </label>
+
+          <div class="profile-avatar-meta">
+            <h3 style="font-size: 1.3rem; font-weight: 800; margin: 0 0 0.25rem; color: var(--ff-dark-slate);">
+              <?= escapeHtml($user['full_name']) ?>
+            </h3>
+            <div>
+              <span class="badge badge-secondary"><?= strtoupper($currentUser['role']) ?></span>
+              <span style="color: var(--ff-muted-slate); font-size: 0.85rem; margin-left: 0.5rem;">
+                <?= escapeHtml($user['email']) ?>
+              </span>
+            </div>
+            <div style="margin-top:0.35rem; font-size:0.85rem; color:#475569;">
+              🎂 <strong>Ngày sinh:</strong> 
+              <?= !empty($user['date_of_birth']) ? date('d/m/Y', strtotime($user['date_of_birth'])) : '<span style="color:#94a3b8; font-style:italic;">Chưa cập nhật ngày sinh</span>' ?>
+            </div>
+            <div class="profile-avatar-actions">
+              <label for="profile-avatar-input" class="profile-avatar-upload-btn">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                  <polyline points="17 8 12 3 7 8"></polyline>
+                  <line x1="12" y1="3" x2="12" y2="15"></line>
+                </svg>
+                <span>Đổi ảnh đại diện</span>
+              </label>
+              <span class="profile-avatar-hint">JPG, PNG, WebP, GIF • Tối đa 5MB</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="profile-avatar-pending" id="profile-avatar-pending" hidden>
+          <div class="profile-avatar-pending-info">
+            <span class="profile-pending-badge">Ảnh mới</span>
+            <span id="profile-avatar-filename" class="profile-pending-name"></span>
+          </div>
+          <div class="profile-avatar-pending-btns">
+            <button type="button" class="profile-avatar-save-btn" id="profile-avatar-save-now">✓ Lưu ảnh ngay</button>
+            <button type="button" class="profile-avatar-cancel-btn" id="profile-avatar-cancel">Hủy</button>
+          </div>
+        </div>
 
         <div class="profile-form-group">
           <label class="profile-form-label" for="profile-name">Họ và Tên *</label>

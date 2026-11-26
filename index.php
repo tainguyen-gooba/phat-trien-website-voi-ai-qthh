@@ -409,7 +409,7 @@ require_once ROOT_PATH . '/includes/header.php';
 
     <div class="review-grid">
       <?php foreach ($reviews as $rev): 
-        $avatar = $rev['avatar_url'] ?: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80';
+        $avatar = getAvatarUrl($rev['avatar_url'] ?? '', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80');
         $rating = (int)($rev['rating'] ?? 5);
       ?>
         <div class="review-card">

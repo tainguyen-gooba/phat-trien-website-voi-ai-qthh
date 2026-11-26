@@ -16,6 +16,103 @@ function getAssetUrl($path) {
     return BASE_URL . '/' . $cleanPath;
 }
 
+/**
+ * Resolve user avatar URL across root-served and subdirectory-served environments.
+ */
+function getAvatarUrl(?string $avatarUrl, string $fallback = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80'): string {
+    $raw = trim((string)($avatarUrl ?? ''));
+    if ($raw === '') {
+        return $fallback;
+    }
+    if (preg_match('#^((https?:)?//|data:image/)#i', $raw)) {
+        return $raw;
+    }
+    return getAssetUrl(ltrim($raw, '/'));
+}
+
+/**
+ * Validate and store an uploaded profile avatar file under uploads/avatars/.
+ */
+function processProfileAvatarUpload(array $file, int $userId, ?string $oldAvatarUrl = null): array {
+    if (!isset($file['error']) || $file['error'] === UPLOAD_ERR_NO_FILE) {
+        return ['success' => false, 'error' => 'Vui lòng chọn tệp hình ảnh để tải lên.'];
+    }
+    if ($file['error'] === UPLOAD_ERR_INI_SIZE || $file['error'] === UPLOAD_ERR_FORM_SIZE) {
+        return ['success' => false, 'error' => 'Dung lượng ảnh vượt quá giới hạn cho phép (tối đa 5MB).'];
+    }
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        return ['success' => false, 'error' => 'Lỗi tải ảnh lên máy chủ (mã lỗi ' . (int)$file['error'] . ').'];
+    }
+
+    $maxSize = 5 * 1024 * 1024;
+    if (($file['size'] ?? 0) <= 0 || $file['size'] > $maxSize) {
+        return ['success' => false, 'error' => 'Dung lượng hình ảnh không hợp lệ (tối đa 5MB).'];
+    }
+
+    $tmpPath = $file['tmp_name'] ?? '';
+    if (!$tmpPath || !is_uploaded_file($tmpPath)) {
+        return ['success' => false, 'error' => 'Tệp ảnh tải lên không hợp lệ.'];
+    }
+
+    $origName = (string)($file['name'] ?? '');
+    $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION));
+    $allowedExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+    if (!in_array($ext, $allowedExts, true)) {
+        return ['success' => false, 'error' => 'Định dạng ảnh không được hỗ trợ. Vui lòng chọn JPG, PNG, WebP hoặc GIF.'];
+    }
+
+    $finfo = function_exists('finfo_open') ? finfo_open(FILEINFO_MIME_TYPE) : false;
+    $mimeType = $finfo ? (string)finfo_file($finfo, $tmpPath) : '';
+    if ($finfo) {
+        finfo_close($finfo);
+    }
+    $allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+    if ($mimeType !== '' && !in_array($mimeType, $allowedMimes, true)) {
+        return ['success' => false, 'error' => 'Loại tệp hình ảnh không hợp lệ.'];
+    }
+
+    $imgInfo = @getimagesize($tmpPath);
+    if ($imgInfo === false || empty($imgInfo[0]) || empty($imgInfo[1])) {
+        return ['success' => false, 'error' => 'Tệp tin bị hỏng hoặc không phải hình ảnh hợp lệ.'];
+    }
+
+    $uploadDir = ROOT_PATH . '/uploads/avatars';
+    if (!is_dir($uploadDir) && !@mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+        return ['success' => false, 'error' => 'Không thể khởi tạo thư mục lưu ảnh đại diện.'];
+    }
+
+    $htaccessPath = $uploadDir . '/.htaccess';
+    if (!file_exists($htaccessPath)) {
+        @file_put_contents($htaccessPath, "<FilesMatch \"(?i)\\.(php|phtml|php3|php4|php5|php7|php8|phar|inc|pl|py|cgi|sh|bash|exe|bat|cmd)$\">\n    Order Deny,Allow\n    Deny from all\n</FilesMatch>\nOptions -Indexes\n");
+    }
+
+    $safeExt = ($ext === 'jpeg') ? 'jpg' : $ext;
+    $fileName = 'avatar_' . $userId . '_' . date('Ymd_His') . '_' . bin2hex(random_bytes(5)) . '.' . $safeExt;
+    $destPath = $uploadDir . '/' . $fileName;
+
+    if (!move_uploaded_file($tmpPath, $destPath)) {
+        return ['success' => false, 'error' => 'Không thể lưu ảnh đại diện lên hệ thống.'];
+    }
+
+    if ($oldAvatarUrl) {
+        $oldClean = ltrim(str_replace('\\', '/', trim($oldAvatarUrl)), '/');
+        if (preg_match('#^uploads/avatars/[a-zA-Z0-9._-]+$#', $oldClean) && $oldClean !== ('uploads/avatars/' . $fileName)) {
+            $oldFullPath = ROOT_PATH . '/' . $oldClean;
+            if (is_file($oldFullPath)) {
+                @unlink($oldFullPath);
+            }
+        }
+    }
+
+    $relativeUrl = 'uploads/avatars/' . $fileName;
+    return [
+        'success'      => true,
+        'relative_url' => $relativeUrl,
+        'full_url'     => getAssetUrl($relativeUrl),
+        'file_name'    => $fileName,
+    ];
+}
+
 function getFoodImageUrl($img) {
     $placeholder = BASE_URL . '/assets/images/foods/banh-mi-chao.jpg';
     if (empty($img)) {

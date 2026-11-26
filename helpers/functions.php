@@ -75,7 +75,15 @@ function renderProductCard($p) {
     
     $restaurant = !empty($p['restaurant_name']) ? $p['restaurant_name'] : (!empty($p['restaurant']) ? $p['restaurant'] : 'FASTFOOD Partner');
     $category = !empty($p['category_name']) ? $p['category_name'] : (!empty($p['category']) ? $p['category'] : 'FASTFOOD');
-    $rating = !empty($p['rating_avg']) ? number_format((float)$p['rating_avg'], 1) : (!empty($p['rating']) ? number_format((float)$p['rating'], 1) : '4.9');
+    $ratingCount = (int)($p['rating_count'] ?? 0);
+    $ratingAvgVal = (float)($p['rating_avg'] ?? 0);
+    if ($ratingCount > 0 && $ratingAvgVal > 0) {
+        $ratingDisplay = '★ ' . number_format($ratingAvgVal, 1) . ' <span style="color:var(--text-muted); font-weight:500;">(' . $ratingCount . ')</span>';
+    } elseif (!empty($p['rating']) && (float)$p['rating'] > 0) {
+        $ratingDisplay = '★ ' . number_format((float)$p['rating'], 1);
+    } else {
+        $ratingDisplay = '<span style="color:var(--text-muted); font-weight:600;">★ Mới</span>';
+    }
     $prepTime = !empty($p['prep_time_minutes']) ? $p['prep_time_minutes'] . ' phút' : '15-20 phút';
     $detailUrl = getUrl('food-detail.php?id=' . $id);
     
@@ -84,7 +92,7 @@ function renderProductCard($p) {
     <div class="product-card" data-product-id="<?= $id ?>" data-category-id="<?= (int)($p['category_id'] ?? 0) ?>" data-category="<?= escapeHtml($category) ?>">
       <div class="product-thumb-wrap">
         <a href="<?= $detailUrl ?>" style="display:block; width:100%; height:100%;">
-          <img src="<?= $imgUrl ?>" alt="<?= escapeHtml($name) ?>" class="product-thumb" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='<?= BASE_URL ?>assets/images/foods/banh-mi-chao.jpg';">
+          <img src="<?= $imgUrl ?>" alt="<?= escapeHtml($name) ?>" class="product-thumb" loading="lazy" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='<?= getAssetUrl('assets/images/foods/banh-mi-chao.jpg') ?>';">
         </a>
         <?php if ($hasDiscount): ?>
           <span class="product-tag-discount">-<?= $discountPct ?>%</span>
@@ -94,7 +102,7 @@ function renderProductCard($p) {
       <div class="product-info">
         <div class="product-meta-row">
           <span class="product-category-name" title="<?= escapeHtml($category) ?>"><?= escapeHtml($category) ?></span>
-          <span class="product-rating">★ <?= $rating ?></span>
+          <span class="product-rating"><?= $ratingDisplay ?></span>
         </div>
         <a href="<?= $detailUrl ?>" class="product-title" title="<?= escapeHtml($name) ?>">
           <?= escapeHtml($name) ?>

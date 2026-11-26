@@ -385,6 +385,11 @@ switch ($action) {
             $reviewId = (int)$db->lastInsertId();
         }
 
+        // Đồng bộ đánh giá đơn hàng sang từng món ăn trong đơn (product_reviews)
+        require_once ROOT_PATH . '/helpers/reviews.php';
+        ensureProductReviewsSchema($db);
+        syncOrderReviewToProducts($db, (int)$ord['id'], $userId, $rating, $comment);
+
         jsonSuccess('Cảm ơn bạn đã đánh giá đơn hàng!', [
             'review' => [
                 'id'           => $reviewId,

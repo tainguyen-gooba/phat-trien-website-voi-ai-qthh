@@ -48,7 +48,7 @@ $products = array_map(function($p) {
         'categoryId' => (int)$p['category_id'],
         'restaurant' => $p['restaurant'] ?: 'FASTFOOD Kitchen',
         'address' => $p['address'] ?: 'Buôn Ma Thuột',
-        'image' => $p['image'] ?: '',
+        'image' => $p['image'] ? getFoodImageUrl($p['image']) : '',
         'price' => (int)$p['price'],
         'status' => $p['is_available'] ? 'Đang bán' : 'Tạm hết',
         'options' => $opts,
@@ -167,16 +167,29 @@ $restaurants = array_map(function($r) {
     ];
 }, $restaurantsRaw);
 
-// 6. Reviews
-$reviews = $db->query("SELECT r.*, u.full_name AS customer_name FROM reviews r LEFT JOIN users u ON r.user_id = u.id ORDER BY r.id DESC LIMIT 100")->fetchAll();
+// 6. Reviews (Order reviews + Product reviews)
+require_once ROOT_PATH . '/helpers/reviews.php';
+ensureProductReviewsSchema($db);
+$reviews = $db->query("SELECT r.*, o.order_code, res.name AS restaurant_name, u.full_name AS customer_name 
+                       FROM reviews r 
+                       LEFT JOIN orders o ON r.order_id = o.id
+                       LEFT JOIN restaurants res ON r.restaurant_id = res.id
+                       LEFT JOIN users u ON r.user_id = u.id 
+                       ORDER BY r.id DESC LIMIT 100")->fetchAll();
+$productReviews = $db->query("SELECT pr.*, p.name AS product_name, u.full_name AS customer_name 
+                              FROM product_reviews pr 
+                              LEFT JOIN products p ON pr.product_id = p.id 
+                              LEFT JOIN users u ON pr.user_id = u.id 
+                              ORDER BY pr.created_at DESC, pr.id DESC LIMIT 200")->fetchAll();
 
 $initialData = [
-    'categories'  => $categories,
-    'products'    => $products,
-    'orders'      => $orders,
-    'users'       => $users,
-    'restaurants' => $restaurants,
-    'reviews'     => $reviews,
+    'categories'     => $categories,
+    'products'       => $products,
+    'orders'         => $orders,
+    'users'          => $users,
+    'restaurants'    => $restaurants,
+    'reviews'        => $reviews,
+    'productReviews' => $productReviews,
     'currentUser' => [
         'id'        => $currentUser['id'],
         'fullName'  => $currentUser['full_name'],
@@ -7006,7 +7019,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           <span class="nav-badge nav-badge-ai">AI</span>
         </button>
         <?php
-          $totalReviewsCount = (int)($db->query("SELECT COUNT(*) FROM reviews")->fetchColumn() ?: 0);
+          $totalReviewsCount = (int)($db->query("SELECT COUNT(*) FROM reviews")->fetchColumn() ?: 0)
+                             + (int)($db->query("SELECT COUNT(*) FROM product_reviews")->fetchColumn() ?: 0);
         ?>
         <button class="nav-item" type="button" data-section="reviews">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -7488,14 +7502,15 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         <section class="reviews-panel" id="reviews-section" aria-label="Đánh giá khách hàng" hidden>
           <header class="reviews-panel-heading">
             <div>
-              <h2>Nhận xét &amp; đánh giá gần đây</h2>
-              <p>Đánh giá từ khách sau khi hoàn thành đơn hàng (tự động cập nhật thời gian thực)</p>
+              <h2>Nhận xét &amp; đánh giá khách hàng</h2>
+              <p>Đánh giá chi tiết từng món ăn và đánh giá sau khi hoàn thành đơn hàng</p>
             </div>
             <div class="reviews-controls">
               <select class="filter-select reviews-filter-select" id="reviews-filter" aria-label="Lọc đánh giá">
                 <option value="all">Tất cả đánh giá</option>
+                <option value="product">Đánh giá món ăn</option>
+                <option value="restaurant">Đơn hàng / Quán ăn</option>
                 <option value="driver">Tài xế</option>
-                <option value="restaurant">Quán ăn</option>
                 <option value="5">5 sao ★★★★★</option>
                 <option value="4">4 sao ★★★★☆</option>
                 <option value="3">3 sao ★★★☆☆</option>
@@ -8983,16 +8998,55 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
       async function loadOrderReviews(options = {}) {
         const requestId = ++reviewsRequestId;
-        const rawReviews = (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.reviews)) ? window.FASTFOOD_DATA.reviews : [];
-        renderedReviews = rawReviews.map(r => ({
-          id: r.id,
-          orderCode: r.order_id || r.order_code || '',
+        const rawOrderReviews = (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.reviews)) ? window.FASTFOOD_DATA.reviews : [];
+        let rawProdReviews = (window.FASTFOOD_DATA && Array.isArray(window.FASTFOOD_DATA.productReviews)) ? window.FASTFOOD_DATA.productReviews : [];
+
+        if (!options.skipFetch) {
+          try {
+            const res = await fetch('api.php?action=get_product_reviews');
+            const json = await res.json();
+            if (json.success && json.data && Array.isArray(json.data.product_reviews)) {
+              rawProdReviews = json.data.product_reviews;
+              if (window.FASTFOOD_DATA) window.FASTFOOD_DATA.productReviews = rawProdReviews;
+            }
+          } catch {}
+        }
+        if (requestId !== reviewsRequestId) return;
+
+        const mappedOrders = rawOrderReviews.map(r => ({
+          id: 'ord_' + r.id,
+          rawId: r.id,
+          orderCode: r.order_code || r.order_id || '',
           customerName: r.customer_name || 'Khách hàng',
+          restaurantName: r.restaurant_name || '',
           target: r.target || 'restaurant',
           rating: Number(r.rating || 5),
           comment: r.comment || '',
+          replyContent: r.reply_from_restaurant || '',
           submittedAt: r.created_at || new Date().toISOString()
         }));
+
+        const mappedProducts = rawProdReviews.map(pr => ({
+          id: 'prod_' + pr.id,
+          rawId: Number(pr.id),
+          productId: Number(pr.product_id),
+          productName: pr.product_name || ('Món #' + pr.product_id),
+          customerName: pr.customer_name || 'Thực khách FASTFOOD',
+          target: 'product',
+          rating: Number(pr.rating || 5),
+          comment: pr.comment || '',
+          variantInfo: pr.variant_info || '',
+          replyContent: pr.reply_content || '',
+          isVerifiedPurchase: Number(pr.is_verified_purchase) === 1,
+          isApproved: Number(pr.is_approved ?? 1) === 1,
+          helpfulCount: Number(pr.helpful_count || 0),
+          submittedAt: pr.created_at || new Date().toISOString()
+        }));
+
+        renderedReviews = [...mappedProducts, ...mappedOrders].sort((a, b) => (
+          new Date(b.submittedAt || 0).getTime() - new Date(a.submittedAt || 0).getTime()
+        ));
+
         reviewsLoaded = true;
         updateReviewsBadge(renderedReviews.length);
         if (activeSection === 'reviews' || options.forceRender) {
@@ -9001,12 +9055,14 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       function mergeReviews(...groups) {
-        const byOrderAndTarget = new Map();
+        const byKey = new Map();
         groups.flat().forEach((review) => {
-          if (review?.orderCode && ['driver', 'restaurant'].includes(review.target)) {
+          if (review?.target === 'product' && review?.rawId) {
+            byKey.set(`product:${review.rawId}`, review);
+          } else if (review?.orderCode && ['driver', 'restaurant'].includes(review.target)) {
             const cleanCode = String(review.orderCode).replace(/^#/, '');
-            const existing = byOrderAndTarget.get(`${cleanCode}:${review.target}`);
-            byOrderAndTarget.set(`${cleanCode}:${review.target}`, {
+            const existing = byKey.get(`${cleanCode}:${review.target}`);
+            byKey.set(`${cleanCode}:${review.target}`, {
               ...existing,
               ...review,
               orderCode: cleanCode,
@@ -9014,7 +9070,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             });
           }
         });
-        return [...byOrderAndTarget.values()].sort((first, second) => (
+        return [...byKey.values()].sort((first, second) => (
           new Date(second.submittedAt || 0).getTime() - new Date(first.submittedAt || 0).getTime()
         ));
       }
@@ -9022,7 +9078,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       function renderOrderReviews(reviews) {
         renderedReviews = reviews;
         let filtered = reviews;
-        if (reviewFilterValue === 'driver' || reviewFilterValue === 'restaurant') {
+        if (reviewFilterValue === 'product' || reviewFilterValue === 'driver' || reviewFilterValue === 'restaurant') {
           filtered = filtered.filter((r) => r.target === reviewFilterValue);
         } else if (['1', '2', '3', '4', '5'].includes(reviewFilterValue)) {
           filtered = filtered.filter((r) => Number(r.rating) === Number(reviewFilterValue));
@@ -9030,6 +9086,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (reviewSearchTerm) {
           filtered = filtered.filter((r) =>
             String(r.orderCode || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
+            || String(r.productName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
             || String(r.customerName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
             || String(r.restaurantName || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
             || String(r.comment || '').toLocaleLowerCase('vi').includes(reviewSearchTerm)
@@ -9051,6 +9108,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         filtered.forEach((review) => {
           const card = document.createElement('article');
           card.className = `review-card${review.isNew ? ' just-added' : ''}`;
+          if (review.target === 'product' && review.isApproved === false) {
+            card.style.opacity = '0.62';
+            card.style.borderStyle = 'dashed';
+          }
+
           const top = document.createElement('div');
           top.className = 'review-card-top';
           const customer = document.createElement('div');
@@ -9063,28 +9125,126 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             newTag.textContent = 'MỚI';
             name.appendChild(newTag);
           }
-          const order = document.createElement('span');
-          order.textContent = `Đơn #${review.orderCode || ''}`;
-          customer.append(name, order);
+          const subMeta = document.createElement('span');
+          if (review.target === 'product') {
+            subMeta.textContent = review.isVerifiedPurchase ? '✓ Đã mua hàng' : 'Đánh giá trực tiếp';
+            if (review.isApproved === false) subMeta.textContent += ' · Đang ẩn';
+          } else {
+            subMeta.textContent = `Đơn #${review.orderCode || ''}`;
+          }
+          customer.append(name, subMeta);
+
           const target = document.createElement('span');
           target.className = 'review-target';
-          target.textContent = review.target === 'driver' ? '🛵 Tài xế' : `🏪 Quán · ${review.restaurantName || ''}`;
+          if (review.target === 'product') {
+            const link = document.createElement('a');
+            link.href = `../food-detail.php?id=${review.productId}`;
+            link.target = '_blank';
+            link.rel = 'noopener noreferrer';
+            link.style.color = '#ea580c';
+            link.style.fontWeight = '700';
+            link.style.textDecoration = 'none';
+            link.textContent = `🍽️ ${review.productName}`;
+            target.appendChild(link);
+          } else {
+            target.textContent = review.target === 'driver' ? '🛵 Tài xế' : `🏪 Quán · ${review.restaurantName || ''}`;
+          }
           top.append(customer, target);
 
           const stars = document.createElement('div');
           stars.className = 'review-stars';
           stars.setAttribute('aria-label', `${review.rating} trên 5 sao`);
           stars.textContent = `${'★'.repeat(Math.max(0, Math.min(5, Number(review.rating) || 0)))}${'☆'.repeat(5 - Math.max(0, Math.min(5, Number(review.rating) || 0)))}`;
+
           const comment = document.createElement('p');
           comment.className = 'review-comment';
-          comment.textContent = review.comment || 'Khách hàng không để lại nhận xét.';
+          comment.textContent = (review.variantInfo ? `[${review.variantInfo}] ` : '') + (review.comment || 'Khách hàng không để lại nhận xét.');
+
+          card.append(top, stars, comment);
+
+          if (review.replyContent) {
+            const replyBox = document.createElement('div');
+            replyBox.style.cssText = 'background:#fff7ed;border-left:3px solid #ea580c;padding:8px 12px;border-radius:0 8px 8px 0;margin:8px 0;font-size:13px;color:#431407;';
+            const replyStrong = document.createElement('strong');
+            replyStrong.style.color = '#c2410c';
+            replyStrong.textContent = '🏪 Phản hồi của quán: ';
+            replyBox.append(replyStrong, document.createTextNode(review.replyContent));
+            card.appendChild(replyBox);
+          }
+
           const meta = document.createElement('div');
           meta.className = 'review-card-meta';
+          meta.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;';
           const submittedAt = new Date(review.submittedAt || '');
-          meta.textContent = Number.isNaN(submittedAt.getTime())
+          const timeText = document.createElement('span');
+          timeText.textContent = Number.isNaN(submittedAt.getTime())
             ? ''
             : submittedAt.toLocaleString('vi-VN', { dateStyle: 'medium', timeStyle: 'short' });
-          card.append(top, stars, comment, meta);
+          meta.appendChild(timeText);
+
+          if (review.target === 'product') {
+            const actions = document.createElement('div');
+            actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+
+            const replyBtn = document.createElement('button');
+            replyBtn.type = 'button';
+            replyBtn.className = 'action-button';
+            replyBtn.textContent = review.replyContent ? '✏️ Sửa phản hồi' : '💬 Phản hồi';
+            replyBtn.onclick = async () => {
+              const txt = prompt(`Nhập phản hồi cho nhận xét của ${review.customerName}:`, review.replyContent || '');
+              if (txt === null || !txt.trim()) return;
+              const r = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reply_product_review', review_id: review.rawId, reply_content: txt.trim() })
+              });
+              const j = await r.json();
+              if (j.success) {
+                showToast(j.message);
+                loadOrderReviews({ forceRender: true });
+              } else showToast(j.message || 'Lỗi gửi phản hồi.', true);
+            };
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.type = 'button';
+            toggleBtn.className = 'action-button';
+            toggleBtn.textContent = review.isApproved ? '🙈 Ẩn' : '👁️ Hiện';
+            toggleBtn.onclick = async () => {
+              const r = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'toggle_product_review', review_id: review.rawId })
+              });
+              const j = await r.json();
+              if (j.success) {
+                showToast(j.message);
+                loadOrderReviews({ forceRender: true });
+              } else showToast(j.message || 'Lỗi cập nhật.', true);
+            };
+
+            const delBtn = document.createElement('button');
+            delBtn.type = 'button';
+            delBtn.className = 'action-button delete';
+            delBtn.textContent = '🗑️ Xóa';
+            delBtn.onclick = async () => {
+              if (!confirm('Xóa đánh giá món ăn này?')) return;
+              const r = await fetch('api.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_product_review', review_id: review.rawId })
+              });
+              const j = await r.json();
+              if (j.success) {
+                showToast(j.message);
+                loadOrderReviews({ forceRender: true });
+              } else showToast(j.message || 'Lỗi khi xóa.', true);
+            };
+
+            actions.append(replyBtn, toggleBtn, delBtn);
+            meta.appendChild(actions);
+          }
+
+          card.appendChild(meta);
           reviewsList.appendChild(card);
         });
       }
@@ -9999,7 +10159,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               if (column.key === 'price' || column.key === 'total') return `<td>${escapeHtml(money(value))}</td>`;
               if (column.key === 'image' && value) {
                 const imageUrl = String(value).trim();
-                const safeImageUrl = /^https?:\/\/\S+$/i.test(imageUrl) || /^\/assets\/uploads\/[a-zA-Z0-9._-]+$/.test(imageUrl);
+                const safeImageUrl = /^https?:\/\/\S+$/i.test(imageUrl) || /^\/(fastfood\/)?assets\/\S+$/i.test(imageUrl) || /^\/assets\/uploads\/[a-zA-Z0-9._-]+$/i.test(imageUrl);
                 return `<td>${safeImageUrl ? `<a class="product-image-cell" href="${escapeHtml(imageUrl)}" target="_blank" rel="noopener noreferrer"><img src="${escapeHtml(imageUrl)}" alt="" loading="lazy"><span>${escapeHtml(imageUrl)}</span></a>` : escapeHtml(imageUrl)}</td>`;
               }
               if (column.key === 'url' && value) {

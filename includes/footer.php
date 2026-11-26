@@ -188,7 +188,7 @@ $fPolicyLinks  = !empty($footerData['policy_links']) && is_array($footerData['po
     } catch (e) {}
   </script>
   <?php } ?>
-  <script src="<?= getAssetUrl('js/chatbot.js') ?>"></script>
+  <script src="<?= getAssetUrl('js/chatbot.js') ?>?v=<?= @filemtime(__DIR__ . '/../js/chatbot.js') ?: '20261126' ?>"></script>
   <?php if (!empty($extraJs)): ?>
     <?php foreach ((array)$extraJs as $js): ?>
       <script src="<?= getAssetUrl($js) ?>"></script>

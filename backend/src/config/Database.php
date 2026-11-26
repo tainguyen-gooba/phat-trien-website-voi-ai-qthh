@@ -14,8 +14,8 @@ class Database {
         if (self::$instance === null) {
             date_default_timezone_set('Asia/Ho_Chi_Minh');
             $host = getenv('DB_HOST') ?: '127.0.0.1';
-            $defaultPort = getenv('DB_PORT') ?: '3306';
-            $ports = array_unique(array_filter([$defaultPort, '3306', '3307', '3301']));
+            $defaultPort = getenv('DB_PORT') ?: '3307';
+            $ports = array_unique(array_filter([$defaultPort, '3307', '3306', '3301']));
             $name = getenv('DB_NAME') ?: 'fastfood_db';
             $user = getenv('DB_USER') ?: 'root';
             $pass = getenv('DB_PASSWORD') !== false ? getenv('DB_PASSWORD') : (getenv('DB_PASS') ?: '');

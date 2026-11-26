@@ -19,9 +19,9 @@ class AiService {
         $db = Database::getConnection();
 
         // 0. CHÀO HỎI / XÃ GIAO / LỜI CẢM ƠN (Ngắn gọn, thân thiện, lịch sự)
-        $greetingWords = ['hello', 'hi', 'hey', 'alo', 'alô', 'chào', 'chào bạn', 'chào shop', 'chào ad', 'chào admin', 'shop ơi', 'ad ơi', 'admin ơi', 'hé lô', 'halo', 'hế nhô', 'bạn ơi'];
+        $greetingWords = ['xin chào', 'xin chao', 'hello', 'hi', 'hey', 'alo', 'alô', 'chào', 'chào bạn', 'chào shop', 'chào ad', 'chào admin', 'shop ơi', 'ad ơi', 'admin ơi', 'hé lô', 'halo', 'hế nhô', 'bạn ơi'];
         if (in_array($clean, $greetingWords, true) ||
-            preg_match('/^(?:hello|hi|hey|alo|alô|chào|chào bạn|chào shop|hé lô|halo|hế nhô|shop ơi|ad ơi|admin ơi|bạn ơi)\b/iu', $clean)) {
+            preg_match('/^(?:xin\s+chào|xin\s+chao|hello|hi|hey|alo|alô|chào|chào bạn|chào shop|hé lô|halo|hế nhô|shop ơi|ad ơi|admin ơi|bạn ơi)\b/iu', $clean)) {
             return [
                 'reply'       => "Dạ FASTFOOD xin chào bạn! Rất vui được hỗ trợ bạn hôm nay 💖\nBạn đang cần tìm món ăn ngon, xem khuyến mãi hay tra cứu đơn hàng nào ạ?",
                 'products'    => [],
@@ -148,7 +148,8 @@ class AiService {
 
         // 3. TÌM MÓN THEO NGÂN SÁCH / GIÁ TIỀN (Ví dụ: "Món nào dưới 50.000đ?", "dưới 30k", "sinh viên", "giá rẻ")
         $hasBudgetIntent = (
-            preg_match('/(?:dưới|duoi|tầm|tam|khoảng|khoang|giá|gia|tối đa|toi da|không quá|khong qua|<)\s*(\d+(?:[.,]\d+)?)\s*(k|kđ|đ|d|vnd|nghìn|ngan|ngàn|000)?/iu', $clean, $priceMatches) ||
+            preg_match('/(?:dưới|duoi|tối đa|toi da|không quá|khong qua|<)\s*(\d+(?:[.,]\d+)?)\s*(k|kđ|đ|d|vnd|nghìn|ngan|ngàn|000)?(?![\p{L}\p{N}]|\s*(?:km|cm|mm|kg|gam|gram|năm|tuổi|tháng|ngày|giờ|phút|lần|người|%))/iu', $clean, $priceMatches) ||
+            preg_match('/(?:tầm|tam|khoảng|khoang|giá|gia)\s*(\d+(?:[.,]\d+)?)\s*(k|kđ|đ|vnd|nghìn|ngan|ngàn|000)\b/iu', $clean, $priceMatches) ||
             preg_match('/(\d+)\s*(?:k|000)\s*(?:trở xuống|tro xuong|đổ lại|do lai)/iu', $clean, $priceMatches) ||
             str_contains($clean, '50k') || str_contains($clean, 'dưới 50') || str_contains($clean, 'duoi 50') ||
             str_contains($clean, 'giá rẻ') || str_contains($clean, 'gia re') ||
@@ -216,13 +217,16 @@ class AiService {
             ];
         }
 
-        // 4. MÓN BÁN CHẠY / HÔM NAY ĂN GÌ / GỢI Ý MÓN NGON
+        // 4. MÓN BÁN CHẠY / HÔM NAY ĂN GÌ / THỰC ĐƠN / GỢI Ý MÓN NGON
         if (str_contains($clean, 'hôm nay ăn gì') || str_contains($clean, 'hom nay an gi') ||
             str_contains($clean, 'bán chạy') || str_contains($clean, 'ban chay') ||
             str_contains($clean, 'món gì ngon') || str_contains($clean, 'gợi ý') || str_contains($clean, 'goi y') ||
             str_contains($clean, 'món hot') || str_contains($clean, 'mon hot') ||
             str_contains($clean, 'món nào ngon') || str_contains($clean, 'best seller') ||
-            str_contains($clean, 'món đặc sắc') || str_contains($clean, 'recommend')) {
+            str_contains($clean, 'món đặc sắc') || str_contains($clean, 'recommend') ||
+            str_contains($clean, 'thực đơn') || str_contains($clean, 'thuc don') ||
+            self::containsPhrase($clean, 'menu') || str_contains($clean, 'có món gì') ||
+            str_contains($clean, 'quán có gì') || str_contains($clean, 'bán gì')) {
 
             $formatted = self::getFeaturedProducts($db, 4);
             $reply = "🔥 Top món **bán chạy & được yêu thích nhất** tại FASTFOOD Buôn Ma Thuột hôm nay:\n\n";
@@ -239,10 +243,14 @@ class AiService {
         }
 
         // 5. GIỜ HOẠT ĐỘNG / ĐỊA CHỈ / HOTLINE / LIÊN HỆ
-        if (str_contains($clean, 'giờ') || str_contains($clean, 'mở cửa') || str_contains($clean, 'đóng cửa') ||
-            str_contains($clean, 'địa chỉ') || str_contains($clean, 'ở đâu') || str_contains($clean, 'hotline') ||
-            str_contains($clean, 'số điện thoại') || str_contains($clean, 'sdt') || str_contains($clean, 'liên hệ') ||
-            str_contains($clean, 'chi nhánh') || str_contains($clean, 'quán ở đâu')) {
+        if (str_contains($clean, 'giờ mở') || str_contains($clean, 'mở cửa') || str_contains($clean, 'đóng cửa') ||
+            str_contains($clean, 'mấy giờ mở') || str_contains($clean, 'mấy giờ đóng') || str_contains($clean, 'giờ hoạt động') ||
+            str_contains($clean, 'giờ làm việc') || str_contains($clean, 'địa chỉ') ||
+            str_contains($clean, 'quán ở đâu') || str_contains($clean, 'shop ở đâu') || str_contains($clean, 'cửa hàng ở đâu') ||
+            str_contains($clean, 'fastfood ở đâu') || str_contains($clean, 'bên bạn ở đâu') ||
+            str_contains($clean, 'hotline') || str_contains($clean, 'tổng đài') ||
+            str_contains($clean, 'số điện thoại') || self::containsPhrase($clean, 'sdt') ||
+            str_contains($clean, 'liên hệ') || str_contains($clean, 'chi nhánh')) {
             return [
                 'reply' => "🏠 **FASTFOOD Buôn Ma Thuột** luôn sẵn sàng phục vụ bạn:\n\n"
                     . "• **Địa chỉ quán:** 16 Hoàng Diệu, Phường Thắng Lợi, TP. Buôn Ma Thuột, Đắk Lắk\n"
@@ -255,8 +263,8 @@ class AiService {
         }
 
         // 6. GIAO HÀNG / PHÍ SHIP / TỐC ĐỘ GIAO
-        if (str_contains($clean, 'phí ship') || str_contains($clean, 'phi ship') ||
-            str_contains($clean, 'freeship') || str_contains($clean, 'ship bao nhiêu') ||
+        if (str_contains($clean, 'phí ship') || str_contains($clean, 'phi ship') || str_contains($clean, 'phí giao hàng') ||
+            str_contains($clean, 'freeship') || str_contains($clean, 'ship bao nhiêu') || str_contains($clean, 'thời gian giao') ||
             str_contains($clean, 'giao hàng trong bao lâu') || str_contains($clean, 'bao lâu nhận được') ||
             str_contains($clean, 'có giao tận nơi') || str_contains($clean, 'giao tận nhà')) {
             return [
@@ -275,7 +283,7 @@ class AiService {
         // 7. HƯỚNG DẪN ĐẶT HÀNG / THANH TOÁN (COD, VIETQR SEPAY)
         if (str_contains($clean, 'đặt đồ ăn') || str_contains($clean, 'đặt món') || str_contains($clean, 'cách đặt') ||
             str_contains($clean, 'thanh toán') || str_contains($clean, 'chuyển khoản') || str_contains($clean, 'quét mã') ||
-            str_contains($clean, 'vietqr') || str_contains($clean, 'tiền mặt') || str_contains($clean, 'cod') ||
+            str_contains($clean, 'vietqr') || str_contains($clean, 'tiền mặt') || self::containsPhrase($clean, 'cod') ||
             str_contains($clean, 'sepay') || str_contains($clean, 'ngân hàng')) {
             return [
                 'reply' => "🛒 **Hướng dẫn đặt hàng siêu tốc tại FASTFOOD:**\n\n"
@@ -290,30 +298,30 @@ class AiService {
             ];
         }
 
-        // 8. TÌM KIẾM THEO LOẠI MÓN / THỰC ĐƠN CỤ THỂ (Cơm, Gà, Burger, Pizza, Mì Ý, Trà sữa, Ăn vặt, v.v.)
+        // 8. TÌM KIẾM THEO LOẠI MÓN / THỰC ĐƠN CỤ THỂ (so khớp đúng ranh giới từ để tránh trùng con như "ngày" -> "gà")
         $categoriesMap = [
             'Cơm & Món Việt' => [
-                'keywords' => ['cơm', 'com', 'cơm tấm', 'sườn', 'cơm gà', 'gạo lứt', 'cơm chiên', 'phở'],
+                'keywords' => ['cơm', 'com', 'cơm tấm', 'cơm sườn', 'sườn nướng', 'cơm gà', 'gạo lứt', 'cơm chiên', 'phở', 'bún', 'xôi', 'canh', 'súp', 'xíu mại', 'chả cua'],
                 'category_slugs' => ['com', 'com-mon-viet']
             ],
             'Burger & Gà Rán' => [
-                'keywords' => ['burger', 'gà', 'ga', 'gà rán', 'cánh gà', 'đùi gà', 'hamburger', 'bánh mì cuộn', 'wrap', 'bò nướng'],
+                'keywords' => ['burger', 'gà', 'gà rán', 'cánh gà', 'đùi gà', 'gà giòn', 'gà viên', 'hamburger', 'bánh mì cuộn', 'wrap', 'bò nướng'],
                 'category_slugs' => ['burger', 'burger-ga-ran']
             ],
             'Pizza & Mỳ Ý' => [
-                'keywords' => ['pizza', 'mì ý', 'mỳ ý', 'spaghetti', 'pasta', 'bò bằm'],
+                'keywords' => ['pizza', 'mì ý', 'mỳ ý', 'mì cay', 'mì', 'mỳ', 'nui', 'spaghetti', 'lasagna', 'pasta', 'bò bằm'],
                 'category_slugs' => ['pizza', 'pizza-my-y']
             ],
             'Trà Sữa & Đồ Uống' => [
-                'keywords' => ['trà', 'tra', 'trà sữa', 'trà đào', 'trà chanh', 'trà vải', 'cà phê', 'cafe', 'nước ép', 'nước ngọt', 'coca', 'pepsi', 'đồ uống', 'thức uống'],
+                'keywords' => ['trà sữa', 'trà đào', 'trà chanh', 'trà vải', 'trà tắc', 'hồng trà', 'cà phê', 'cafe', 'sinh tố', 'sữa chua', 'sữa tươi', 'matcha', 'trân châu', 'nước ép', 'nước ngọt', 'nước uống', 'coca', 'pepsi', 'đồ uống', 'thức uống', 'trà'],
                 'category_slugs' => ['tra-sua', 'tra-sua-do-uong', 'cafe']
             ],
             'Ăn Vặt & Tráng Miệng' => [
-                'keywords' => ['khoai', 'khoai tây', 'phô mai que', 'bánh', 'tráng miệng', 'chè', 'kem', 'tàu hũ', 'ăn vặt', 'xúc xích', 'quẩy'],
+                'keywords' => ['khoai tây', 'khoai', 'phô mai que', 'phô mai', 'bánh mì', 'bánh tráng', 'tráng miệng', 'chè', 'kem', 'tàu hũ', 'tiramisu', 'panna cotta', 'croffle', 'nem chua', 'chả cá', 'da gà', 'bắp xào', 'bánh', 'ăn vặt', 'xúc xích', 'quẩy'],
                 'category_slugs' => ['an-vat', 'an-vat-trang-mieng']
             ],
             'Salad & Healthy' => [
-                'keywords' => ['salad', 'healthy', 'ăn kiêng', 'eat clean', 'rau'],
+                'keywords' => ['salad', 'healthy', 'ăn kiêng', 'eat clean', 'poke', 'detox'],
                 'category_slugs' => ['healthy']
             ],
             'Sushi & Món Nhật' => [
@@ -324,15 +332,17 @@ class AiService {
 
         foreach ($categoriesMap as $catTitle => $config) {
             foreach ($config['keywords'] as $kw) {
-                if (str_contains($clean, $kw)) {
+                if (self::containsPhrase($clean, $kw)) {
                     $stmt = $db->prepare("
                         SELECT id, name, base_price, discount_price, image_url, description, is_featured 
                         FROM products 
-                        WHERE is_available = 1 AND (LOWER(name) LIKE ? OR LOWER(description) LIKE ?)
+                        WHERE is_available = 1 AND LOWER(name) LIKE ?
                         ORDER BY is_featured DESC, id DESC LIMIT 4
                     ");
-                    $stmt->execute(["%{$kw}%", "%{$kw}%"]);
-                    $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+                    $stmt->execute(["%{$kw}%"]);
+                    $items = array_values(array_filter($stmt->fetchAll(PDO::FETCH_ASSOC), function ($row) use ($kw) {
+                        return self::containsPhrase(mb_strtolower($row['name'] ?? '', 'UTF-8'), $kw);
+                    }));
 
                     if (!empty($items)) {
                         $formatted = self::formatProducts($items);
@@ -352,17 +362,67 @@ class AiService {
             }
         }
 
-        // 9. TÌM KIẾM THEO TỪ KHÓA TỰ DO TRONG BẢNG PRODUCTS
-        $words = array_filter(explode(' ', $clean), fn($w) => mb_strlen($w, 'UTF-8') >= 2);
-        if (!empty($words)) {
+        // 9. TÌM KIẾM TÊN MÓN CỤ THỂ TRONG BẢNG PRODUCTS
+        // Loại bỏ từ dừng/đại từ/địa danh/tính từ mô tả, và yêu cầu khớp TẤT CẢ từ khóa (hoặc danh từ món ăn hợp lệ nếu chỉ 1 từ)
+        $stopWords = [
+            'cho', 'hoi', 'hỏi', 'cua', 'của', 'toi', 'tôi', 'minh', 'mình', 'ban', 'bạn',
+            'em', 'anh', 'chị', 'chi', 'shop', 'ad', 'admin', 'quán', 'quan', 'la', 'là',
+            'gi', 'gì', 'nao', 'nào', 'sao', 'nhu', 'như', 'the', 'thế', 'khi', 'dau', 'đâu',
+            'ai', 'bao', 'nhieu', 'nhiêu', 'co', 'có', 'khong', 'không', 'duoc', 'được',
+            'voi', 'với', 'va', 'và', 'hay', 'hoac', 'hoặc', 'nhung', 'nhưng', 've', 'về',
+            'tai', 'tại', 'trong', 'ngoai', 'ngoài', 'ngay', 'ngày', 'thang', 'tháng',
+            'nam', 'năm', 'sinh', 'tuoi', 'tuổi', 'ten', 'tên', 'lam', 'làm', 'biet', 'biết',
+            'nhe', 'nhé', 'a', 'ạ', 'oi', 'ơi', 'vay', 'vậy', 'day', 'đây', 'do', 'đó',
+            'nay', 'này', 'kia', 'thi', 'thì', 'ma', 'mà', 'de', 'để', 'tu', 'từ', 'den', 'đến',
+            'neu', 'nếu', 'vi', 'vì', 'nen', 'nên', 'rat', 'rất', 'qua', 'quá', 'lam', 'lắm',
+            'giup', 'giúp', 'xem', 'nua', 'nữa', 'them', 'thêm', 'thoi', 'thôi',
+            'phai', 'phải', 'can', 'cần', 'muon', 'muốn', 'thich', 'thích', 'noi', 'nói',
+            'ke', 'kể', 'viet', 'viết', 'tinh', 'tính', 'bang', 'bằng', 'may', 'mấy',
+            'thoi', 'thời', 'tiet', 'tiết', 'troi', 'trời', 'mua', 'mưa', 'nang', 'nắng',
+            'bong', 'bóng', 'da', 'đá', 'que', 'quê', 'nha', 'nhà', 'nuoc', 'nước',
+            'thu', 'thủ', 'đô', 'gia', 'giá', 'mon', 'món', 'an', 'ăn', 'uong', 'uống',
+            'tim', 'tìm', 'kiem', 'kiếm', 'dat', 'đặt', 'hang', 'hàng', 'ngon', 'moi', 'mới',
+            'hom', 'hôm', 'mai', 'tot', 'tốt', 'nhat', 'nhất',
+            // Từ chung / địa danh / tính từ trong mô tả dễ gây trùng ngoài lề
+            'tong', 'tổng', 'thong', 'thống', 'truyen', 'truyền', 'kieu', 'kiểu', 'dac', 'đặc',
+            'biet', 'biệt', 'hop', 'hợp', 'hoang', 'hoàng', 'phap', 'pháp', 'duc', 'đức',
+            'my', 'mỹ', 'y', 'ý', 'nhat', 'nhật', 'han', 'hàn', 'thai', 'thái', 'viet', 'việt',
+            'bac', 'bắc', 'đông', 'sai', 'sài', 'gon', 'gòn', 'noi', 'nội', 'hue', 'huế',
+            'sieu', 'siêu', 'khong', 'khổng', 'lồ', 'lon', 'lớn', 'nho', 'nhỏ', 'vua', 'vừa',
+            'tuoi', 'tươi', 'nong', 'nóng', 'lanh', 'lạnh', 'mat', 'mát', 'beo', 'béo',
+            'ngay', 'ngậy', 'gion', 'giòn', 'rum', 'rụm', 'thom', 'thơm', 'cay', 'ngot', 'ngọt',
+            'man', 'mặn', 'thanh', 'dam', 'đậm', 'lua', 'lửa', 'than', 'hoa', 'rung', 'rừng',
+            'bien', 'biển', 'dat', 'đất', 'gio', 'gió', 'bao', 'bão', 'xanh', 'do', 'đỏ',
+            'vang', 'vàng', 'den', 'đen', 'trang', 'trắng', 'tim', 'tím', 'nau', 'nâu',
+            'phat', 'phát', 'minh', 'den', 'đèn', 'lich', 'lịch', 'su', 'sử', 'dia', 'địa',
+            'toan', 'toán', 'hoa', 'hóa', 'ly', 'lý', 'khoa', 'hoc', 'học', 'tin', 'tức', 'tuc'
+        ];
+        $singleFoodNouns = [
+            'tôm', 'cua', 'mực', 'cá', 'bò', 'heo', 'sườn', 'trứng', 'bắp', 'bơ', 'dâu', 'xoài',
+            'vải', 'bưởi', 'táo', 'ổi', 'cam', 'nho', 'đào', 'súp', 'soup', 'hủ', 'tàu',
+            'coca', 'pepsi', 'sprite', 'fanta', 'milo', 'oreo', 'caramel', 'bacon', 'cheese',
+            'whopper', 'pepperoni', 'hawaiian', 'carbonara', 'bolognese', 'tartar', 'teriyaki',
+            'mozzarella', 'cheddar', 'parmesan', 'macchiato', 'americano', 'espresso', 'latte',
+            'granola', 'quinoa', 'oatmeal', 'tokbokki', 'ramen', 'udon', 'kimbap', 'nugget', 'popcorn'
+        ];
+        $rawTokens = preg_split('/[^\p{L}\p{N}]+/u', $clean, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $words = array_values(array_filter(array_unique($rawTokens), function ($w) use ($stopWords, $singleFoodNouns) {
+            if (in_array($w, $singleFoodNouns, true)) {
+                return true;
+            }
+            return mb_strlen($w, 'UTF-8') >= 3 && !in_array($w, $stopWords, true);
+        }));
+
+        $canSearchSpecific = count($words) >= 2 || (count($words) === 1 && in_array($words[0], $singleFoodNouns, true));
+        if ($canSearchSpecific) {
+            $activeWords = array_slice($words, 0, 3);
             $likeClauses = [];
             $params = [];
-            foreach (array_slice($words, 0, 4) as $w) {
-                $likeClauses[] = '(LOWER(name) LIKE ? OR LOWER(description) LIKE ?)';
-                $params[] = "%{$w}%";
+            foreach ($activeWords as $w) {
+                $likeClauses[] = 'LOWER(name) LIKE ?';
                 $params[] = "%{$w}%";
             }
-            $whereSql = implode(' OR ', $likeClauses);
+            $whereSql = implode(' AND ', $likeClauses);
 
             $stmt = $db->prepare("
                 SELECT id, name, base_price, discount_price, image_url, description, is_featured 
@@ -371,7 +431,15 @@ class AiService {
                 ORDER BY is_featured DESC, id DESC LIMIT 4
             ");
             $stmt->execute($params);
-            $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $items = array_values(array_filter($stmt->fetchAll(PDO::FETCH_ASSOC), function ($row) use ($activeWords) {
+                $nameLower = mb_strtolower($row['name'] ?? '', 'UTF-8');
+                foreach ($activeWords as $w) {
+                    if (!self::containsPhrase($nameLower, $w)) {
+                        return false;
+                    }
+                }
+                return true;
+            }));
 
             if (!empty($items)) {
                 $formatted = self::formatProducts($items);
@@ -389,12 +457,26 @@ class AiService {
             }
         }
 
-        // 10. PHẢN HỒI THÔNG MINH MẶC ĐỊNH
+        // 10. CÂU HỎI NGOÀI LỀ (Không liên quan món ăn / dịch vụ FASTFOOD)
         return [
-            'reply'       => "Dạ FASTFOOD luôn sẵn sàng hỗ trợ bạn! Bạn muốn tìm món ăn ngon theo sở thích, săn ưu đãi giảm giá hay tra cứu đơn hàng vừa đặt ạ? Bạn có thể bấm chọn gợi ý bên dưới hoặc nhắn tên món bạn muốn tìm nhé 💖",
-            'products'    => self::getFeaturedProducts($db, 4),
+            'reply'       => "Xin lỗi, tôi không thể biết hoặc trả lời thông tin này vì nằm ngoài phạm vi hỗ trợ món ăn và đơn hàng của **FASTFOOD** 😔\n\n"
+                . "Tôi là **Trợ lý AI của FASTFOOD**, bạn có thể hỏi tôi về:\n"
+                . "• 🍔 Thực đơn món ăn, đồ uống, combo đang bán\n"
+                . "• 💰 Gợi ý món ngon theo tầm giá (ví dụ: món dưới 50K)\n"
+                . "• 🎁 Voucher, mã giảm giá & chương trình ưu đãi\n"
+                . "• 📦 Kiểm tra đơn hàng, phí ship & giờ mở cửa\n\n"
+                . "*Nếu cần hỗ trợ vấn đề khác, bạn hãy chuyển sang tab **\"Chat với Admin\"** nhé!*",
+            'products'    => [],
             'suggestions' => ['🍜 Hôm nay ăn gì?', '💰 Món nào dưới 50.000đ?', '🎁 Có combo nào tiết kiệm không?', '📦 Tra cứu đơn hàng']
         ];
+    }
+
+    /**
+     * Kiểm tra từ/cụm từ xuất hiện đúng ranh giới từ Unicode (tránh khớp nhầm chuỗi con như "ngày" -> "gà")
+     */
+    private static function containsPhrase(string $text, string $phrase): bool {
+        if ($phrase === '') return false;
+        return (bool)preg_match('/(?<![\p{L}\p{N}])' . preg_quote($phrase, '/') . '(?![\p{L}\p{N}])/iu', $text);
     }
 
     /**
@@ -426,20 +508,21 @@ class AiService {
     /**
      * Xử lý câu hỏi và phân tích dữ liệu nghiệp vụ dành riêng cho Admin AI Copilot
      */
-    public static function processAdminPrompt(string $prompt, array $admin = []): array {
+    public static function processAdminPrompt(string $prompt, array $admin = [], ?PDO $pdo = null): array {
         $clean = mb_strtolower(trim($prompt), 'UTF-8');
-        $db = Database::getConnection();
+        $db = $pdo ?: Database::getConnection();
 
         // 1. Phân tích doanh thu & vận hành & đơn hàng
         if (str_contains($clean, 'doanh thu') || str_contains($clean, 'báo cáo') || str_contains($clean, 'thống kê') || str_contains($clean, 'giờ cao điểm') || str_contains($clean, 'đơn hôm nay') || str_contains($clean, 'tình hình')) {
             $todayStats = ['total' => 0, 'revenue' => 0, 'pending' => 0, 'delivered' => 0];
+            $allStats = ['total' => 0, 'revenue' => 0, 'pending' => 0, 'delivered' => 0];
             try {
                 $stmt = $db->query("
                     SELECT 
                         COUNT(*) AS total_orders,
                         COALESCE(SUM(CASE WHEN order_status != 'cancelled' THEN total_amount ELSE 0 END), 0) AS revenue,
-                        SUM(CASE WHEN order_status = 'placed' THEN 1 ELSE 0 END) AS pending_orders,
-                        SUM(CASE WHEN order_status = 'delivered' OR order_status = 'completed' THEN 1 ELSE 0 END) AS delivered_orders
+                        SUM(CASE WHEN order_status IN ('pending', 'placed', 'awaiting_payment', 'preparing') THEN 1 ELSE 0 END) AS pending_orders,
+                        SUM(CASE WHEN order_status IN ('delivered', 'completed') THEN 1 ELSE 0 END) AS delivered_orders
                     FROM orders 
                     WHERE DATE(created_at) = CURDATE()
                 ");
@@ -450,18 +533,35 @@ class AiService {
                     $todayStats['pending'] = (int)($r['pending_orders'] ?? 0);
                     $todayStats['delivered'] = (int)($r['delivered_orders'] ?? 0);
                 }
+
+                $stmtAll = $db->query("
+                    SELECT 
+                        COUNT(*) AS total_orders,
+                        COALESCE(SUM(CASE WHEN order_status != 'cancelled' THEN total_amount ELSE 0 END), 0) AS revenue,
+                        SUM(CASE WHEN order_status IN ('pending', 'placed', 'awaiting_payment', 'preparing') THEN 1 ELSE 0 END) AS pending_orders,
+                        SUM(CASE WHEN order_status IN ('delivered', 'completed') THEN 1 ELSE 0 END) AS delivered_orders
+                    FROM orders
+                ");
+                $ra = $stmtAll->fetch(PDO::FETCH_ASSOC);
+                if ($ra) {
+                    $allStats['total'] = (int)($ra['total_orders'] ?? 0);
+                    $allStats['revenue'] = (float)($ra['revenue'] ?? 0);
+                    $allStats['pending'] = (int)($ra['pending_orders'] ?? 0);
+                    $allStats['delivered'] = (int)($ra['delivered_orders'] ?? 0);
+                }
             } catch (\Exception $e) {}
 
-            $revText = number_format($todayStats['revenue'], 0, ',', '.') . 'đ';
-            $reply = "📊 **BÁO CÁO DOANH THU & PHÂN TÍCH VẬN HÀNH HÔM NAY:**\n\n"
-                   . "• **Tổng đơn hàng phát sinh hôm nay:** **{$todayStats['total']} đơn**\n"
-                   . "• **Doanh thu thực nhận hôm nay:** **{$revText}**\n"
-                   . "• **Đơn đang chờ xử lý:** **{$todayStats['pending']} đơn**\n"
-                   . "• **Đơn đã giao thành công:** **{$todayStats['delivered']} đơn**\n\n"
+            $revTodayText = number_format($todayStats['revenue'], 0, ',', '.') . 'đ';
+            $revAllText = number_format($allStats['revenue'], 0, ',', '.') . 'đ';
+            $reply = "📊 **BÁO CÁO DOANH THU & PHÂN TÍCH VẬN HÀNH:**\n\n"
+                   . "• **Đơn hàng hôm nay:** **{$todayStats['total']} đơn** (Doanh thu: **{$revTodayText}**)\n"
+                   . "• **Chờ xử lý / Đang chuẩn bị (hôm nay):** **{$todayStats['pending']} đơn**\n"
+                   . "• **Đã giao hoàn tất (hôm nay):** **{$todayStats['delivered']} đơn**\n"
+                   . "• **Tổng lũy kế toàn hệ thống:** **{$allStats['total']} đơn** – Tổng doanh thu: **{$revAllText}** ({$allStats['pending']} đơn đang xử lý)\n\n"
                    . "⏰ **Khung giờ cao điểm tại Buôn Ma Thuột:**\n"
-                   . "1. **Trưa (11:00 – 13:00):** Tỉ trọng 45% lượng đơn, nhóm văn phòng & sinh viên chọn các combo cơm, mì cay, burger.\n"
-                   . "2. **Chiều tối (17:30 – 20:30):** Tỉ trọng 40% lượng đơn, nhóm gia đình & giới trẻ đặt gà rán giòn rụm, pizza, trà sữa.\n\n"
-                   . "💡 **Khuyến nghị AI cho Quản lý:** Hãy chuẩn bị nguyên liệu trước 10:30 sáng và bố trí tối thiểu 2 shipper trực vùng trung tâm để giữ thời gian giao dưới 20 phút.";
+                   . "- **Trưa (11:00 – 13:00):** Tỉ trọng ~45% lượng đơn, nhóm văn phòng & sinh viên ưu tiên combo cơm, mì cay, burger.\n"
+                   . "- **Chiều tối (17:30 – 20:30):** Tỉ trọng ~40% lượng đơn, nhóm gia đình & giới trẻ đặt gà rán, pizza, trà sữa.\n\n"
+                   . "💡 **Khuyến nghị AI cho Quản lý:** Chuẩn bị nguyên liệu trước 10:30 sáng và bố trí tối thiểu 2 shipper trực khu vực trung tâm để giữ thời gian giao dưới 20 phút.";
 
             return [
                 'reply' => $reply,
@@ -469,6 +569,30 @@ class AiService {
                     'Chính sách phí giao hàng & hủy đơn',
                     'Top 5 món bán chạy nhất tuần',
                     'Soạn thông báo ưu đãi cuối tuần'
+                ]
+            ];
+        }
+
+        // 2. Quy trình xử lý khiếu nại / đánh giá 1 sao / giao trễ
+        if (str_contains($clean, '1 sao') || str_contains($clean, 'khiếu nại') || str_contains($clean, 'đánh giá') || str_contains($clean, 'giao trễ') || str_contains($clean, 'quy trình')) {
+            $reply = "🛡️ **QUY TRÌNH CHUẨN XỬ LÝ KHIẾU NẠI & ĐÁNH GIÁ 1 SAO (GIAO TRỄ):**\n\n"
+                   . "1. **Tiếp nhận & Xin lỗi chân thành (Trong vòng 15 phút):**\n"
+                   . "   - Liên hệ khách qua tin nhắn trực tiếp hoặc SĐT, nhận trách nhiệm không đổ lỗi cho thời tiết/tài xế.\n"
+                   . "2. **Xác minh nhanh nguyên nhân:**\n"
+                   . "   - Kiểm tra trạng thái bếp/shipper ở tab **Đơn hàng** và **Đánh giá** để xác định điểm nghẽn.\n"
+                   . "3. **Phương án đền bù giữ chân khách hàng:**\n"
+                   . "   - Nếu trễ 15–30 phút: Gửi lời xin lỗi kèm mã Freeship / Voucher **20.000đ** cho đơn kế tiếp.\n"
+                   . "   - Nếu đồ ăn nguội/hư hỏng hoặc trễ > 45 phút: Hoàn tiền một phần/toàn bộ hoặc giao bù món mới miễn phí.\n"
+                   . "4. **Phản hồi công khai & Nâng hạng chăm sóc:**\n"
+                   . "   - Đáp lại đánh giá lịch sự, thể hiện cầu thị và có thể cân nhắc cộng điểm / thăng hạng tại mục **Thành viên & Điểm thưởng**.\n\n"
+                   . "> Mẫu câu gợi ý: *\"FASTFOOD thành thật xin lỗi anh/chị vì sự cố giao trễ hôm nay. Quán xin gửi tặng mã giảm 20.000đ như lời xin lỗi chân thành cho trải nghiệm lần sau ạ!\"*";
+
+            return [
+                'reply' => $reply,
+                'suggestions' => [
+                    'Phân tích tình hình doanh thu hôm nay',
+                    'Chính sách phí giao hàng & hủy đơn',
+                    'Soạn tin nhắn khuyến mãi 50K'
                 ]
             ];
         }
@@ -504,7 +628,7 @@ class AiService {
                    . "👉 Nhập mã: **CUOITUAN50** – Giảm ngay **50.000đ** cho đơn từ 150.000đ.\n"
                    . "👉 Miễn phí ship 3km đầu tiên cho tất cả combo Burger & Gà Rán Giòn Rụm.\n"
                    . "⚡ Giao siêu tốc chỉ 15 - 20 phút, đồ ăn luôn nóng hổi trên tay!\n\n"
-                   . "📲 Mở app đặt ngay hôm nay: [fastfood.vn](http://localhost:5000)\n"
+                   . "📲 Mở app đặt ngay hôm nay: [Thực Đơn FASTFOOD](../foods.php)\n"
                    . "Chúc quý khách có bữa ăn thật ngon miệng bên người thân yêu! ❤️";
 
             return [

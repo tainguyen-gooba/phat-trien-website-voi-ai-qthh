@@ -30,9 +30,10 @@ switch ($action) {
     case 'get_all':
         $vouchers = getAllPublicVouchers($userId, $typeFilter);
         jsonSuccess('Lấy danh sách voucher thành công!', [
-            'vouchers'      => $vouchers,
-            'is_logged_in'  => $userId > 0,
-            'user_tier'     => $userId > 0 ? getUserMemberTier($userId) : null
+            'vouchers'             => sanitizeVouchersForClient($vouchers),
+            'hunt_available_count' => getPublicHuntAvailableCount($vouchers),
+            'is_logged_in'         => $userId > 0,
+            'user_tier'            => $userId > 0 ? getUserMemberTier($userId) : null
         ]);
         break;
 
@@ -46,9 +47,37 @@ switch ($action) {
         $vouchers = getUserWalletVouchers($userId, $typeFilter);
         $count = getUserVoucherCount($userId);
         jsonSuccess('Lấy danh sách ví voucher thành công!', [
-            'vouchers'     => $vouchers,
+            'vouchers'     => sanitizeVouchersForClient($vouchers),
             'active_count' => $count,
             'user_tier'    => getUserMemberTier($userId)
+        ]);
+        break;
+
+    // -------------------------------------------------------------------------
+    // 2b. Đồng bộ tức thì toàn bộ trạng thái trang Kho Voucher (không reload)
+    // -------------------------------------------------------------------------
+    case 'sync_state':
+        $publics = getAllPublicVouchers($userId, null);
+        $wallets = $userId > 0 ? getUserWalletVouchers($userId, null) : [];
+        $walletCount = $userId > 0 ? getUserVoucherCount($userId) : 0;
+        $userPoints = 0;
+        $userTier = 'BRONZE';
+        if ($userId > 0) {
+            $db = getDB();
+            $uRowStmt = $db->prepare("SELECT points_balance, member_tier FROM users WHERE id = ? LIMIT 1");
+            $uRowStmt->execute([$userId]);
+            $uRow = $uRowStmt->fetch();
+            $userPoints = (int)($uRow['points_balance'] ?? 0);
+            $userTier = strtoupper($uRow['member_tier'] ?? 'BRONZE');
+        }
+        jsonSuccess('Đồng bộ trạng thái voucher thành công!', [
+            'is_logged_in'         => $userId > 0,
+            'user_points'          => $userPoints,
+            'user_tier'            => $userTier,
+            'public_vouchers'      => sanitizeVouchersForClient($publics),
+            'hunt_available_count' => getPublicHuntAvailableCount($publics),
+            'wallet_vouchers'      => sanitizeVouchersForClient($wallets),
+            'wallet_count'         => $walletCount
         ]);
         break;
 
@@ -67,9 +96,14 @@ switch ($action) {
         if (!$result['success']) {
             jsonError($result['error'] ?? 'Không thể lưu voucher.');
         }
+        $freshPublics = getAllPublicVouchers($userId, null);
+        $freshWallet  = getUserWalletVouchers($userId, null);
         jsonSuccess($result['message'], [
-            'voucher'      => $result['voucher'] ?? null,
-            'wallet_count' => getUserVoucherCount($userId)
+            'voucher'              => $result['voucher'] ?? null,
+            'wallet_count'         => getUserVoucherCount($userId),
+            'hunt_available_count' => getPublicHuntAvailableCount($freshPublics),
+            'public_vouchers'      => sanitizeVouchersForClient($freshPublics),
+            'wallet_vouchers'      => sanitizeVouchersForClient($freshWallet)
         ]);
         break;
 
@@ -98,9 +132,11 @@ switch ($action) {
         $list = [];
         $appliedId = !empty($_SESSION['applied_coupon']['id']) ? (int)$_SESSION['applied_coupon']['id'] : 0;
         $appliedCode = !empty($_SESSION['applied_coupon']['code']) ? strtoupper($_SESSION['applied_coupon']['code']) : '';
+        $cartItemsForEval = (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) ? array_values($_SESSION['cart']) : null;
 
         foreach ($candidates as $c) {
-            $evaluation = validateAndCalculateVoucher($c, $subtotal, $userId ?: null, $shippingFee);
+            enrichVoucherScopeFields($c);
+            $evaluation = validateAndCalculateVoucher($c, $subtotal, $userId ?: null, $shippingFee, $cartItemsForEval);
             $isApplied = ($appliedId > 0 && (int)$c['id'] === $appliedId) || ($appliedCode && strtoupper($c['code']) === $appliedCode);
 
             $discVal = (float)$c['discount_value'];
@@ -122,6 +158,10 @@ switch ($action) {
                 'min_order'               => (float)($c['min_order_value'] ?? 0),
                 'max_discount'            => !empty($c['max_discount_amount']) ? (float)$c['max_discount_amount'] : null,
                 'min_member_tier'         => $c['min_member_tier'] ?? 'ALL',
+                'applicable_scope'        => $c['applicable_scope'] ?? 'all',
+                'applicable_label'        => $c['applicable_label'] ?? '',
+                'user_limit'              => getEffectivePerUserLimit($c),
+                'is_used'                 => !empty($c['is_used']),
                 'end_date'                => !empty($c['end_date']) ? date('d/m/Y', strtotime($c['end_date'])) : 'Không thời hạn',
                 'is_eligible'             => $evaluation['valid'],
                 'ineligibility_reason'    => $evaluation['valid'] ? '' : ($evaluation['reason'] ?? ''),
@@ -179,7 +219,8 @@ switch ($action) {
             }
         }
 
-        $eval = validateAndCalculateVoucher($vc, $subtotal, $userId ?: null, $shippingFee);
+        $sessionCartItems = (!empty($_SESSION['cart']) && is_array($_SESSION['cart'])) ? array_values($_SESSION['cart']) : [];
+        $eval = validateAndCalculateVoucher($vc, $subtotal, $userId ?: null, $shippingFee, $sessionCartItems);
         if (!$eval['valid']) {
             jsonError($eval['reason'] ?? 'Không đủ điều kiện áp dụng mã này.');
         }
@@ -225,6 +266,8 @@ switch ($action) {
             'discount_value'      => (float)$vc['discount_value'],
             'min_order_value'     => (float)$vc['min_order_value'],
             'max_discount_amount' => (float)$vc['max_discount_amount'],
+            'applicable_scope'    => $eval['applicable_scope'] ?? ($vc['applicable_scope'] ?? 'all'),
+            'applicable_label'    => $eval['applicable_label'] ?? ($vc['applicable_label'] ?? ''),
             'discount_amount'     => (float)$eval['discount_amount']
         ];
 

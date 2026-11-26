@@ -1,9 +1,6 @@
 /**
  * FASTFOOD ADMIN CHAT INBOX CONTROLLER
- * Quản lý hộp thư tin nhắn khách hàng & Chuyển đổi linh hoạt giữa:
- * 1. AI Tự Động Trả Lời (24/7)
- * 2. Admin Trực Tiếp Chat (Tắt AI tự động)
- * Kèm theo AI Copilot hỗ trợ soạn tin siêu tốc cho nhân viên
+ * Quản lý hộp thư chat trực tiếp giữa Admin và Khách hàng.
  */
 
 (function () {
@@ -33,21 +30,11 @@
     const form = document.getElementById('admin-chat-form');
     const input = document.getElementById('admin-chat-input-field') || form.elements.message;
 
-    // Mode Switcher Controls
-    const btnModeAi = document.getElementById('btn-mode-ai');
-    const btnModeAdmin = document.getElementById('btn-mode-admin');
-    const btnAdminBusyToggle = document.getElementById('btn-admin-busy-toggle');
-    const modeBadge = document.getElementById('chat-mode-current-badge');
-    const modeDesc = document.getElementById('chat-mode-desc-text');
-
-    // Thread AI & Copilot Controls
-    const btnSuggest = document.getElementById('btn-ai-suggest-reply');
-    const btnToggleAuto = document.getElementById('btn-toggle-ai-automation');
+    // Thread Controls
     const btnDeleteConv = document.getElementById('btn-delete-conv');
     const btnClearAll = document.getElementById('btn-clear-all-conversations');
     const btnRefresh = document.getElementById('btn-refresh-conversations');
     const searchInput = document.getElementById('chat-conv-search-input');
-    const intentTag = document.getElementById('ai-detected-intent');
     const quickChips = document.getElementById('ai-quick-chips');
 
     // Product Picker (Kho Món Ăn FASTFOOD) Controls
@@ -172,7 +159,7 @@
     let active = false;
     let historyRequestId = 0;
     let lastAdminChatDateStr = '';
-    let supportStatus = { mode: 'auto', adminOnline: true, effectiveBusy: true };
+    let supportStatus = { mode: 'admin', adminOnline: true, effectiveBusy: false };
     let pollTimer = null;
 
     // Kênh đồng bộ thời gian thực liên tab (< 30ms)
@@ -370,82 +357,24 @@
       }
     }
 
-    function isAiPaused(conversation) {
-      const pauseTime = conversation?.aiPausedUntil ? new Date(conversation.aiPausedUntil) : null;
-      return Boolean(pauseTime && pauseTime.getTime() > Date.now());
-    }
-
     /**
-     * Cập nhật giao diện chuyển chế độ Chat toàn cục (AI Tự Chat vs Admin Trực Tiếp)
+     * Luôn cố định chế độ chat trực tiếp với Admin
      */
     function updateChatModeUI(status) {
       if (status) {
-        supportStatus = { ...supportStatus, ...status };
-      }
-
-      const mode = supportStatus.mode || (supportStatus.effectiveBusy ? 'auto' : 'admin');
-      const isAuto = mode === 'auto';
-
-      if (btnModeAi) {
-        btnModeAi.classList.toggle('active', isAuto);
-      }
-      if (btnModeAdmin) {
-        btnModeAdmin.classList.toggle('active', !isAuto);
-      }
-      if (modeBadge) {
-        modeBadge.textContent = isAuto ? '🤖 AI Tự Chat (24/7)' : '👨‍💼 Admin Trực Tiếp Chat';
-        modeBadge.className = `chat-mode-status-tag ${isAuto ? 'mode-auto' : 'mode-admin'}`;
-      }
-      if (modeDesc) {
-        modeDesc.innerHTML = isAuto
-          ? '✨ <strong>AI Tự Chat:</strong> Trợ lý AI đang tự động trả lời tin nhắn của khách hàng 24/7. Bạn có thể theo dõi và can thiệp khi cần.'
-          : '⚡ <strong>Admin Trực Tiếp:</strong> AI đã tắt tự động. Bạn đọc và phản hồi trực tiếp cho khách hàng.';
-      }
-
-      // Hỗ trợ nút cũ (nếu có)
-      if (btnAdminBusyToggle) {
-        btnAdminBusyToggle.textContent = isAuto ? '🤖 AI Tự Chat (24/7)' : '🟢 Admin Trực Tiếp (Tự trả lời)';
-        btnAdminBusyToggle.classList.toggle('secondary', !isAuto);
+        supportStatus = { ...supportStatus, ...status, mode: 'admin', adminOnline: true, effectiveBusy: false };
+      } else {
+        supportStatus = { mode: 'admin', adminOnline: true, effectiveBusy: false };
       }
     }
 
     /**
-     * Cập nhật trạng thái AI cho riêng cuộc trò chuyện đang chọn
+     * Hiển thị trạng thái chat trực tiếp cho cuộc trò chuyện đang chọn
      */
-    function updateAutomationUI(conversation) {
-      const paused = isAiPaused(conversation);
-      const forced = Boolean(conversation?.aiForceAuto);
-      const isGlobalAuto = supportStatus.mode === 'auto' || supportStatus.effectiveBusy;
-
-      const aiCurrentlyActive = !paused && (forced || isGlobalAuto);
-
-      if (btnToggleAuto) {
-        if (aiCurrentlyActive) {
-          btnToggleAuto.innerHTML = '👨‍💼 Tắt AI (Admin tiếp quản)';
-          btnToggleAuto.classList.add('secondary');
-          btnToggleAuto.title = 'Tạm dừng AI cho khách này trong 30 phút để bạn trực tiếp trao đổi.';
-        } else {
-          btnToggleAuto.innerHTML = '🤖 Bật AI cho khách này';
-          btnToggleAuto.classList.remove('secondary');
-          btnToggleAuto.title = 'Bật Trợ lý AI tự động trả lời riêng cho khách hàng này.';
-        }
-      }
-
+    function updateAutomationUI() {
       if (assistantStatus) {
-        if (paused) {
-          const pauseTime = new Date(conversation.aiPausedUntil);
-          assistantStatus.innerHTML = `👨‍💼 <strong>Admin đang tiếp quản</strong> (AI tạm dừng đến ${pauseTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })})`;
-          assistantStatus.className = 'chat-assistant-status-pill paused';
-        } else if (forced) {
-          assistantStatus.innerHTML = '🤖 <strong>AI tự động riêng</strong> đang phục vụ khách này';
-          assistantStatus.className = 'chat-assistant-status-pill auto';
-        } else if (isGlobalAuto) {
-          assistantStatus.innerHTML = '🤖 <strong>AI tự chat 24/7</strong> đang trả lời khách';
-          assistantStatus.className = 'chat-assistant-status-pill auto';
-        } else {
-          assistantStatus.innerHTML = '👨‍💼 <strong>Admin đang trực</strong>: Bạn trả lời trực tiếp cho khách';
-          assistantStatus.className = 'chat-assistant-status-pill direct';
-        }
+        assistantStatus.innerHTML = '👨‍💼 <strong>Chat trực tiếp với khách hàng</strong>';
+        assistantStatus.className = 'chat-assistant-status-pill direct';
       }
     }
 
@@ -462,7 +391,7 @@
       const existingBubbles = messageList.querySelectorAll('.admin-chat-message');
       for (let i = existingBubbles.length - 1; i >= 0; i--) {
         const b = existingBubbles[i];
-        const contentEl = b.querySelector('.admin-msg-content');
+        const contentEl = b.querySelector('.admin-msg-body-text, .admin-msg-content, .admin-msg-text');
         if (contentEl && contentEl.textContent.trim() === cleanMsg) {
           const curId = b.dataset.messageId || '';
           if (!curId || curId.startsWith('cmsg_') || curId.startsWith('tmp_')) {
@@ -530,7 +459,7 @@
       sender.textContent = isAdminMsg
         ? '👨‍💼 Bạn (Admin)'
         : isAiMsg
-          ? '🤖 Trợ lý AI FASTFOOD'
+          ? '💬 Hệ thống'
           : `👤 ${customerDisplayName}`;
 
       const timeSpan = document.createElement('span');
@@ -691,13 +620,10 @@
         name.className = 'conv-name';
         name.textContent = (conversation.customerName || 'Khách hàng') + ' ';
 
-        const isAdminDirect = conversation.channel === 'admin' || sessionId.startsWith('admin_sess_');
         const channelBadge = document.createElement('span');
-        channelBadge.className = `conv-channel-badge ${isAdminDirect ? 'admin-direct' : 'ai-query'}`;
-        channelBadge.textContent = isAdminDirect ? '👨‍💼 Liên hệ cửa hàng' : '🤖 Hỏi AI';
-        channelBadge.style.cssText = isAdminDirect
-          ? 'font-size: 10px; font-weight: 750; padding: 2px 6px; border-radius: 6px; background: #dcfce7; color: #15803d; margin-left: 4px; display: inline-block;'
-          : 'font-size: 10px; font-weight: 750; padding: 2px 6px; border-radius: 6px; background: #fff7ed; color: #c2410c; margin-left: 4px; display: inline-block;';
+        channelBadge.className = 'conv-channel-badge admin-direct';
+        channelBadge.textContent = '👨‍💼 Chat trực tiếp';
+        channelBadge.style.cssText = 'font-size: 10px; font-weight: 750; padding: 2px 6px; border-radius: 6px; background: #dcfce7; color: #15803d; margin-left: 4px; display: inline-block;';
         name.appendChild(channelBadge);
 
         const time = document.createElement('span');
@@ -723,7 +649,7 @@
           ? '<span class="prefix-user">Khách: </span>'
           : conversation.lastSender === 'admin'
             ? '<span class="prefix-admin">Bạn: </span>'
-            : '<span class="prefix-ai">🤖: </span>';
+            : '<span class="prefix-ai">💬: </span>';
         preview.innerHTML = `${prefix}${escapeHtml(conversation.lastMessage || '...')}`;
 
         bottomRow.appendChild(preview);
@@ -745,7 +671,6 @@
       const requestId = ++historyRequestId;
       lastAdminChatDateStr = '';
       messageList.replaceChildren();
-      if (intentTag) intentTag.style.display = 'none';
 
       const conversation = conversations.find((item) => String(item.sessionId) === sessionId);
       const prevUnreadCount = conversation && conversation.unreadCount ? parseInt(conversation.unreadCount, 10) : 0;
@@ -791,10 +716,7 @@
         customerAvatar.textContent = getAvatarForName(conversation?.customerName);
       }
       if (customerTypeBadge) {
-        const isAdminDirect = conversation?.channel === 'admin' || sessionId.startsWith('admin_sess_');
-        customerTypeBadge.textContent = isAdminDirect
-          ? `👨‍💼 Chat trực tiếp • ${conversation?.userId ? `Thành viên #${conversation.userId}` : 'Khách vãng lai'}`
-          : `🤖 Hỏi AI 24/7 • ${conversation?.userId ? `Thành viên #${conversation.userId}` : 'Khách vãng lai'}`;
+        customerTypeBadge.textContent = `👨‍💼 Chat trực tiếp • ${conversation?.userId ? `Thành viên #${conversation.userId}` : 'Khách vãng lai'}`;
       }
       if (customerMeta) {
         const contactArr = [];
@@ -855,41 +777,6 @@
       }
     }
 
-    /**
-     * Chuyển đổi chế độ Chat toàn cục (AI Tự Chat vs Admin Trực Tiếp Chat)
-     */
-    async function switchChatMode(targetMode) {
-      if (supportStatus.mode === targetMode) return;
-      showFeedback(`Đang chuyển sang chế độ ${targetMode === 'auto' ? 'AI Tự Chat' : 'Admin Trực Tiếp'}...`);
-
-      try {
-        const data = await chatRequest('/admin/status', {
-          method: 'PATCH',
-          body: JSON.stringify({ mode: targetMode }),
-        });
-        updateChatModeUI(data);
-
-        const current = conversations.find((item) => String(item.sessionId) === selectedSessionId);
-        if (current) updateAutomationUI(current);
-
-        showFeedback(
-          targetMode === 'auto'
-            ? '🤖 ĐÃ BẬT AI TỰ ĐỘNG PHẢN HỒI: Trợ lý AI sẽ tự động phản hồi khách hàng 24/7.'
-            : '👨‍💼 ĐÃ BẬT CHẾ ĐỘ ADMIN TRỰC TIẾP: AI đã tắt tự động. Bạn đọc tin nhắn và chat trực tiếp với khách hàng!'
-        );
-      } catch (err) {
-        showFeedback(err.message || 'Không thể đổi chế độ chat.', true);
-      }
-    }
-
-    // --- Mode Switch Button Listeners ---
-    btnModeAi?.addEventListener('click', () => switchChatMode('auto'));
-    btnModeAdmin?.addEventListener('click', () => switchChatMode('admin'));
-    btnAdminBusyToggle?.addEventListener('click', () => {
-      const nextMode = supportStatus.mode === 'auto' ? 'admin' : 'auto';
-      switchChatMode(nextMode);
-    });
-
     // --- Refresh Button ---
     btnRefresh?.addEventListener('click', () => {
       btnRefresh.classList.add('spinning');
@@ -901,70 +788,6 @@
       renderConversationList();
     });
 
-    // --- AI Suggest Reply (Copilot) ---
-    btnSuggest?.addEventListener('click', async () => {
-      if (!selectedSessionId) {
-        showFeedback('Vui lòng chọn một cuộc trò chuyện từ danh sách trước.', true);
-        return;
-      }
-
-      const conversation = conversations.find((item) => String(item.sessionId) === selectedSessionId);
-      let lastCustomerMsg = '';
-      const allBubbles = Array.from(messageList.querySelectorAll('.admin-chat-message'));
-      for (let i = allBubbles.length - 1; i >= 0; i--) {
-        const b = allBubbles[i];
-        if (!b.classList.contains('outgoing') && !b.classList.contains('assistant')) {
-          const p = b.querySelector('.admin-msg-text, p');
-          if (p && p.textContent.trim()) {
-            lastCustomerMsg = p.textContent.trim();
-            break;
-          }
-        }
-      }
-
-      if (!lastCustomerMsg && conversation?.lastSender === 'user') {
-        lastCustomerMsg = conversation.lastMessage;
-      }
-
-      if (!lastCustomerMsg) {
-        showFeedback('Chưa tìm thấy tin nhắn nào từ khách để AI phân tích gợi ý.', true);
-        return;
-      }
-
-      const originalBtnText = btnSuggest.innerHTML;
-      btnSuggest.disabled = true;
-      btnSuggest.innerHTML = '✨ Đang phân tích...';
-      showFeedback('AI đang phân tích câu hỏi và tạo câu trả lời...');
-
-      try {
-        const data = await realtimeRequest('/chat/ai/suggest', {
-          method: 'POST',
-          body: JSON.stringify({
-            customerMessage: lastCustomerMsg,
-            customerName: conversation?.customerName || 'bạn',
-          }),
-        });
-
-        const replyText = data?.suggestedReply || data?.suggestion;
-        if (replyText) {
-          input.value = replyText;
-          input.focus();
-          if (intentTag && (data.intentLabel || data.intent)) {
-            intentTag.style.display = 'inline-block';
-            intentTag.textContent = `🎯 ${data.intentLabel || data.intent}`;
-          }
-          showFeedback('✨ Đã điền câu trả lời gợi ý! Bạn có thể chỉnh sửa rồi bấm Gửi.');
-        } else {
-          showFeedback('Không thể tạo gợi ý, vui lòng thử lại.', true);
-        }
-      } catch (err) {
-        showFeedback(err.message || 'Lỗi khi gọi gợi ý AI.', true);
-      } finally {
-        btnSuggest.disabled = false;
-        btnSuggest.innerHTML = originalBtnText;
-      }
-    });
-
     // --- Quick Response Chips ---
     quickChips?.addEventListener('click', (event) => {
       const chip = event.target.closest('.ai-chip');
@@ -974,52 +797,6 @@
         input.value = text;
         input.focus();
         showFeedback('Đã chọn câu trả lời mẫu.');
-      }
-    });
-
-    // --- Toggle Per-Session Automation ---
-    btnToggleAuto?.addEventListener('click', async () => {
-      if (!selectedSessionId) {
-        showFeedback('Vui lòng chọn khách hàng trước.', true);
-        return;
-      }
-
-      const conversation = conversations.find((item) => String(item.sessionId) === selectedSessionId);
-      const paused = isAiPaused(conversation);
-      const isGlobalAuto = supportStatus.mode === 'auto' || supportStatus.effectiveBusy;
-      const aiCurrentlyActive = !paused && (conversation?.aiForceAuto || isGlobalAuto);
-      const willEnable = !aiCurrentlyActive;
-
-      btnToggleAuto.disabled = true;
-      try {
-        await chatRequest(`/admin/sessions/${encodeURIComponent(selectedSessionId)}/automation`, {
-          method: 'PATCH',
-          body: JSON.stringify({
-            enabled: willEnable,
-            pauseMinutes: 30,
-          }),
-        });
-
-        if (conversation) {
-          if (willEnable) {
-            conversation.aiPausedUntil = null;
-            conversation.aiForceAuto = true;
-          } else {
-            conversation.aiPausedUntil = new Date(Date.now() + 30 * 60 * 1000).toISOString();
-            conversation.aiForceAuto = false;
-          }
-          updateAutomationUI(conversation);
-        }
-
-        showFeedback(
-          willEnable
-            ? '🤖 Đã bật AI tự động trả lời riêng cho khách này.'
-            : '👨‍💼 Đã tắt AI (Admin tiếp quản 30 phút).'
-        );
-      } catch (err) {
-        showFeedback(err.message || 'Không thể thay đổi trạng thái AI.', true);
-      } finally {
-        btnToggleAuto.disabled = false;
       }
     });
 
@@ -1186,15 +963,12 @@
 
         input.value = '';
         clearSelectedImage();
-        if (intentTag) intentTag.style.display = 'none';
 
         if (result?.message) {
           renderMessage(result.message);
         }
         const conv = conversations.find((item) => String(item.sessionId) === selectedSessionId);
         if (conv) {
-          conv.aiPausedUntil = result?.aiPausedUntil || new Date(Date.now() + 15 * 60 * 1000).toISOString();
-          conv.aiForceAuto = false;
           conv.lastMessage = replyPayload.message;
           conv.lastSender = 'admin';
           updateAutomationUI(conv);
@@ -1230,7 +1004,7 @@
           }));
         } catch (_) {}
 
-        showFeedback('✅ Đã gửi phản hồi trực tiếp cho khách hàng (AI tạm dừng 15 phút).');
+        showFeedback('✅ Đã gửi phản hồi trực tiếp cho khách hàng.');
       } catch (err) {
         showFeedback(err.message || 'Không thể gửi tin nhắn.', true);
       } finally {
@@ -1271,8 +1045,7 @@
 
     socket?.on('support:status', (status) => {
       updateChatModeUI(status);
-      const current = conversations.find((item) => String(item.sessionId) === selectedSessionId);
-      if (current) updateAutomationUI(current);
+      updateAutomationUI();
     });
 
     // =========================================================================
@@ -1454,8 +1227,6 @@
 
         const conv = conversations.find((item) => String(item.sessionId) === selectedSessionId);
         if (conv) {
-          conv.aiPausedUntil = result?.aiPausedUntil || new Date(Date.now() + 15 * 60 * 1000).toISOString();
-          conv.aiForceAuto = false;
           conv.lastMessage = `[Thẻ món ăn] ${prod.name}`;
           conv.lastSender = 'admin';
           updateAutomationUI(conv);

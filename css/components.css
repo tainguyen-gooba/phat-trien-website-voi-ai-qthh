@@ -923,10 +923,10 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
-/* --- 4. TOAST ALERTS (GÓC TRÊN BÊN PHẢI) --- */
+/* --- 4. TOAST ALERTS (DƯỚI NAVBAR GÓC BÊN PHẢI) --- */
 #toast-container {
   position: fixed;
-  top: 24px;
+  top: calc(var(--header-height, 80px) + 12px);
   right: 24px;
   z-index: 999999;
   display: flex;

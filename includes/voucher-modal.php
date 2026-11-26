@@ -731,8 +731,8 @@
         <span class="voucher-modal-subheading">
           <span>✨</span> Voucher Khả Dụng Trong Ví &amp; Sàn
         </span>
-        <a href="<?= getUrl('vouchers.php') ?>" target="_blank" class="voucher-modal-link-more">
-          🎁 Săn thêm voucher ↗
+        <a href="<?= getUrl('vouchers.php') ?>" class="voucher-modal-link-more" onclick="VoucherModal.close()">
+          🎁 Săn thêm voucher →
         </a>
       </div>
 
@@ -812,7 +812,7 @@ window.VoucherModal = (function() {
             <div class="voucher-empty-icon">🎟️</div>
             <h4 class="voucher-empty-title">Chưa có voucher phù hợp với giỏ hàng</h4>
             <p class="voucher-empty-desc">Bạn có thể ghé sàn khuyến mãi để thu thập thêm mã hoặc nhập mã ưu đãi thủ công ở trên.</p>
-            <a href="${window.BASE_URL || ''}/vouchers.php" target="_blank" class="voucher-empty-btn">
+            <a href="<?= getUrl('vouchers.php') ?>" class="voucher-empty-btn" onclick="VoucherModal.close()">
               🎁 Khám Phá Sàn Voucher Ngay
             </a>
           </div>
@@ -913,8 +913,10 @@ window.VoucherModal = (function() {
           <!-- Middle details -->
           <div class="voucher-picker-info">
             <div class="voucher-picker-top-row">
-              <span class="voucher-picker-code">🎟️ ${escapeHtml(v.code)}</span>
+              <span class="voucher-picker-code" style="${v.is_used ? 'user-select:none; color:#94a3b8; background:#f1f5f9; border-color:#cbd5e1;' : ''}">${v.is_used ? '🔒 ' + 'x'.repeat(Math.max(8, String(v.code || '').length)) : '🎟️ ' + escapeHtml(v.code)}</span>
               ${v.min_member_tier && v.min_member_tier !== 'ALL' ? `<span class="voucher-picker-tier">👑 Hạng ${escapeHtml(v.min_member_tier)}+</span>` : ''}
+              ${v.applicable_scope === 'specific' && v.applicable_label ? `<span style="font-size:0.7rem; font-weight:750; color:#1d4ed8; background:#eff6ff; border:1px solid #bfdbfe; padding:0.15rem 0.45rem; border-radius:6px;">🍽️ ${escapeHtml(v.applicable_label)}</span>` : ''}
+              ${Number(v.user_limit || 1) === 1 ? `<span style="font-size:0.7rem; font-weight:750; color:#9a3412; background:#fff7ed; border:1px solid #fed7aa; padding:0.15rem 0.45rem; border-radius:6px;">🔒 1 lần/tài khoản</span>` : ''}
               ${v.max_discount ? `<span style="font-size:0.7rem; font-weight:700; color:#64748b; background:#f8fafc; border:1px solid #e2e8f0; padding:0.15rem 0.45rem; border-radius:6px;">Tối đa ${Number(v.max_discount).toLocaleString('vi-VN')}đ</span>` : ''}
             </div>
             

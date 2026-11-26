@@ -118,8 +118,10 @@ $pointHistory = getUserPointHistory($userId, 50);
 
 $pageTitle = 'Hồ Sơ & Khách Hàng VIP - FASTFOOD';
 $activeNav = 'profile';
-$extraCss  = ['css/pages.css', 'css/profile.css'];
-$extraJs   = ['js/profile.js'];
+$cssVer = @filemtime(__DIR__ . '/css/profile.css') ?: '20261126';
+$jsVer  = @filemtime(__DIR__ . '/js/profile.js') ?: '20261126';
+$extraCss  = ['css/pages.css', 'css/profile.css?v=' . $cssVer];
+$extraJs   = ['js/profile.js?v=' . $jsVer];
 
 require_once ROOT_PATH . '/includes/header.php';
 ?>
@@ -151,47 +153,113 @@ require_once ROOT_PATH . '/includes/header.php';
         'DIAMOND' => 'vip-card-diamond',
         default   => 'vip-card-bronze',
     };
+    $tierPrivilegeHighlight = match ($currentTierCode) {
+        'DIAMOND' => 'Freeship 0đ • VIP 24/7',
+        'GOLD'    => 'Freeship đơn từ 150K',
+        'SILVER'  => 'Ưu tiên xử lý đơn',
+        default   => 'Tích điểm đổi Voucher',
+    };
+    $memberSerialCode = '#FF-' . str_pad((string)$userId, 5, '0', STR_PAD_LEFT);
     ?>
-    <div class="vip-pass-card vip-card vip-member-card membership-card <?= $tierCardClass ?>" id="vipCard" data-component="vip-card">
+    <div class="vip-pass-card vip-card vip-member-card membership-card <?= $tierCardClass ?> js-vip-tilt-card" id="vipCard" data-component="vip-card">
+      <!-- Precision Engraved Vector Foil & Ambient Glare -->
+      <div class="vip-card-bg-art" aria-hidden="true">
+        <div class="vip-card-dotmatrix"></div>
+        <div class="vip-card-inner-frame"></div>
+        <div class="vip-card-glare"></div>
+        <svg class="vip-guilloche-svg" viewBox="0 0 420 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="365" cy="65" r="145" stroke="rgba(255,255,255,0.09)" stroke-width="1"/>
+          <circle cx="365" cy="65" r="112" stroke="rgba(255,255,255,0.07)" stroke-width="1" stroke-dasharray="5 5"/>
+          <circle cx="365" cy="65" r="78" stroke="rgba(255,255,255,0.09)" stroke-width="0.9"/>
+          <path d="M295 190 L345 128 L395 190 L345 252 Z" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+          <path d="M312 190 L345 148 L378 190 L345 232 Z" stroke="rgba(255,255,255,0.06)" stroke-width="1"/>
+          <line x1="25" y1="225" x2="140" y2="225" stroke="rgba(255,255,255,0.08)" stroke-width="0.8"/>
+        </svg>
+      </div>
+
       <!-- Header -->
       <div class="vip-card-header">
         <div class="vip-brand-badge">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5m14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
-          </svg>
-          FASTFOOD VIP
+          <div class="vip-brand-crest">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M5 16L3 5l5.5 5L12 4l3.5 6L21 5l-2 11H5m14 3c0 .6-.4 1-1 1H6c-.6 0-1-.4-1-1v-1h14v1z"/>
+            </svg>
+          </div>
+          <div class="vip-brand-text">
+            <span class="vip-brand-title">FASTFOOD VIP</span>
+            <span class="vip-brand-sub">PRIORITY LOYALTY PASS</span>
+          </div>
         </div>
         <div class="vip-tier-pill vip-tier tier-badge badge-tier" data-tier="<?= $currentTierCode ?>">
-          <span><?= escapeHtml($currentTier['badge_icon']) ?></span>
+          <span class="vip-tier-icon"><?= escapeHtml($currentTier['badge_icon']) ?></span>
           <span><?= escapeHtml($currentTier['tier_name']) ?></span>
         </div>
       </div>
 
-      <!-- Middle: EMV Chip & Monospace ID -->
+      <!-- Middle: Gold EMV Chip, NFC & Engraved Member ID -->
       <div class="vip-card-middle">
         <div class="vip-chip-wrap">
-          <div class="vip-chip-svg"></div>
-          <svg class="vip-nfc-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8.5 16.5a5 5 0 0 1 0-7"/>
-            <path d="M12 19a8.5 8.5 0 0 0 0-12"/>
-            <path d="M15.5 21.5a12 12 0 0 0 0-17"/>
+          <div class="vip-chip-svg" aria-hidden="true">
+            <svg viewBox="0 0 48 34" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="0.75" y="0.75" width="46.5" height="32.5" rx="5.25" stroke="rgba(255,255,255,0.38)" stroke-width="1"/>
+              <path d="M1 12.5H15.5C17 12.5 18 13.5 18 15V19C18 20.5 17 21.5 15.5 21.5H1" stroke="rgba(120,53,15,0.45)" stroke-width="1.2"/>
+              <path d="M47 12.5H32.5C31 12.5 30 13.5 30 15V19C30 20.5 31 21.5 32.5 21.5H47" stroke="rgba(120,53,15,0.45)" stroke-width="1.2"/>
+              <path d="M18 17H30" stroke="rgba(120,53,15,0.45)" stroke-width="1.2"/>
+              <path d="M24 1V12.5M24 21.5V33" stroke="rgba(120,53,15,0.45)" stroke-width="1.2"/>
+              <rect x="17" y="11" width="14" height="12" rx="3" stroke="rgba(120,53,15,0.42)" stroke-width="1.15"/>
+            </svg>
+          </div>
+          <svg class="vip-nfc-icon" width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M8.5 15.5a5 5 0 0 1 0-7"/>
+            <path d="M12 18a8.5 8.5 0 0 0 0-12"/>
+            <path d="M15.5 20.5a12 12 0 0 0 0-17"/>
           </svg>
         </div>
-        <div class="vip-cust-id">#FF-<?= str_pad((string)$userId, 5, '0', STR_PAD_LEFT) ?></div>
+
+        <div class="vip-id-block">
+          <span class="vip-id-eyebrow">MÃ THÀNH VIÊN</span>
+          <button type="button"
+                  class="vip-cust-id-btn js-copy-code"
+                  data-code="<?= escapeHtml($memberSerialCode) ?>"
+                  title="Bấm để sao chép mã thẻ thành viên">
+            <span class="vip-cust-id copy-btn-text"><?= escapeHtml($memberSerialCode) ?></span>
+            <svg class="vip-id-copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Luxury Privilege Highlight Ribbon -->
+      <div class="vip-perks-strip">
+        <div class="vip-perk-cell">
+          <span class="vip-perk-kicker">TỶ LỆ TÍCH ĐIỂM</span>
+          <span class="vip-perk-value">x<?= number_format((float)$currentTier['point_ratio'], 1) ?> / 10.000đ</span>
+        </div>
+        <div class="vip-perk-divider" aria-hidden="true"></div>
+        <div class="vip-perk-cell vip-perk-cell-right">
+          <span class="vip-perk-kicker">ĐẶC QUYỀN HẠNG</span>
+          <span class="vip-perk-value"><?= escapeHtml($tierPrivilegeHighlight) ?></span>
+        </div>
       </div>
 
       <!-- Footer: User Info & Points -->
       <div class="vip-card-footer">
         <div class="vip-user-info">
-          <img src="<?= escapeHtml($user['avatar_url'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80') ?>" 
-               alt="Avatar" class="vip-avatar-img">
+          <div class="vip-avatar-ring">
+            <img src="<?= escapeHtml($user['avatar_url'] ?: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=160&auto=format&fit=crop&q=80') ?>" 
+                 alt="Avatar" class="vip-avatar-img">
+          </div>
           <div class="vip-user-meta">
+            <span class="vip-holder-kicker">CHỦ THẺ</span>
             <h3 class="vip-user-name"><?= escapeHtml($user['full_name']) ?></h3>
             <span class="vip-spent-label">Đã chi: <?= number_format($totalSpent, 0, ',', '.') ?> đ</span>
           </div>
         </div>
 
         <div class="vip-points-box vip-points points-balance" id="pointsBalance" data-points="<?= $pointsBalance ?>">
+          <div class="vip-points-kicker">ĐIỂM TÍCH LŨY</div>
           <div class="vip-points-val">
             <span class="js-user-points-balance" data-raw-points="<?= $pointsBalance ?>"><?= number_format($pointsBalance, 0, ',', '.') ?></span>
             <span class="vip-points-unit">Điểm</span>
@@ -204,13 +272,30 @@ require_once ROOT_PATH . '/includes/header.php';
     </div>
 
     <!-- F8: Tier Progress Tracker & Next Tier Gap -->
+    <?php
+    if ($totalSpent >= 5000000.0) {
+        $trackFillPercent = 100.0;
+    } elseif ($totalSpent >= 3000000.0) {
+        $trackFillPercent = 66.67 + (($totalSpent - 3000000.0) / 2000000.0) * 33.33;
+    } elseif ($totalSpent >= 1000000.0) {
+        $trackFillPercent = 33.33 + (($totalSpent - 1000000.0) / 2000000.0) * 33.34;
+    } else {
+        $trackFillPercent = ($totalSpent / 1000000.0) * 33.33;
+    }
+    $trackFillPercent = round(min(100.0, max(0.0, $trackFillPercent)), 2);
+    ?>
     <div class="tier-tracker-card">
-      <div>
+      <div class="tracker-main-body">
         <div class="tracker-title-row">
-          <h2 class="tracker-title">
-            <span>🏅</span> Tiến Trình Nâng Hạng
-          </h2>
+          <div class="tracker-heading-group">
+            <div class="tracker-icon-badge" aria-hidden="true">🏅</div>
+            <div>
+              <h2 class="tracker-title">Tiến Trình Nâng Hạng</h2>
+              <p class="tracker-subtitle">Lộ trình tích lũy chi tiêu &amp; mở khóa đặc quyền</p>
+            </div>
+          </div>
           <span class="tracker-badge-pill">
+            <span class="tracker-pill-dot" aria-hidden="true"></span>
             Tỷ lệ tích: x<?= number_format((float)$currentTier['point_ratio'], 1) ?> điểm/10k
           </span>
         </div>
@@ -238,38 +323,47 @@ require_once ROOT_PATH . '/includes/header.php';
         </div>
 
         <!-- Milestones Track -->
-        <div class="tier-milestones-track" data-component="progress-tracker">
-          <div class="milestones-bar-bg">
-            <div class="milestones-bar-fill progress-bar tier-progress-fill <?= $isMaxTier ? 'diamond-max' : '' ?>" 
-                 id="tierProgressBar"
-                 role="progressbar"
-                 aria-valuenow="<?= $isMaxTier ? '100' : $progressPercent ?>"
-                 aria-valuemin="0"
-                 aria-valuemax="100"
-                 style="width: <?= $isMaxTier ? '100' : $overallPercent ?>%;"></div>
+        <div class="tier-progress-panel <?= $isMaxTier ? 'is-diamond-max' : '' ?>">
+          <div class="tier-progress-panel-head">
+            <span class="tier-progress-kicker">Cột mốc chi tiêu</span>
+            <span class="tier-progress-status <?= $isMaxTier ? 'is-max' : '' ?>">
+              <?= $isMaxTier ? '100% • Hoàn tất' : $progressPercent . '% đến ' . escapeHtml($nextTier['tier_name'] ?? '') ?>
+            </span>
           </div>
 
-          <div class="milestone-nodes">
-            <?php
-            $tierNodes = [
-                ['code' => 'BRONZE',  'name' => 'Đồng',      'spent' => '0đ',   'threshold' => 0],
-                ['code' => 'SILVER',  'name' => 'Bạc',       'spent' => '1.0M', 'threshold' => 1000000],
-                ['code' => 'GOLD',    'name' => 'Vàng',      'spent' => '3.0M', 'threshold' => 3000000],
-                ['code' => 'DIAMOND', 'name' => 'Kim Cương', 'spent' => '5.0M', 'threshold' => 5000000],
-            ];
-            foreach ($tierNodes as $idx => $tNode):
-                $isReached = ($totalSpent >= $tNode['threshold']);
-                $isCurr = ($currentTierCode === $tNode['code']);
-                $nodeClass = $isCurr ? 'is-reached is-current' : ($isReached ? 'is-reached' : '');
-            ?>
-              <div class="milestone-node <?= $nodeClass ?>">
-                <div class="node-dot">
-                  <?= $isReached ? '✓' : ($idx + 1) ?>
+          <div class="tier-milestones-track <?= $isMaxTier ? 'is-diamond-max' : '' ?>" data-component="progress-tracker">
+            <div class="milestones-bar-bg">
+              <div class="milestones-bar-fill progress-bar tier-progress-fill <?= $isMaxTier ? 'diamond-max' : '' ?>" 
+                   id="tierProgressBar"
+                   role="progressbar"
+                   aria-valuenow="<?= $isMaxTier ? '100' : $progressPercent ?>"
+                   aria-valuemin="0"
+                   aria-valuemax="100"
+                   style="width: <?= $isMaxTier ? '100' : $trackFillPercent ?>%;"></div>
+            </div>
+
+            <div class="milestone-nodes">
+              <?php
+              $tierNodes = [
+                  ['code' => 'BRONZE',  'name' => 'Đồng',      'spent' => '0đ',   'threshold' => 0],
+                  ['code' => 'SILVER',  'name' => 'Bạc',       'spent' => '1.0M', 'threshold' => 1000000],
+                  ['code' => 'GOLD',    'name' => 'Vàng',      'spent' => '3.0M', 'threshold' => 3000000],
+                  ['code' => 'DIAMOND', 'name' => 'Kim Cương', 'spent' => '5.0M', 'threshold' => 5000000],
+              ];
+              foreach ($tierNodes as $idx => $tNode):
+                  $isReached = ($totalSpent >= $tNode['threshold']);
+                  $isCurr = ($currentTierCode === $tNode['code']);
+                  $nodeClass = $isCurr ? 'is-reached is-current' : ($isReached ? 'is-reached' : '');
+              ?>
+                <div class="milestone-node <?= $nodeClass ?>">
+                  <div class="node-dot">
+                    <?= $isReached ? '✓' : ($idx + 1) ?>
+                  </div>
+                  <div class="node-name"><?= $tNode['name'] ?></div>
+                  <div class="node-spent"><?= $tNode['spent'] ?></div>
                 </div>
-                <div class="node-name"><?= $tNode['name'] ?></div>
-                <div class="node-spent"><?= $tNode['spent'] ?></div>
-              </div>
-            <?php endforeach; ?>
+              <?php endforeach; ?>
+            </div>
           </div>
         </div>
       </div>
@@ -277,20 +371,28 @@ require_once ROOT_PATH . '/includes/header.php';
       <!-- Gap Banner / Max Status -->
       <?php if (!$isMaxTier && $nextTier): ?>
         <div class="tracker-alert-box">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-          </svg>
-          <div>
-            Chi tiêu thêm <span class="remaining-gap next-tier-gap" id="remainingGap" data-gap="<?= $remainingSpent ?>"><strong><?= number_format($remainingSpent, 0, ',', '.') ?> đ</strong></span> để thăng hạng 
-            <strong><?= escapeHtml($nextTier['tier_name']) ?></strong> (tiến độ <?= $progressPercent ?>%)!
+          <div class="tracker-alert-icon" aria-hidden="true">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
           </div>
+          <div class="tracker-banner-copy">
+            <div class="tracker-banner-kicker">TIẾN ĐỘ THĂNG HẠNG TIẾP THEO</div>
+            <div class="tracker-banner-desc">
+              Chi tiêu thêm <span class="remaining-gap next-tier-gap" id="remainingGap" data-gap="<?= $remainingSpent ?>"><strong><?= number_format($remainingSpent, 0, ',', '.') ?> đ</strong></span> để thăng hạng 
+              <strong><?= escapeHtml($nextTier['tier_name']) ?></strong>!
+            </div>
+          </div>
+          <span class="tracker-banner-chip"><?= $progressPercent ?>%</span>
         </div>
       <?php else: ?>
         <div class="tracker-max-badge">
-          <span>💎</span>
-          <div>
-            <strong>ĐẠT HẠNG TỐI ĐA!</strong> Bạn đang sở hữu cấp bậc Kim Cương cao cấp nhất cùng trọn vẹn đặc quyền VIP tối thượng!
+          <div class="tracker-max-icon" aria-hidden="true">💎</div>
+          <div class="tracker-banner-copy">
+            <div class="tracker-max-kicker">ĐẠT HẠNG TỐI ĐA!</div>
+            <div class="tracker-max-desc">Bạn đang sở hữu cấp bậc Kim Cương cao cấp nhất cùng trọn vẹn đặc quyền VIP tối thượng!</div>
           </div>
+          <span class="tracker-max-chip">VIP MAX</span>
         </div>
       <?php endif; ?>
     </div>
@@ -405,19 +507,33 @@ require_once ROOT_PATH . '/includes/header.php';
                 </div>
 
                 <div>
+                  <?php
+                    $isCouponUsed = !empty($coupon['is_used']);
+                    $displayCouponCode = $isCouponUsed
+                      ? str_repeat('x', max(8, strlen((string)$coupon['code'])))
+                      : $coupon['code'];
+                  ?>
                   <div class="ticket-code-row">
-                    <span class="ticket-code-badge"><?= escapeHtml($coupon['code']) ?></span>
-                    <button type="button" class="ticket-copy-btn js-copy-code" data-code="<?= escapeHtml($coupon['code']) ?>" title="Sao chép mã vào clipboard">
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                      </svg>
-                      <span class="copy-btn-text">Sao Chép</span>
-                    </button>
+                    <span class="ticket-code-badge" <?= $isCouponUsed ? 'style="user-select:none; -webkit-user-select:none; background:#f1f5f9; color:#94a3b8; border-color:#cbd5e1;"' : '' ?>>
+                      <?= $isCouponUsed ? '🔒 ' : '' ?><?= escapeHtml($displayCouponCode) ?>
+                    </span>
+                    <?php if (!$isCouponUsed): ?>
+                      <button type="button" class="ticket-copy-btn js-copy-code" data-code="<?= escapeHtml($coupon['code']) ?>" title="Sao chép mã vào clipboard">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                        </svg>
+                        <span class="copy-btn-text">Sao Chép</span>
+                      </button>
+                    <?php else: ?>
+                      <span style="font-size:0.75rem; font-weight:750; color:#64748b; background:#f1f5f9; padding:0.25rem 0.55rem; border-radius:8px;">Đã dùng</span>
+                    <?php endif; ?>
                   </div>
                   <div class="ticket-expiry-row">
                     <span>HSD: <?= $endDate ?></span>
-                    <a href="<?= getUrl('foods.php') ?>" style="color: var(--ff-primary); font-weight: 700; text-decoration: none;">Dùng ngay →</a>
+                    <?php if (!$isCouponUsed): ?>
+                      <a href="<?= getUrl('foods.php') ?>" style="color: var(--ff-primary); font-weight: 700; text-decoration: none;">Dùng ngay →</a>
+                    <?php endif; ?>
                   </div>
                 </div>
               </div>

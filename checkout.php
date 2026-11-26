@@ -49,17 +49,23 @@ foreach ($cart as $item) {
 }
 $shippingFee = ($subtotal > 0 && $subtotal < 100000) ? 18000 : 0;
 
-// Xử lý giảm giá từ Coupon / Voucher
+// Xử lý giảm giá từ Coupon / Voucher (Xác thực chuẩn xác 4 loại & chặn dùng lại quá 1 lần)
+require_once ROOT_PATH . '/helpers/voucher.php';
 $appliedCoupon = $_SESSION['applied_coupon'] ?? null;
 $discount = 0;
 if ($appliedCoupon && $subtotal > 0) {
-    if (($appliedCoupon['discount_type'] ?? '') === 'percentage') {
-        $discount = ($subtotal * (float)$appliedCoupon['discount_value']) / 100.0;
-        if (!empty($appliedCoupon['max_discount_amount']) && (float)$appliedCoupon['max_discount_amount'] > 0) {
-            $discount = min($discount, (float)$appliedCoupon['max_discount_amount']);
-        }
+    $vCheck = validateAndCalculateVoucher($appliedCoupon, (float)$subtotal, $userId > 0 ? $userId : null, (float)$shippingFee, array_values($cart));
+    if (!empty($vCheck['valid'])) {
+        $discount = (float)$vCheck['discount_amount'];
     } else {
-        $discount = min($subtotal, (float)($appliedCoupon['discount_value'] ?? 0));
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $error = $vCheck['reason'] ?? 'Voucher đang áp dụng không còn hợp lệ.';
+        }
+        if (empty($vCheck['missing_amount']) || !empty($vCheck['scope_mismatch'])) {
+            unset($_SESSION['applied_coupon']);
+            $appliedCoupon = null;
+        }
+        $discount = 0;
     }
 }
 $payableBeforePoints = max(0, $subtotal + $shippingFee - $discount);
@@ -78,7 +84,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $notes   = trim($_POST['customer_notes'] ?? '');
     $method  = trim($_POST['paymentMethod'] ?? 'cod');
 
-    if (mb_strlen($name) < 3) {
+    if ($error) {
+        // Giữ lỗi voucher từ bước xác thực trước khi tạo đơn
+    } elseif (mb_strlen($name) < 3) {
         $error = 'Vui lòng nhập họ và tên người nhận hợp lệ.';
     } elseif (!preg_match('/^[0-9+() -]{10,15}$/', $phone)) {
         $error = 'Số điện thoại người nhận không hợp lệ.';
@@ -145,6 +153,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $db->beginTransaction();
         try {
+            // Xác thực & khóa voucher trong transaction để chống dùng trùng / vượt giới hạn 1 lần/hạng
+            $couponIdForOrder = null;
+            $appliedVoucherId = 0;
+            $voucherLockedFrom = null;
+            if ($appliedCoupon && !empty($appliedCoupon['code'])) {
+                $appliedVoucherCode = strtoupper(trim((string)$appliedCoupon['code']));
+                $vLockStmt = $db->prepare("SELECT * FROM vouchers WHERE UPPER(code) = ? LIMIT 1 FOR UPDATE");
+                $vLockStmt->execute([$appliedVoucherCode]);
+                $freshV = $vLockStmt->fetch();
+                if ($freshV) {
+                    $voucherLockedFrom = 'vouchers';
+                    $appliedVoucherId = (int)$freshV['id'];
+                } else {
+                    $cLockStmt = $db->prepare("SELECT * FROM coupons WHERE UPPER(code) = ? LIMIT 1 FOR UPDATE");
+                    $cLockStmt->execute([$appliedVoucherCode]);
+                    $freshV = $cLockStmt->fetch();
+                    if ($freshV) {
+                        $voucherLockedFrom = 'coupons';
+                        $appliedVoucherId = (int)$freshV['id'];
+                    }
+                }
+
+                if (!$freshV) {
+                    unset($_SESSION['applied_coupon']);
+                    throw new Exception('Mã giảm giá "' . $appliedVoucherCode . '" không còn hiệu lực.');
+                }
+
+                $reCheck = validateAndCalculateVoucher($freshV, (float)$subtotal, $userId > 0 ? $userId : null, (float)$shippingFee, array_values($cart));
+                if (empty($reCheck['valid'])) {
+                    unset($_SESSION['applied_coupon']);
+                    throw new Exception($reCheck['reason'] ?? 'Voucher không còn hợp lệ để áp dụng.');
+                }
+
+                $discount = (float)$reCheck['discount_amount'];
+                $payableBeforePoints = max(0, $subtotal + $shippingFee - $discount);
+                if ($pointsDiscount > $payableBeforePoints) {
+                    $pointsDiscount = $payableBeforePoints;
+                }
+
+                // Khớp coupon_id trong bảng coupons (nếu có) để an toàn khóa ngoại fk_orders_coupon
+                $fkStmt = $db->prepare("SELECT id FROM coupons WHERE UPPER(code) = ? LIMIT 1");
+                $fkStmt->execute([$appliedVoucherCode]);
+                $fkId = $fkStmt->fetchColumn();
+                $couponIdForOrder = $fkId ? (int)$fkId : null;
+            }
+
             $total = max(0, $payableBeforePoints - $pointsDiscount);
 
             // Xác định trạng thái thanh toán nếu đơn hàng được thanh toán 100% bằng điểm (total == 0)
@@ -158,7 +212,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $paymentMethodDb = ($method === 'vietqr' || $method === 'banking') ? 'banking' : (($method === 'momo') ? 'momo' : 'cod');
 
             // 1. Lưu vào bảng orders bao gồm points_used và points_discount
-            $couponId = !empty($appliedCoupon['id']) ? (int)$appliedCoupon['id'] : null;
             $stmt = $db->prepare("INSERT INTO orders 
                 (order_code, customer_id, restaurant_id, coupon_id, recipient_name, recipient_phone, delivery_address, note_for_restaurant, 
                  subtotal, shipping_fee, discount_amount, points_used, points_discount, total_amount, payment_method, payment_status, order_status, created_at)
@@ -167,7 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $orderCode,
                 $userId,
                 $restaurantId,
-                $couponId,
+                $couponIdForOrder,
                 $name,
                 $phone,
                 $address,
@@ -192,9 +245,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            if ($couponId) {
-                require_once ROOT_PATH . '/helpers/voucher.php';
-                @recordVoucherUsage($couponId, $userId, $orderId, $orderCode, (float)$discount);
+            if ($appliedVoucherId > 0) {
+                if ($voucherLockedFrom === 'vouchers') {
+                    if (!recordVoucherUsage($appliedVoucherId, $userId, $orderId, $orderCode, (float)$discount)) {
+                        throw new Exception('Không thể ghi nhận lượt sử dụng voucher.');
+                    }
+                } elseif ($voucherLockedFrom === 'coupons') {
+                    $db->prepare("UPDATE coupons SET usage_count = usage_count + 1 WHERE id = ?")->execute([$appliedVoucherId]);
+                }
             }
 
             // 2. Lưu từng món vào order_items
@@ -273,6 +331,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         } catch (Exception $e) {
             $db->rollBack();
+            if (empty($_SESSION['applied_coupon'])) {
+                $appliedCoupon = null;
+                $discount = 0;
+                $payableBeforePoints = max(0, $subtotal + $shippingFee);
+                $total = $payableBeforePoints;
+            }
             $error = 'Lỗi hệ thống khi đặt hàng: ' . $e->getMessage();
         }
     }
@@ -524,36 +588,30 @@ require_once ROOT_PATH . '/includes/header.php';
         <?php endif; ?>
 
         <?php if ($appliedCoupon): ?>
-          <div id="checkout-voucher-box" style="margin: 0.75rem 0; background: #fff7ed; border: 1.5px dashed #fb923c; border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <span style="background:#ea580c; color:#fff; font-weight:800; font-size:0.75rem; padding:0.15rem 0.5rem; border-radius:4px; text-transform:uppercase;">
-                  🎟️ <?= escapeHtml($appliedCoupon['code']) ?>
-                </span>
-                <span style="font-weight:700; color:#ea580c; margin-left:0.35rem;">-<?= formatVND($discount) ?></span>
-              </div>
-              <div style="display:flex; gap:0.4rem; align-items:center;">
-                <button type="button" onclick="openCheckoutVoucherPicker()" style="background:none; border:none; color:#ea580c; font-size:0.75rem; font-weight:750; cursor:pointer; text-decoration:underline;">
-                  Đổi mã
-                </button>
-                <button type="button" onclick="removeCheckoutVoucher()" style="background:none; border:none; color:#dc2626; font-size:0.75rem; font-weight:750; cursor:pointer;">
-                  ✕ Gỡ
-                </button>
-              </div>
+          <div id="checkout-voucher-box" class="summary-voucher-box is-applied">
+            <div class="svb-applied-top">
+              <span class="svb-code-pill"><?= escapeHtml($appliedCoupon['code']) ?></span>
+              <span class="svb-discount-pill">-<?= formatVND($discount) ?></span>
             </div>
-            <div style="font-size:0.74rem; color:#9a3412; margin-top:0.25rem;">
+            <div class="svb-applied-title">
               <?= escapeHtml($appliedCoupon['title']) ?>
+            </div>
+            <div class="svb-applied-actions">
+              <button type="button" class="svb-action-btn svb-action-change" onclick="openCheckoutVoucherPicker()">Đổi mã</button>
+              <button type="button" class="svb-action-btn svb-action-remove" onclick="removeCheckoutVoucher()">Gỡ bỏ</button>
             </div>
           </div>
         <?php else: ?>
-          <div id="checkout-voucher-box" style="margin: 0.75rem 0; background: #fffaf0; border: 1.5px dashed #fdba74; border-radius: 10px; padding: 0.65rem 0.85rem; font-size: 0.82rem; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-weight:750; color:#9a3412; font-size:0.85rem;">🎟️ Voucher Giảm Giá</div>
-              <div style="font-size:0.72rem; color:#64748b;">Chọn hoặc nhập mã để giảm chi phí</div>
+          <div id="checkout-voucher-box" class="summary-voucher-box">
+            <div class="svb-header" style="margin-bottom:0;">
+              <div>
+                <div class="svb-label">Voucher Giảm Giá</div>
+                <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">Chọn hoặc nhập mã để giảm chi phí</div>
+              </div>
+              <button type="button" class="svb-picker-link" onclick="openCheckoutVoucherPicker()">
+                Chọn Voucher ➔
+              </button>
             </div>
-            <button type="button" class="btn btn-sm btn-outline" onclick="openCheckoutVoucherPicker()" style="font-size:0.78rem; font-weight:750; padding:0.25rem 0.65rem; border-color:#ea580c; color:#ea580c; background:#fff;">
-              Chọn Voucher ➔
-            </button>
           </div>
         <?php endif; ?>
 

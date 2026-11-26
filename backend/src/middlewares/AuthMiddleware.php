@@ -40,7 +40,25 @@ class AuthMiddleware {
         }
 
         $sessionUser = null;
-        if (!empty($_SESSION['user_id'])) {
+        if (!empty($_SESSION['admin_user']['id'])) {
+            $au = $_SESSION['admin_user'];
+            $sessionUser = [
+                'id'       => (int)$au['id'],
+                'roleId'   => (int)($au['role_id'] ?? 1),
+                'role'     => $au['role'] ?? 'admin',
+                'fullName' => $au['full_name'] ?? 'Quản trị viên',
+                'email'    => $au['email'] ?? ''
+            ];
+        } elseif (!empty($_SESSION['customer_user']['id'])) {
+            $cu = $_SESSION['customer_user'];
+            $sessionUser = [
+                'id'       => (int)$cu['id'],
+                'roleId'   => (int)($cu['role_id'] ?? 2),
+                'role'     => $cu['role'] ?? 'customer',
+                'fullName' => $cu['full_name'] ?? 'Khách hàng',
+                'email'    => $cu['email'] ?? ''
+            ];
+        } elseif (!empty($_SESSION['user_id'])) {
             $sessionUser = [
                 'id'       => (int)$_SESSION['user_id'],
                 'roleId'   => (int)($_SESSION['user_role_id'] ?? 4),

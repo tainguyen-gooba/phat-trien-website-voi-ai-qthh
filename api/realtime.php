@@ -153,7 +153,7 @@ switch ($action) {
 
             // Đếm tổng tin nhắn chưa đọc từ khách hàng cho Admin
             try {
-                $unreadChatCount = (int)$db->query("SELECT COUNT(*) FROM ai_chat_messages WHERE sender = 'user' AND is_read = 0")->fetchColumn();
+                $unreadChatCount = (int)$db->query("SELECT COUNT(*) FROM ai_chat_messages WHERE sender = 'user' AND is_read = 0 AND session_id NOT LIKE 'ai_sess_%'")->fetchColumn();
             } catch (\Exception $e) {
                 $unreadChatCount = 0;
             }

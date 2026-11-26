@@ -114,10 +114,10 @@ class ChatController extends BaseController {
             }
         }
 
-        // Kênh chat tách biệt: 'ai' (Khách hỏi riêng AI) vs 'admin' (Khách chat tay riêng với Admin)
+        // Kênh chat tách biệt: 'ai' (Trợ lý AI 24/7) vs 'admin' (Chat trực tiếp 100% với Admin)
         $channel = trim($body['channel'] ?? '');
         if (!$channel) {
-            $channel = str_starts_with($sessionId, 'admin_sess_') ? 'admin' : (str_starts_with($sessionId, 'ai_sess_') ? 'ai' : 'auto');
+            $channel = str_starts_with($sessionId, 'ai_sess_') ? 'ai' : 'admin';
         }
 
         // Lưu thông tin phiên
@@ -125,72 +125,17 @@ class ChatController extends BaseController {
 
         // Lưu tin nhắn của khách hàng
         $userMsgId = AiChatService::saveMessage($sessionId, $userId, 'user', $message, $metadata, $messageType);
+        $settings = AiChatService::getChatSettings();
 
-        // 1. KÊNH CHAT TAY LIÊN HỆ VỚI CỬA HÀNG
-        if ($channel === 'admin' || str_starts_with($sessionId, 'admin_sess_')) {
-            // Kiểm tra xem tin nhắn có phải là câu hỏi tư vấn món ăn / thực đơn / giá / khuyến mãi / địa chỉ không
-            $cleanMsg = mb_strtolower($message, 'UTF-8');
-            $isAiConsultation = (
-                str_contains($cleanMsg, '50k') || str_contains($cleanMsg, 'dưới 50') ||
-                str_contains($cleanMsg, 'hôm nay ăn gì') || str_contains($cleanMsg, 'combo') ||
-                str_contains($cleanMsg, 'bán chạy') || str_contains($cleanMsg, 'khuyến mãi') ||
-                str_contains($cleanMsg, 'thực đơn') || str_contains($cleanMsg, 'menu') ||
-                str_contains($cleanMsg, 'quán ở đâu') || str_contains($cleanMsg, 'giờ mở cửa') ||
-                str_contains($cleanMsg, 'địa chỉ') || str_contains($cleanMsg, 'phí ship') ||
-                str_contains($cleanMsg, 'đặt đồ ăn') || str_contains($cleanMsg, 'có món') ||
-                preg_match('/(?:dưới|giá rẻ|sinh viên|tiết kiệm|\b[1-9]\d{1,2}k\b)/iu', $cleanMsg)
-            );
-
-            // Nếu là câu hỏi tư vấn hoặc Admin đang bật chế độ AI tự động:
-            if ($isAiConsultation || AiChatService::shouldAiAutoReply($sessionId)) {
-                $aiResponse = AiService::processPrompt($message, $userId);
-                $replyText = $aiResponse['reply'] ?? '';
-                $products = $aiResponse['products'] ?? [];
-                $order = $aiResponse['order'] ?? null;
-                $suggestions = $aiResponse['suggestions'] ?? [];
-
-                if ($replyText) {
-                    $botReply = "🤖 *Trợ lý ảo FASTFOOD xin hỗ trợ gợi ý nhanh cho bạn trong khi chờ nhân viên cửa hàng phản hồi:*\n\n" . $replyText;
-                    $botMsgId = AiChatService::saveMessage(
-                        $sessionId,
-                        $userId,
-                        'assistant',
-                        $botReply,
-                        ['products' => $products, 'order' => $order]
-                    );
-
-                    $this->sendSuccess('Trợ lý ảo đã gợi ý món ăn cho khách!', [
-                        'channel'            => 'admin',
-                        'autoReplied'        => true,
-                        'reply'              => $botReply,
-                        'products'           => $products,
-                        'order'              => $order,
-                        'suggestions'        => $suggestions,
-                        'userMessageId'      => $userMsgId,
-                        'assistantMessageId' => $botMsgId ?: time(),
-                        'messageId'          => $botMsgId ?: time(),
-                        'adminOnline'        => true,
-                    ]);
-                    return;
-                }
+        // 1. KÊNH TRỢ LÝ AI HỖ TRỢ KHÁCH HÀNG 24/7 (tách riêng khỏi hộp thư Admin)
+        if ($channel === 'ai' || str_starts_with($sessionId, 'ai_sess_')) {
+            if ($userMsgId) {
+                try {
+                    $db = \FastFood\Config\Database::getConnection();
+                    $db->prepare("UPDATE ai_chat_messages SET is_read = 1 WHERE id = ?")->execute([$userMsgId]);
+                } catch (\Exception $e) {}
             }
 
-            $this->sendSuccess('Tin nhắn đã được chuyển trực tiếp đến cửa hàng!', [
-                'channel'       => 'admin',
-                'autoReplied'   => false,
-                'reply'         => null,
-                'userMessageId' => $userMsgId,
-                'messageId'     => $userMsgId,
-                'messageType'   => $messageType,
-                'metadata'      => $metadata,
-                'adminBusy'     => false,
-                'adminOnline'   => true,
-            ]);
-            return;
-        }
-
-        // 2. KÊNH HỎI RIÊNG TRỢ LÝ AI: Tự động phân tích và phản hồi 24/7
-        if ($channel === 'ai' || str_starts_with($sessionId, 'ai_sess_')) {
             $aiResponse = AiService::processPrompt($message, $userId);
             $replyText = $aiResponse['reply'] ?? '';
             $products = $aiResponse['products'] ?? [];
@@ -216,55 +161,23 @@ class ChatController extends BaseController {
                 'assistantMessageId' => $botMsgId ?: time(),
                 'messageId'          => $botMsgId ?: time(),
                 'adminOnline'        => true,
+                'supportStatus'      => $settings
             ]);
             return;
         }
 
-        // Kiểm tra xem AI có được phép tự động trả lời (Chế độ legacy)
-        $shouldReply = AiChatService::shouldAiAutoReply($sessionId);
-        $settings = AiChatService::getChatSettings();
-
-        if (!$shouldReply) {
-            $this->sendSuccess('Tin nhắn đã được chuyển đến nhân viên hỗ trợ!', [
-                'channel'       => 'admin',
-                'autoReplied'   => false,
-                'reply'         => null,
-                'messageId'     => $userMsgId,
-                'adminBusy'     => ($settings['mode'] ?? 'auto') === 'auto',
-                'adminOnline'   => true,
-                'supportStatus' => $settings
-            ]);
-            return;
-        }
-
-        // Trợ lý AI phân tích và trả lời tự động
-        $aiResponse = AiService::processPrompt($message, $userId);
-        $replyText = $aiResponse['reply'] ?? '';
-        $products = $aiResponse['products'] ?? [];
-        $order = $aiResponse['order'] ?? null;
-        $suggestions = $aiResponse['suggestions'] ?? [];
-
-        // Lưu phản hồi của trợ lý AI
-        $botMsgId = AiChatService::saveMessage(
-            $sessionId,
-            $userId,
-            'assistant',
-            $replyText,
-            ['products' => $products, 'order' => $order]
-        );
-
-        $this->sendSuccess('Phản hồi thành công!', [
-            'autoReplied'        => true,
-            'reply'              => $replyText,
-            'products'           => $products,
-            'order'              => $order,
-            'suggestions'        => $suggestions,
-            'userMessageId'      => $userMsgId,
-            'assistantMessageId' => $botMsgId ?: time(),
-            'messageId'          => $botMsgId ?: time(),
-            'adminBusy'          => ($settings['mode'] ?? 'auto') === 'auto',
-            'adminOnline'        => true,
-            'supportStatus'      => $settings
+        // 2. KÊNH CHAT TRỰC TIẾP VỚI ADMIN (không có AI tự động trả lời)
+        $this->sendSuccess('Tin nhắn đã được chuyển trực tiếp đến Admin!', [
+            'channel'       => 'admin',
+            'autoReplied'   => false,
+            'reply'         => null,
+            'userMessageId' => $userMsgId,
+            'messageId'     => $userMsgId,
+            'messageType'   => $messageType,
+            'metadata'      => $metadata,
+            'adminBusy'     => false,
+            'adminOnline'   => true,
+            'supportStatus' => $settings
         ]);
     }
 
@@ -325,13 +238,22 @@ class ChatController extends BaseController {
      * Khởi tạo phiên trò chuyện mới cho khách hàng
      */
     public function newSession(): void {
-        $newSessionId = 'ff_chat_' . bin2hex(random_bytes(6)) . time();
+        $body = $this->getJsonBody();
+        $channel = trim($body['channel'] ?? 'ai');
+        $isAdminChannel = ($channel === 'admin');
+
+        $newSessionId = ($isAdminChannel ? 'admin_sess_' : 'ai_sess_') . bin2hex(random_bytes(6)) . time();
         AiChatService::getOrCreateSession($newSessionId);
         $settings = AiChatService::getChatSettings();
 
+        $welcome = $isAdminChannel
+            ? "Dạ chào bạn! Bạn đang kết nối chat trực tiếp với Admin FASTFOOD. Hãy nhắn tin để được hỗ trợ ngay nhé!"
+            : "Dạ chào bạn! Tôi là Trợ lý AI FASTFOOD 24/7. Bạn muốn tìm món ngon, combo, voucher hay kiểm tra đơn hàng nào hôm nay?";
+
         $this->sendSuccess('Tạo phiên mới thành công!', [
             'sessionId'      => $newSessionId,
-            'welcomeMessage' => "Dạ chào bạn! Tôi là Nhân viên hỗ trợ FASTFOOD. Bạn cần tìm món ngon, săn khuyến mãi hay kiểm tra đơn hàng nào hôm nay?",
+            'channel'        => $isAdminChannel ? 'admin' : 'ai',
+            'welcomeMessage' => $welcome,
             'supportStatus'  => $settings
         ]);
     }
@@ -488,33 +410,23 @@ class ChatController extends BaseController {
     }
 
     /**
-     * Bật/Tắt chế độ chat toàn cục (AI Tự Chat vs Admin Trực Tiếp Chat)
+     * Hệ thống chỉ dùng chế độ Admin Trực Tiếp Chat
      */
     public function updateAdminStatus(): void {
         AuthMiddleware::requireAdminOrStaff();
-        $body = $this->getJsonBody();
-        $mode = trim($body['mode'] ?? '');
-        if (!$mode) {
-            $busy = !empty($body['busy']);
-            $mode = $busy ? 'auto' : 'admin';
-        }
-
-        $settings = AiChatService::updateChatSettings(['mode' => $mode]);
-        $this->sendSuccess('Cập nhật chế độ chat thành công!', $settings);
+        $settings = AiChatService::updateChatSettings(['mode' => 'admin']);
+        $this->sendSuccess('Hệ thống đang chạy chế độ Admin Trực Tiếp Chat.', $settings);
     }
 
     /**
-     * Bật/Tắt tự động trả lời AI cho một phiên
+     * AI tự động cho phiên chat đã được tắt hoàn toàn
      */
     public function updateSessionAutomation(string $sessionId): void {
         AuthMiddleware::requireAdminOrStaff();
-        $body = $this->getJsonBody();
-        $enabled = !empty($body['enabled']);
+        AiChatService::updateSessionAutomation($sessionId, false);
 
-        AiChatService::updateSessionAutomation($sessionId, $enabled);
-
-        $this->sendSuccess('Cập nhật tự động thành công!', [
-            'enabled' => $enabled
+        $this->sendSuccess('AI tự động đã tắt — luôn giữ chat trực tiếp với Admin.', [
+            'enabled' => false
         ]);
     }
 

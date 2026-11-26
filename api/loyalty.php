@@ -92,24 +92,28 @@ switch ($action) {
         $settings = getLoyaltySettings();
         $rate = (float)($settings['point_to_vnd_rate'] ?? 100.0);
         $newBalance = (int)$result['new_balance'];
+        require_once ROOT_PATH . '/helpers/voucher.php';
+        $walletCount = getUserVoucherCount($userId);
 
         http_response_code(200);
         echo json_encode([
             'success'         => true,
-            'message'         => 'Đổi voucher thành công! Mã ưu đãi đã được lưu vào kho của bạn.',
+            'message'         => 'Đổi voucher thành công! Mã ưu đãi đã được lưu vào Ví Voucher của bạn.',
             'coupon_id'       => $result['coupon_id'],
             'coupon_code'     => $result['coupon_code'],
             'discount_amount' => (float)$result['discount_amount'],
             'points_deducted' => (int)$result['points_deducted'],
             'new_balance'     => $newBalance,
             'new_balance_vnd' => $newBalance * $rate,
+            'wallet_count'    => $walletCount,
             'data'            => [
                 'coupon_id'       => $result['coupon_id'],
                 'coupon_code'     => $result['coupon_code'],
                 'discount_amount' => (float)$result['discount_amount'],
                 'points_deducted' => (int)$result['points_deducted'],
                 'new_balance'     => $newBalance,
-                'new_balance_vnd' => $newBalance * $rate
+                'new_balance_vnd' => $newBalance * $rate,
+                'wallet_count'    => $walletCount
             ]
         ], JSON_UNESCAPED_UNICODE);
         exit;

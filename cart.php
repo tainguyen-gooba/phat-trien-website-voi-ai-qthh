@@ -15,17 +15,22 @@ foreach ($cart as $item) {
 }
 $shippingFee = ($subtotal > 0 && $subtotal < 100000) ? 18000 : 0;
 
-// Xử lý giảm giá từ Coupon / Voucher
+// Xử lý giảm giá từ Coupon / Voucher (Chuẩn xác cả 4 loại & 1 lần/hạng thành viên)
+require_once ROOT_PATH . '/helpers/voucher.php';
+$cUser = currentUser();
+$cUid = $cUser ? (int)$cUser['id'] : null;
 $appliedCoupon = $_SESSION['applied_coupon'] ?? null;
 $discount = 0;
 if ($appliedCoupon && $subtotal > 0) {
-    if (($appliedCoupon['discount_type'] ?? '') === 'percentage') {
-        $discount = ($subtotal * (float)$appliedCoupon['discount_value']) / 100.0;
-        if (!empty($appliedCoupon['max_discount_amount']) && (float)$appliedCoupon['max_discount_amount'] > 0) {
-            $discount = min($discount, (float)$appliedCoupon['max_discount_amount']);
-        }
+    $vCheck = validateAndCalculateVoucher($appliedCoupon, (float)$subtotal, $cUid, (float)$shippingFee, array_values($cart));
+    if (!empty($vCheck['valid'])) {
+        $discount = (float)$vCheck['discount_amount'];
     } else {
-        $discount = min($subtotal, (float)($appliedCoupon['discount_value'] ?? 0));
+        if (empty($vCheck['missing_amount']) || !empty($vCheck['scope_mismatch'])) {
+            unset($_SESSION['applied_coupon']);
+            $appliedCoupon = null;
+        }
+        $discount = 0;
     }
 }
 $total = max(0, $subtotal + $shippingFee - $discount);
@@ -156,40 +161,27 @@ require_once ROOT_PATH . '/includes/header.php';
         </div>
 
         <!-- Mã Giảm Giá / Voucher Box -->
-        <div id="cart-voucher-box" style="margin: 1rem 0; background: #fff7ed; border: 1.5px dashed #fb923c; border-radius: 12px; padding: 0.9rem;">
+        <div id="cart-voucher-box" class="summary-voucher-box <?= $appliedCoupon ? 'is-applied' : '' ?>">
           <?php if ($appliedCoupon): ?>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-              <div>
-                <span style="background:#ea580c; color:#fff; font-weight:800; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:4px; text-transform:uppercase;">
-                  🎟️ <?= escapeHtml($appliedCoupon['code']) ?>
-                </span>
-                <div style="font-weight:700; color:#ea580c; font-size:0.85rem; margin-top:0.35rem;">
-                  -<?= formatVND($discount) ?> (<?= escapeHtml($appliedCoupon['title']) ?>)
-                </div>
-              </div>
-              <div style="display:flex; gap:0.4rem; align-items:center;">
-                <button type="button" class="btn btn-sm btn-outline" onclick="openCartVoucherPicker()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
-                  Đổi mã
-                </button>
-                <button type="button" class="btn btn-sm btn-outline text-danger" onclick="removeCoupon()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
-                  Gỡ bỏ
-                </button>
-              </div>
+            <div class="svb-applied-top">
+              <span class="svb-code-pill"><?= escapeHtml($appliedCoupon['code']) ?></span>
+              <span class="svb-discount-pill">-<?= formatVND($discount) ?></span>
+            </div>
+            <div class="svb-applied-title">
+              <?= escapeHtml($appliedCoupon['title']) ?>
+            </div>
+            <div class="svb-applied-actions">
+              <button type="button" class="svb-action-btn svb-action-change" onclick="openCartVoucherPicker()">Đổi mã</button>
+              <button type="button" class="svb-action-btn svb-action-remove" onclick="removeCoupon()">Gỡ bỏ</button>
             </div>
           <?php else: ?>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-              <label style="font-size:0.82rem; font-weight:800; color:#9a3412; margin:0;">
-                🎟️ Mã Giảm Giá / Voucher
-              </label>
-              <button type="button" onclick="openCartVoucherPicker()" style="background:none; border:none; color:#ea580c; font-size:0.8rem; font-weight:800; cursor:pointer; text-decoration:underline;">
-                Chọn từ Ví Voucher ➔
-              </button>
+            <div class="svb-header">
+              <label for="cart-coupon-input" class="svb-label">Mã Giảm Giá / Voucher</label>
+              <button type="button" class="svb-picker-link" onclick="openCartVoucherPicker()">Chọn từ Ví ➔</button>
             </div>
-            <div style="display:flex; gap:0.5rem;">
-              <input type="text" id="cart-coupon-input" class="form-control form-control-sm" placeholder="Nhập mã (FASTFOOD20...)" style="text-transform:uppercase; font-weight:700; font-size:0.85rem;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
-              <button type="button" class="btn btn-sm btn-primary" onclick="applyCoupon()" style="white-space:nowrap; padding:0.4rem 0.85rem; font-size:0.85rem;">
-                Áp dụng
-              </button>
+            <div class="svb-input-row">
+              <input type="text" id="cart-coupon-input" placeholder="Nhập mã (FASTFOOD20...)" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
+              <button type="button" class="svb-apply-btn" onclick="applyCoupon()">Áp dụng</button>
             </div>
           <?php endif; ?>
         </div>
@@ -295,40 +287,45 @@ function updateCartUI(data) {
   // 6. Cập nhật khung mã giảm giá voucher
   const voucherBox = document.getElementById('cart-voucher-box');
   if (voucherBox) {
+    const escHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (ch) => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    }[ch]));
+    voucherBox.className = 'summary-voucher-box' + (data.appliedCoupon ? ' is-applied' : '');
     if (data.appliedCoupon) {
       voucherBox.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div>
-            <span style="background:#ea580c; color:#fff; font-weight:800; font-size:0.75rem; padding:0.2rem 0.55rem; border-radius:4px; text-transform:uppercase;">
-              🎟️ ${data.appliedCoupon.code}
-            </span>
-            <div style="font-weight:700; color:#ea580c; font-size:0.85rem; margin-top:0.35rem;">
-              -${formatVND(data.discount)} (${data.appliedCoupon.title})
-            </div>
-          </div>
-          <div style="display:flex; gap:0.4rem; align-items:center;">
-            <button type="button" class="btn btn-sm btn-outline" onclick="openCartVoucherPicker()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
-              Đổi mã
-            </button>
-            <button type="button" class="btn btn-sm btn-outline text-danger" onclick="removeCoupon()" style="padding:0.25rem 0.6rem; font-size:0.75rem; background:#fff;">
-              Gỡ bỏ
-            </button>
-          </div>
+        <div class="svb-applied-top">
+          <span class="svb-code-pill">${escHtml(data.appliedCoupon.code)}</span>
+          <span class="svb-discount-pill">-${formatVND(data.discount)}</span>
+        </div>
+        <div class="svb-applied-title">
+          ${escHtml(data.appliedCoupon.title)}
+        </div>
+        <div class="svb-applied-actions">
+          <button type="button" class="svb-action-btn svb-action-change" onclick="openCartVoucherPicker()">
+            Đổi mã
+          </button>
+          <button type="button" class="svb-action-btn svb-action-remove" onclick="removeCoupon()">
+            Gỡ bỏ
+          </button>
         </div>
       `;
     } else {
       voucherBox.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.4rem;">
-          <label style="font-size:0.82rem; font-weight:800; color:#9a3412; margin:0;">
-            🎟️ Mã Giảm Giá / Voucher
+        <div class="svb-header">
+          <label for="cart-coupon-input" class="svb-label">
+            Mã Giảm Giá / Voucher
           </label>
-          <button type="button" onclick="openCartVoucherPicker()" style="background:none; border:none; color:#ea580c; font-size:0.8rem; font-weight:800; cursor:pointer; text-decoration:underline;">
-            Chọn từ Ví Voucher ➔
+          <button type="button" class="svb-picker-link" onclick="openCartVoucherPicker()">
+            Chọn từ Ví ➔
           </button>
         </div>
-        <div style="display:flex; gap:0.5rem;">
-          <input type="text" id="cart-coupon-input" class="form-control form-control-sm" placeholder="Nhập mã (FASTFOOD20...)" style="text-transform:uppercase; font-weight:700; font-size:0.85rem;" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
-          <button type="button" class="btn btn-sm btn-primary" onclick="applyCoupon()" style="white-space:nowrap; padding:0.4rem 0.85rem; font-size:0.85rem;">
+        <div class="svb-input-row">
+          <input type="text" id="cart-coupon-input" placeholder="Nhập mã (FASTFOOD20...)" onkeydown="if(event.key==='Enter'){event.preventDefault();applyCoupon();}">
+          <button type="button" class="svb-apply-btn" onclick="applyCoupon()">
             Áp dụng
           </button>
         </div>

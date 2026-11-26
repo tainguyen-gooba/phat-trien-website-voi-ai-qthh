@@ -170,7 +170,9 @@
           const isFoods = path.includes('foods.php') || path.includes('food-detail.php');
           const isVouchers = path.includes('vouchers.php');
           const isProfile = path.includes('profile.php');
-          if (
+          if (isVouchers && col === 'vouchers' && typeof window.syncVouchersLiveState === 'function') {
+            window.syncVouchersLiveState();
+          } else if (
             col === 'footer_settings' ||
             (isHome && (!col || ['bestseller', 'banners', 'products', 'categories', 'footer_settings'].includes(col))) ||
             (isFoods && ['products', 'categories'].includes(col)) ||

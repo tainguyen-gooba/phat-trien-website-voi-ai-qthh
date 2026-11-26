@@ -19,9 +19,10 @@ $currentUser = currentUser();
 $userId = $currentUser ? (int)$currentUser['id'] : 0;
 
 // Lấy dữ liệu voucher
-$publicVouchers = getAllPublicVouchers($userId);
-$walletVouchers = $userId > 0 ? getUserWalletVouchers($userId) : [];
-$walletCount    = $userId > 0 ? getUserVoucherCount($userId) : 0;
+$publicVouchers     = getAllPublicVouchers($userId);
+$huntAvailableCount = getPublicHuntAvailableCount($publicVouchers);
+$walletVouchers     = $userId > 0 ? getUserWalletVouchers($userId) : [];
+$walletCount        = $userId > 0 ? getUserVoucherCount($userId) : 0;
 
 // Lấy thông tin điểm thưởng & ngày sinh nếu đã đăng nhập
 $userPoints = 0;
@@ -72,7 +73,7 @@ require_once ROOT_PATH . '/includes/header.php';
         <?php if ($userId > 0): ?>
           <div class="voucher-stat-chip">
             <span>🪙</span>
-            <div>Điểm tích lũy: <strong><span id="stat-user-points"><?= number_format($userPoints) ?></span> pts</strong> (Hạng <strong><?= escapeHtml($userTier) ?></strong>)</div>
+            <div>Điểm tích lũy: <strong><span id="stat-user-points"><?= number_format($userPoints) ?></span> pts</strong> (Hạng <strong id="stat-user-tier"><?= escapeHtml($userTier) ?></strong>)</div>
           </div>
         <?php else: ?>
           <div class="voucher-stat-chip">
@@ -108,7 +109,7 @@ require_once ROOT_PATH . '/includes/header.php';
   <nav class="voucher-tabs-bar" role="tablist">
     <button type="button" class="voucher-tab-btn active" data-target="tab-hunt" role="tab" aria-selected="true">
       <span>🎁</span> Săn Voucher Hot
-      <span class="voucher-tab-badge"><?= count($publicVouchers) ?></span>
+      <span class="voucher-tab-badge" id="tab-hunt-badge"><?= $huntAvailableCount ?></span>
     </button>
     <button type="button" class="voucher-tab-btn" data-target="tab-wallet" role="tab" aria-selected="false">
       <span>🎟️</span> Ví Voucher Của Tôi
@@ -127,7 +128,7 @@ require_once ROOT_PATH . '/includes/header.php';
     <div class="voucher-toolbar-wrap">
       <div class="voucher-filter-group">
         <span style="font-size: 0.86rem; font-weight: 850; color: #334155; margin-right: 0.25rem;">Phân loại:</span>
-        <button type="button" class="voucher-filter-pill active" data-type="all">Tất Cả (<?= count($publicVouchers) ?>)</button>
+        <button type="button" class="voucher-filter-pill active" id="hunt-filter-all-btn" data-type="all">Tất Cả (<?= count($publicVouchers) ?>)</button>
         <button type="button" class="voucher-filter-pill" data-type="percentage">🔥 Giảm %</button>
         <button type="button" class="voucher-filter-pill" data-type="fixed">💰 Giảm Tiền Mặt</button>
         <button type="button" class="voucher-filter-pill" data-type="free_shipping">🚚 Freeship 0đ</button>
@@ -152,12 +153,19 @@ require_once ROOT_PATH . '/includes/header.php';
           $vType = $cp['voucher_type'] ?? 'percentage';
           $typeBadge = $cp['type_badge'] ?? 'Ưu Đãi';
           $reqTier = strtoupper($cp['min_member_tier'] ?? 'ALL');
-          $usageCount = (int)($cp['usage_count'] ?? 0);
           $usageLimit = (int)($cp['usage_limit'] ?? 0);
-          $usagePct = $usageLimit > 0 ? min(100, round(($usageCount / $usageLimit) * 100)) : 0;
-          $remaining = $usageLimit > 0 ? max(0, $usageLimit - $usageCount) : null;
+          $usageCount = (int)($cp['effective_usage_count'] ?? $cp['usage_count'] ?? 0);
+          $usageMetrics = formatVoucherUsageMetrics($usageCount, $usageLimit);
+          $usagePct = $usageMetrics['usage_pct'];
+          $usageBarWidth = $usageMetrics['bar_width_pct'];
+          $remaining = $usageMetrics['remaining'];
+          $isAvailable = isset($cp['is_available']) ? !empty($cp['is_available']) : ($usageLimit === 0 || $usageCount < $usageLimit);
+          $perUserLimit = (int)($cp['effective_user_limit'] ?? getEffectivePerUserLimit($cp));
+          $isHiddenCode = $isUsed;
+          $displayCode = $isHiddenCode ? maskVoucherCode((string)$cp['code']) : (string)$cp['code'];
+          $safeDataCode = $isHiddenCode ? strtolower($displayCode) : strtolower((string)$cp['code']);
         ?>
-          <article class="voucher-ticket-card <?= $isClaimed ? 'is-claimed' : '' ?> <?= $isUsed ? 'is-used' : '' ?>" data-voucher-type="<?= escapeHtml($vType) ?>" data-code="<?= escapeHtml(strtolower($cp['code'])) ?>" data-title="<?= escapeHtml(strtolower($cp['title'] ?: '')) ?>">
+          <article class="voucher-ticket-card <?= $isClaimed ? 'is-claimed' : '' ?> <?= $isUsed ? 'is-used' : '' ?>" data-voucher-id="<?= (int)$cp['id'] ?>" data-voucher-type="<?= escapeHtml($vType) ?>" data-code="<?= escapeHtml($safeDataCode) ?>" data-title="<?= escapeHtml(strtolower($cp['title'] ?: '')) ?>">
             <div class="ticket-stub">
               <div class="ticket-discount-tag"><?= $discDisplay ?></div>
               <div class="ticket-discount-sub"><?= $typeBadge ?></div>
@@ -166,7 +174,7 @@ require_once ROOT_PATH . '/includes/header.php';
             <div class="ticket-body">
               <div class="ticket-header-row">
                 <div>
-                  <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                  <div style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0.35rem; flex-wrap:wrap;">
                     <span class="ticket-type-tag <?= escapeHtml($vType) ?>">
                       <?= $typeBadge ?>
                     </span>
@@ -175,12 +183,24 @@ require_once ROOT_PATH . '/includes/header.php';
                         👑 Hạng <?= $reqTier ?>+
                       </span>
                     <?php endif; ?>
+                    <?php if ($perUserLimit === 1): ?>
+                      <span class="ticket-tier-badge" style="background:#f8fafc; color:#475569; border-color:#cbd5e1;">
+                        🔒 1 lần/tài khoản
+                      </span>
+                    <?php endif; ?>
+                    <?php if (($cp['applicable_scope'] ?? 'all') === 'specific' && !empty($cp['applicable_label'])): ?>
+                      <span class="ticket-tier-badge" style="background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;">
+                        🍽️ <?= escapeHtml($cp['applicable_label']) ?>
+                      </span>
+                    <?php endif; ?>
                   </div>
-                  <h3 class="ticket-title"><?= escapeHtml($cp['title'] ?: 'Ưu Đãi Đặc Biệt FASTFOOD') ?></h3>
+                  <h3 class="ticket-title" title="<?= escapeHtml($cp['title'] ?: 'Ưu Đãi Đặc Biệt FASTFOOD') ?>"><?= escapeHtml($cp['title'] ?: 'Ưu Đãi Đặc Biệt FASTFOOD') ?></h3>
                 </div>
 
                 <?php if ($isUsed): ?>
                   <span class="ticket-status-pill used">Đã dùng</span>
+                <?php elseif (!$isAvailable): ?>
+                  <span class="ticket-status-pill used">Hết lượt</span>
                 <?php elseif ($isClaimed): ?>
                   <span class="ticket-status-pill saved">✓ Trong ví</span>
                 <?php endif; ?>
@@ -199,25 +219,39 @@ require_once ROOT_PATH . '/includes/header.php';
                   <span>HSD: <?= $endDate ?></span>
                 </div>
 
-                <?php if ($usageLimit > 0): ?>
-                  <div class="ticket-quota-wrap">
-                    <div class="ticket-quota-head">
-                      <span>Đã dùng <?= $usagePct ?>%</span>
-                      <span>Còn <?= $remaining ?> lượt</span>
+                <div class="ticket-bottom-stack">
+                  <?php if ($usageLimit > 0): ?>
+                    <div class="ticket-quota-wrap">
+                      <div class="ticket-quota-head">
+                        <span>Đã dùng <?= escapeHtml($usagePct) ?>% (<?= number_format($usageCount) ?>/<?= number_format($usageLimit) ?>)</span>
+                        <span><?= $remaining > 0 ? 'Còn ' . number_format($remaining) . ' lượt' : 'Đã hết lượt' ?></span>
+                      </div>
+                      <div class="ticket-quota-bar">
+                        <div class="ticket-quota-progress" style="width: <?= $usageBarWidth ?>%;"></div>
+                      </div>
                     </div>
-                    <div class="ticket-quota-bar">
-                      <div class="ticket-quota-progress" style="width: <?= $usagePct ?>%;"></div>
-                    </div>
+                  <?php endif; ?>
+
+                  <div class="ticket-code-row">
+                    <?php if ($isHiddenCode): ?>
+                      <span class="ticket-code-pill is-masked" aria-label="Mã voucher đã bị ẩn" title="Mã đã sử dụng không thể sao chép">
+                        🔒 <?= escapeHtml($displayCode) ?>
+                      </span>
+                    <?php else: ?>
+                      <span class="ticket-code-pill" title="Mã voucher">
+                        🎟️ <?= escapeHtml($displayCode) ?>
+                      </span>
+                    <?php endif; ?>
                   </div>
-                <?php endif; ?>
+                </div>
               </div>
 
               <div class="ticket-actions-strip">
-                <span class="ticket-code-pill" title="Mã voucher">
-                  🎟️ <?= escapeHtml($cp['code']) ?>
-                </span>
-
-                <div style="display:flex; gap:0.4rem; align-items:center;">
+                <?php if ($isUsed): ?>
+                  <button type="button" class="ticket-btn-action ticket-btn-used-disabled" disabled title="Bạn đã sử dụng mã này (tối đa 1 lần/tài khoản)">
+                    ✓ Đã dùng
+                  </button>
+                <?php else: ?>
                   <button type="button" class="ticket-btn-action ticket-btn-copy js-copy-voucher-code" 
                           data-code="<?= escapeHtml($cp['code']) ?>" title="Sao chép mã">
                     📋 Sao chép
@@ -228,12 +262,12 @@ require_once ROOT_PATH . '/includes/header.php';
                       🎁 Lưu mã
                     </a>
                   <?php elseif (!$tierEligible): ?>
-                    <button type="button" class="ticket-btn-action" style="background:#e2e8f0; color:#94a3b8; border:none; cursor:not-allowed;" title="Cần đạt hạng <?= $reqTier ?> để lưu voucher này" disabled>
+                    <button type="button" class="ticket-btn-action ticket-btn-locked-tier" title="Cần đạt hạng <?= $reqTier ?> để lưu voucher này" disabled>
                       Cần Hạng <?= $reqTier ?>
                     </button>
-                  <?php elseif ($isUsed): ?>
-                    <button type="button" class="ticket-btn-action ticket-btn-claimed" disabled>
-                      Đã dùng
+                  <?php elseif (!$isAvailable): ?>
+                    <button type="button" class="ticket-btn-action ticket-btn-used-disabled" style="flex:1.15 1 0;" disabled>
+                      Hết lượt
                     </button>
                   <?php elseif ($isClaimed): ?>
                     <a href="<?= getUrl('cart.php') ?>" class="ticket-btn-action ticket-btn-use">
@@ -245,7 +279,7 @@ require_once ROOT_PATH . '/includes/header.php';
                       🎁 Lưu mã
                     </button>
                   <?php endif; ?>
-                </div>
+                <?php endif; ?>
               </div>
             </div>
           </article>
@@ -278,7 +312,7 @@ require_once ROOT_PATH . '/includes/header.php';
       <div class="voucher-toolbar-wrap">
         <div class="voucher-filter-group">
           <span style="font-size: 0.86rem; font-weight: 850; color: #334155; margin-right: 0.25rem;">Lọc ví:</span>
-          <button type="button" class="wallet-filter-pill active" data-type="all">Tất Cả (<?= count($walletVouchers) ?>)</button>
+          <button type="button" class="wallet-filter-pill active" id="wallet-filter-all-btn" data-type="all">Tất Cả (<?= count($walletVouchers) ?>)</button>
           <button type="button" class="wallet-filter-pill" data-type="percentage">🔥 Giảm %</button>
           <button type="button" class="wallet-filter-pill" data-type="fixed">💰 Giảm Tiền</button>
           <button type="button" class="wallet-filter-pill" data-type="free_shipping">🚚 Freeship</button>
@@ -302,8 +336,12 @@ require_once ROOT_PATH . '/includes/header.php';
             $vType = $cp['voucher_type'] ?? 'percentage';
             $typeBadge = $cp['type_badge'] ?? 'Ưu Đãi';
             $isBirthday = !empty($cp['is_birthday_voucher']) || (!empty($cp['source']) && $cp['source'] === 'birthday');
+            $isTierUpgrade = (strpos((string)($cp['code'] ?? ''), 'UP-') === 0);
+            $isWalletHidden = $isUsed || $isExpired;
+            $walletDisplayCode = $isWalletHidden ? maskVoucherCode((string)$cp['code']) : (string)$cp['code'];
+            $walletDataCode = $isWalletHidden ? strtolower($walletDisplayCode) : strtolower((string)$cp['code']);
           ?>
-            <article class="voucher-ticket-card <?= $isBirthday ? 'is-birthday-exclusive' : '' ?> <?= $isUsed ? 'is-used' : ($isExpired ? 'is-expired' : 'is-claimed') ?>" data-voucher-type="<?= escapeHtml($vType) ?>" data-code="<?= escapeHtml(strtolower($cp['code'])) ?>" data-title="<?= escapeHtml(strtolower($cp['title'] ?: '')) ?>">
+            <article class="voucher-ticket-card <?= $isBirthday ? 'is-birthday-exclusive' : '' ?> <?= $isUsed ? 'is-used' : ($isExpired ? 'is-expired' : 'is-claimed') ?>" data-voucher-id="<?= (int)$cp['id'] ?>" data-voucher-type="<?= escapeHtml($vType) ?>" data-code="<?= escapeHtml($walletDataCode) ?>" data-title="<?= escapeHtml(strtolower($cp['title'] ?: '')) ?>">
               <div class="ticket-stub">
                 <div class="ticket-discount-tag"><?= $discDisplay ?></div>
                 <div class="ticket-discount-sub"><?= $typeBadge ?></div>
@@ -312,17 +350,34 @@ require_once ROOT_PATH . '/includes/header.php';
               <div class="voucher-ticket-body ticket-body">
                 <div class="ticket-header-row">
                   <div>
-                    <div style="display:flex; align-items:center; gap:0.4rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                    <div style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0.35rem; flex-wrap:wrap;">
                       <?php if ($isBirthday): ?>
-                        <span style="font-size:0.72rem; font-weight:800; background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:0.15rem 0.5rem; border-radius:6px;">
+                        <span style="font-size:0.68rem; font-weight:800; background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:0.14rem 0.45rem; border-radius:6px;">
                           🎂 Quà Sinh Nhật
+                        </span>
+                      <?php endif; ?>
+                      <?php if ($isTierUpgrade): ?>
+                        <span class="ticket-tier-badge">
+                          👑 Quà Thăng Hạng
+                        </span>
+                        <span class="ticket-tier-badge" style="background:#f8fafc; color:#475569; border-color:#cbd5e1;">
+                          🔒 1 lần/tài khoản
+                        </span>
+                      <?php elseif (($cp['source'] ?? '') === 'loyalty'): ?>
+                        <span style="font-size:0.68rem; font-weight:800; background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; padding:0.14rem 0.45rem; border-radius:6px;">
+                          🪙 Đổi Điểm
                         </span>
                       <?php endif; ?>
                       <span class="ticket-type-tag <?= escapeHtml($vType) ?>">
                         <?= $typeBadge ?>
                       </span>
+                      <?php if (($cp['applicable_scope'] ?? 'all') === 'specific' && !empty($cp['applicable_label'])): ?>
+                        <span class="ticket-tier-badge" style="background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;">
+                          🍽️ <?= escapeHtml($cp['applicable_label']) ?>
+                        </span>
+                      <?php endif; ?>
                     </div>
-                    <h3 class="ticket-title"><?= escapeHtml($cp['title'] ?: 'Mã Ưu Đãi FASTFOOD') ?></h3>
+                    <h3 class="ticket-title" title="<?= escapeHtml($cp['title'] ?: 'Mã Ưu Đãi FASTFOOD') ?>"><?= escapeHtml($cp['title'] ?: 'Mã Ưu Đãi FASTFOOD') ?></h3>
                   </div>
 
                   <?php if ($isUsed): ?>
@@ -343,24 +398,40 @@ require_once ROOT_PATH . '/includes/header.php';
                     <span>⏳</span>
                     <span>HSD: <?= $endDate ?></span>
                   </div>
+
+                  <div class="ticket-bottom-stack">
+                    <div class="ticket-code-row">
+                      <?php if ($isWalletHidden): ?>
+                        <span class="ticket-code-pill is-masked" aria-label="Mã voucher đã bị ẩn">
+                          🔒 <?= escapeHtml($walletDisplayCode) ?>
+                        </span>
+                      <?php else: ?>
+                        <span class="ticket-code-pill">
+                          🎟️ <?= escapeHtml($walletDisplayCode) ?>
+                        </span>
+                      <?php endif; ?>
+                    </div>
+                  </div>
                 </div>
 
                 <div class="ticket-actions-strip">
-                  <span class="ticket-code-pill">
-                    🎟️ <?= escapeHtml($cp['code']) ?>
-                  </span>
-
-                  <div style="display:flex; gap:0.4rem; align-items:center;">
+                  <?php if ($isUsed): ?>
+                    <button type="button" class="ticket-btn-action ticket-btn-used-disabled" disabled>
+                      ✓ Đã sử dụng
+                    </button>
+                  <?php elseif ($isExpired): ?>
+                    <button type="button" class="ticket-btn-action ticket-btn-used-disabled" disabled>
+                      Hết hạn
+                    </button>
+                  <?php else: ?>
                     <button type="button" class="ticket-btn-action ticket-btn-copy js-copy-voucher-code" 
                             data-code="<?= escapeHtml($cp['code']) ?>" title="Sao chép mã">
                       📋 Sao chép
                     </button>
-                    <?php if (!$isUsed && !$isExpired): ?>
-                      <a href="<?= getUrl('cart.php') ?>" class="ticket-btn-action ticket-btn-use">
-                        Dùng ngay →
-                      </a>
-                    <?php endif; ?>
-                  </div>
+                    <a href="<?= getUrl('cart.php') ?>" class="ticket-btn-action ticket-btn-use">
+                      Dùng ngay →
+                    </a>
+                  <?php endif; ?>
                 </div>
               </div>
             </article>
@@ -381,43 +452,83 @@ require_once ROOT_PATH . '/includes/header.php';
 
   <!-- 5. TAB 3: ĐỔI ĐIỂM LẤY VOUCHER -->
   <div id="tab-loyalty" class="voucher-tab-pane" style="display:none;" role="tabpanel">
-    <div class="voucher-grid">
+    <div class="loyalty-exchange-banner">
+      <div class="loyalty-exchange-banner-text">
+        <h3>🪙 Đổi Điểm Thưởng Lấy Mã Giảm Giá</h3>
+        <p>Sử dụng điểm tích lũy từ các đơn hàng đã đặt để đổi thành mã ưu đãi (tự động lưu vào Ví Voucher của bạn).</p>
+      </div>
+      <div class="loyalty-exchange-balance-chip">
+        <span>Số dư hiện tại:</span>
+        <strong id="loyalty-balance-display"><?= $userId > 0 ? number_format($userPoints) . ' điểm' : 'Chưa đăng nhập' ?></strong>
+      </div>
+    </div>
+
+    <div class="loyalty-exchange-grid">
       <?php if (!empty($voucherPackages)): ?>
         <?php foreach ($voucherPackages as $pkg): 
-          $canExchange = ($userId > 0 && $userPoints >= (int)$pkg['points_cost']);
+          $cost = (int)($pkg['points_cost'] ?? 0);
+          $minOrderPkg = (float)($pkg['min_order_value'] ?? 0);
+          $canExchange = ($userId > 0 && $userPoints >= $cost);
+          $missingPts = max(0, $cost - $userPoints);
+          $progressPct = ($userId > 0 && $cost > 0) ? min(100, round(($userPoints / $cost) * 100)) : 0;
+          $pkgName = $pkg['name'] ?? $pkg['package_name'] ?? 'Voucher FASTFOOD';
         ?>
-          <div class="loyalty-package-card">
+          <div class="loyalty-package-card <?= $canExchange ? 'is-ready' : '' ?>" data-pkg-id="<?= (int)$pkg['id'] ?>" data-pkg-cost="<?= $cost ?>" data-pkg-name="<?= escapeHtml($pkgName) ?>">
             <div class="loyalty-pkg-header">
-              <span class="loyalty-coin-badge">🪙 <?= number_format($pkg['points_cost']) ?> Điểm</span>
-              <span style="font-size:0.75rem; font-weight:750; color:#15803d; background:#dcfce7; padding:0.2rem 0.5rem; border-radius:6px;">
-                Tiền mặt
+              <span class="loyalty-coin-badge">🪙 Cần <?= number_format($cost) ?> điểm</span>
+              <span class="loyalty-pkg-status-tag <?= $canExchange ? 'ready' : '' ?>">
+                <?= $canExchange ? '✓ Đủ điểm đổi' : 'Ưu đãi đơn hàng' ?>
               </span>
             </div>
 
             <div class="loyalty-pkg-body">
-              <div class="loyalty-pkg-value">
-                <?= number_format((float)($pkg['discount_amount'] ?? $pkg['voucher_value'] ?? 0), 0, ',', '.') ?>đ
-              </div>
-              <h4 class="loyalty-pkg-name"><?= escapeHtml($pkg['name'] ?? $pkg['package_name'] ?? 'Voucher') ?></h4>
-              <p class="loyalty-pkg-desc"><?= escapeHtml($pkg['description'] ?? '') ?></p>
+              <h4 class="loyalty-pkg-name"><?= escapeHtml($pkgName) ?></h4>
+
+              <ul class="loyalty-pkg-info-list">
+                <li>
+                  <span>🎁</span>
+                  <span><?= escapeHtml($pkg['description'] ?? 'Áp dụng giảm trực tiếp khi thanh toán') ?></span>
+                </li>
+                <?php if ($minOrderPkg > 0): ?>
+                  <li>
+                    <span>📌</span>
+                    <span>Điều kiện: Đơn hàng từ <?= number_format($minOrderPkg, 0, ',', '.') ?>đ</span>
+                  </li>
+                <?php endif; ?>
+                <li>
+                  <span>⏳</span>
+                  <span>Lưu ngay vào Ví Voucher sau khi đổi thành công</span>
+                </li>
+              </ul>
+
+              <?php if ($userId > 0): ?>
+                <div class="loyalty-pkg-progress-wrap">
+                  <div class="loyalty-pkg-progress-head">
+                    <span>Điểm của bạn: <?= number_format(min($userPoints, $cost)) ?>/<?= number_format($cost) ?></span>
+                    <span><?= $canExchange ? 'Sẵn sàng 100%' : 'Còn thiếu ' . number_format($missingPts) . ' điểm' ?></span>
+                  </div>
+                  <div class="loyalty-pkg-progress-bar">
+                    <div class="loyalty-pkg-progress-fill <?= $canExchange ? 'is-full' : '' ?>" style="width: <?= $progressPct ?>%;"></div>
+                  </div>
+                </div>
+              <?php endif; ?>
             </div>
 
             <div class="loyalty-pkg-footer">
               <?php if (!$userId): ?>
-                <a href="<?= getUrl('login.php') ?>" class="btn btn-outline" style="width:100%; font-size:0.85rem; font-weight:750;">
-                  Đăng nhập để đổi
+                <a href="<?= getUrl('login.php') ?>" class="loyalty-pkg-btn loyalty-pkg-btn-login">
+                  Đăng nhập để đổi điểm
                 </a>
               <?php elseif ($canExchange): ?>
-                <button type="button" class="btn btn-primary js-exchange-voucher-btn" 
+                <button type="button" class="loyalty-pkg-btn loyalty-pkg-btn-exchange js-exchange-voucher-btn" 
                         data-pkg-id="<?= (int)$pkg['id'] ?>" 
-                        data-cost="<?= (int)$pkg['points_cost'] ?>"
-                        data-name="<?= escapeHtml($pkg['name'] ?? $pkg['package_name'] ?? 'Voucher') ?>"
-                        style="width:100%; font-size:0.85rem; font-weight:750;">
-                  🪙 Đổi Ngay
+                        data-cost="<?= $cost ?>"
+                        data-name="<?= escapeHtml($pkgName) ?>">
+                  🪙 Đổi Ngay (-<?= number_format($cost) ?> điểm)
                 </button>
               <?php else: ?>
-                <button type="button" class="btn" style="width:100%; font-size:0.85rem; font-weight:750; background:#f1f5f9; color:#94a3b8; border:none; cursor:not-allowed;" disabled>
-                  Thiếu <?= number_format($pkg['points_cost'] - $userPoints) ?> điểm
+                <button type="button" class="loyalty-pkg-btn loyalty-pkg-btn-disabled" disabled>
+                  Cần thêm <?= number_format($missingPts) ?> điểm để đổi
                 </button>
               <?php endif; ?>
             </div>
@@ -567,41 +678,355 @@ document.addEventListener('DOMContentLoaded', function() {
 
   walletSearch?.addEventListener('input', filterWalletCards);
 
-  // 4. Copy Voucher Code with Toast
-  document.querySelectorAll('.js-copy-voucher-code').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const code = btn.dataset.code;
+  const IS_LOGGED_IN = <?= $userId > 0 ? 'true' : 'false' ?>;
+  const CART_URL = <?= json_encode(getUrl('cart.php')) ?>;
+  const LOGIN_URL = <?= json_encode(getUrl('login.php')) ?>;
+  const API_VOUCHERS_URL = <?= json_encode(getUrl('api/vouchers.php')) ?>;
+  const API_LOYALTY_URL = <?= json_encode(getUrl('api/loyalty.php')) ?>;
+
+  function formatVnd(n) {
+    return Number(n || 0).toLocaleString('vi-VN') + 'đ';
+  }
+
+  function renderCodeRowHtml(cp, isHidden) {
+    const codeText = escapeHtml(cp.display_code || cp.code || '');
+    return `
+      <div class="ticket-code-row">
+        ${isHidden
+          ? `<span class="ticket-code-pill is-masked" aria-label="Mã voucher đã bị ẩn" title="Mã đã sử dụng không thể sao chép">🔒 ${codeText}</span>`
+          : `<span class="ticket-code-pill" title="Mã voucher">🎟️ ${codeText}</span>`
+        }
+      </div>
+    `;
+  }
+
+  function renderPublicVoucherCardHtml(cp) {
+    const reqTier = String(cp.min_member_tier || 'ALL').toUpperCase();
+    const isClaimed = !!cp.is_saved;
+    const isUsed = !!cp.is_used;
+    const isAvailable = cp.is_available !== undefined ? !!cp.is_available : true;
+    const tierEligible = cp.tier_eligible !== undefined ? !!cp.tier_eligible : true;
+    const vType = cp.voucher_type || 'percentage';
+    const typeBadge = cp.type_badge || 'Ưu Đãi';
+    const discDisplay = cp.discount_display || '';
+    const minOrder = Number(cp.min_order_value || 0);
+    const maxDisc = Number(cp.max_discount_amount || 0);
+    const usageLimit = Number(cp.usage_limit || 0);
+    const usageCount = Number(cp.effective_usage_count ?? cp.usage_count ?? 0);
+    const usagePct = cp.usage_pct ?? '0';
+    const usageBarWidth = Number(cp.usage_bar_width || 0);
+    const remaining = cp.remaining_uses !== null && cp.remaining_uses !== undefined ? Number(cp.remaining_uses) : Math.max(0, usageLimit - usageCount);
+    const perUserLimit = Number(cp.effective_user_limit || 1);
+    const displayCode = String(cp.display_code || cp.code || '');
+    const safeDataCode = displayCode.toLowerCase();
+    const title = cp.title || 'Ưu Đãi Đặc Biệt FASTFOOD';
+    const endDate = cp.end_date_formatted || 'Không thời hạn';
+
+    let statusPill = '';
+    if (isUsed) {
+      statusPill = '<span class="ticket-status-pill used">Đã dùng</span>';
+    } else if (!isAvailable) {
+      statusPill = '<span class="ticket-status-pill used">Hết lượt</span>';
+    } else if (isClaimed) {
+      statusPill = '<span class="ticket-status-pill saved">✓ Trong ví</span>';
+    }
+
+    let actionStripHtml = '';
+    if (isUsed) {
+      actionStripHtml = `
+        <button type="button" class="ticket-btn-action ticket-btn-used-disabled" disabled title="Bạn đã sử dụng mã này (tối đa 1 lần/tài khoản)">
+          ✓ Đã dùng
+        </button>
+      `;
+    } else {
+      const copyBtnHtml = `
+        <button type="button" class="ticket-btn-action ticket-btn-copy js-copy-voucher-code"
+                data-code="${escapeHtml(displayCode)}" title="Sao chép mã">
+          📋 Sao chép
+        </button>
+      `;
+      let mainBtnHtml = '';
+      if (!IS_LOGGED_IN) {
+        mainBtnHtml = `<a href="${LOGIN_URL}" class="ticket-btn-action ticket-btn-claim">🎁 Lưu mã</a>`;
+      } else if (!tierEligible) {
+        mainBtnHtml = `<button type="button" class="ticket-btn-action ticket-btn-locked-tier" title="Cần đạt hạng ${escapeHtml(reqTier)} để lưu voucher này" disabled>Cần Hạng ${escapeHtml(reqTier)}</button>`;
+      } else if (!isAvailable) {
+        mainBtnHtml = `<button type="button" class="ticket-btn-action ticket-btn-used-disabled" style="flex:1.15 1 0;" disabled>Hết lượt</button>`;
+      } else if (isClaimed) {
+        mainBtnHtml = `<a href="${CART_URL}" class="ticket-btn-action ticket-btn-use">Dùng ngay →</a>`;
+      } else {
+        mainBtnHtml = `<button type="button" class="ticket-btn-action ticket-btn-claim js-claim-voucher-btn" data-voucher-id="${Number(cp.id)}" data-code="${escapeHtml(displayCode)}">🎁 Lưu mã</button>`;
+      }
+      actionStripHtml = copyBtnHtml + mainBtnHtml;
+    }
+
+    const condLine = (minOrder > 0 ? 'Đơn tối thiểu ' + formatVnd(minOrder) : 'Áp dụng cho mọi đơn hàng') +
+      (maxDisc > 0 ? ' (Tối đa ' + formatVnd(maxDisc) + ')' : '');
+
+    const quotaHtml = usageLimit > 0 ? `
+      <div class="ticket-quota-wrap">
+        <div class="ticket-quota-head">
+          <span>Đã dùng ${escapeHtml(usagePct)}% (${usageCount.toLocaleString('vi-VN')}/${usageLimit.toLocaleString('vi-VN')})</span>
+          <span>${remaining > 0 ? 'Còn ' + remaining.toLocaleString('vi-VN') + ' lượt' : 'Đã hết lượt'}</span>
+        </div>
+        <div class="ticket-quota-bar">
+          <div class="ticket-quota-progress" style="width: ${usageBarWidth}%;"></div>
+        </div>
+      </div>
+    ` : '';
+
+    return `
+      <article class="voucher-ticket-card ${isClaimed ? 'is-claimed' : ''} ${isUsed ? 'is-used' : ''}" data-voucher-id="${Number(cp.id)}" data-voucher-type="${escapeHtml(vType)}" data-code="${escapeHtml(safeDataCode)}" data-title="${escapeHtml(title.toLowerCase())}">
+        <div class="ticket-stub">
+          <div class="ticket-discount-tag">${discDisplay}</div>
+          <div class="ticket-discount-sub">${escapeHtml(typeBadge)}</div>
+        </div>
+        <div class="ticket-body">
+          <div class="ticket-header-row">
+            <div>
+              <div style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                <span class="ticket-type-tag ${escapeHtml(vType)}">${escapeHtml(typeBadge)}</span>
+                ${reqTier !== 'ALL' ? `<span class="ticket-tier-badge">👑 Hạng ${escapeHtml(reqTier)}+</span>` : ''}
+                ${perUserLimit === 1 ? '<span class="ticket-tier-badge" style="background:#f8fafc; color:#475569; border-color:#cbd5e1;">🔒 1 lần/tài khoản</span>' : ''}
+                ${cp.applicable_scope === 'specific' && cp.applicable_label ? `<span class="ticket-tier-badge" style="background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;">🍽️ ${escapeHtml(cp.applicable_label)}</span>` : ''}
+              </div>
+              <h3 class="ticket-title" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
+            </div>
+            ${statusPill}
+          </div>
+          <div class="ticket-meta-info">
+            <div class="ticket-condition"><span>📌</span><span>${condLine}</span></div>
+            <div class="ticket-expiry"><span>⏳</span><span>HSD: ${escapeHtml(endDate)}</span></div>
+            <div class="ticket-bottom-stack">
+              ${quotaHtml}
+              ${renderCodeRowHtml(cp, isUsed)}
+            </div>
+          </div>
+          <div class="ticket-actions-strip">${actionStripHtml}</div>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderWalletVoucherCardHtml(cp) {
+    const isUsed = !!cp.is_used;
+    const isExpired = !!cp.is_expired;
+    const isHidden = isUsed || isExpired;
+    const vType = cp.voucher_type || 'percentage';
+    const typeBadge = cp.type_badge || 'Ưu Đãi';
+    const discDisplay = cp.discount_display || '';
+    const minOrder = Number(cp.min_order_value || 0);
+    const isBirthday = !!cp.is_birthday_voucher || cp.source === 'birthday';
+    const displayCode = String(cp.display_code || cp.code || '');
+    const title = cp.title || 'Mã Ưu Đãi FASTFOOD';
+    const endDate = cp.end_date_formatted || 'Không thời hạn';
+
+    let statusPill = '<span class="ticket-status-pill saved">✓ Sẵn sàng</span>';
+    if (isUsed) statusPill = '<span class="ticket-status-pill used">Đã sử dụng</span>';
+    else if (isExpired) statusPill = '<span class="ticket-status-pill used">Hết hạn</span>';
+
+    let actionStripHtml = '';
+    if (isUsed) {
+      actionStripHtml = '<button type="button" class="ticket-btn-action ticket-btn-used-disabled" disabled>✓ Đã sử dụng</button>';
+    } else if (isExpired) {
+      actionStripHtml = '<button type="button" class="ticket-btn-action ticket-btn-used-disabled" disabled>Hết hạn</button>';
+    } else {
+      actionStripHtml = `
+        <button type="button" class="ticket-btn-action ticket-btn-copy js-copy-voucher-code"
+                data-code="${escapeHtml(displayCode)}" title="Sao chép mã">
+          📋 Sao chép
+        </button>
+        <a href="${CART_URL}" class="ticket-btn-action ticket-btn-use">Dùng ngay →</a>
+      `;
+    }
+
+    return `
+      <article class="voucher-ticket-card ${isBirthday ? 'is-birthday-exclusive' : ''} ${isUsed ? 'is-used' : (isExpired ? 'is-expired' : 'is-claimed')}" data-voucher-id="${Number(cp.id)}" data-voucher-type="${escapeHtml(vType)}" data-code="${escapeHtml(displayCode.toLowerCase())}" data-title="${escapeHtml(title.toLowerCase())}">
+        <div class="ticket-stub">
+          <div class="ticket-discount-tag">${discDisplay}</div>
+          <div class="ticket-discount-sub">${escapeHtml(typeBadge)}</div>
+        </div>
+        <div class="voucher-ticket-body ticket-body">
+          <div class="ticket-header-row">
+            <div>
+              <div style="display:flex; align-items:center; gap:0.35rem; margin-bottom:0.35rem; flex-wrap:wrap;">
+                ${isBirthday ? '<span style="font-size:0.68rem; font-weight:800; background:#fef3c7; color:#b45309; border:1px solid #fde68a; padding:0.14rem 0.45rem; border-radius:6px;">🎂 Quà Sinh Nhật</span>' : ''}
+                ${cp.is_tier_upgrade ? '<span class="ticket-tier-badge">👑 Quà Thăng Hạng</span><span class="ticket-tier-badge" style="background:#f8fafc; color:#475569; border-color:#cbd5e1;">🔒 1 lần/tài khoản</span>' : (cp.source === 'loyalty' ? '<span style="font-size:0.68rem; font-weight:800; background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; padding:0.14rem 0.45rem; border-radius:6px;">🪙 Đổi Điểm</span>' : '')}
+                <span class="ticket-type-tag ${escapeHtml(vType)}">${escapeHtml(typeBadge)}</span>
+                ${cp.applicable_scope === 'specific' && cp.applicable_label ? `<span class="ticket-tier-badge" style="background:#eff6ff; color:#1d4ed8; border-color:#bfdbfe;">🍽️ ${escapeHtml(cp.applicable_label)}</span>` : ''}
+              </div>
+              <h3 class="ticket-title" title="${escapeHtml(title)}">${escapeHtml(title)}</h3>
+            </div>
+            ${statusPill}
+          </div>
+          <div class="ticket-meta-info">
+            <div class="ticket-condition"><span>📌</span><span>${minOrder > 0 ? 'Đơn tối thiểu ' + formatVnd(minOrder) : 'Áp dụng cho mọi đơn hàng'}</span></div>
+            <div class="ticket-expiry"><span>⏳</span><span>HSD: ${escapeHtml(endDate)}</span></div>
+            <div class="ticket-bottom-stack">${renderCodeRowHtml(cp, isHidden)}</div>
+          </div>
+          <div class="ticket-actions-strip">${actionStripHtml}</div>
+        </div>
+      </article>
+    `;
+  }
+
+  function updateLoyaltyCardsUi(points) {
+    if (!IS_LOGGED_IN || typeof points !== 'number') return;
+    const statPts = document.getElementById('stat-user-points');
+    if (statPts) statPts.textContent = points.toLocaleString('vi-VN');
+    const balEl = document.getElementById('loyalty-balance-display');
+    if (balEl) balEl.textContent = `${points.toLocaleString('vi-VN')} điểm`;
+
+    document.querySelectorAll('.loyalty-package-card').forEach(card => {
+      const cost = parseInt(card.dataset.pkgCost || '0', 10);
+      const pkgId = parseInt(card.dataset.pkgId || '0', 10);
+      const pkgName = card.dataset.pkgName || 'Voucher FASTFOOD';
+      if (!cost) return;
+
+      const canExchange = points >= cost;
+      const missingPts = Math.max(0, cost - points);
+      const progressPct = Math.min(100, Math.round((points / cost) * 100));
+
+      card.classList.toggle('is-ready', canExchange);
+
+      const statusTag = card.querySelector('.loyalty-pkg-status-tag');
+      if (statusTag) {
+        statusTag.classList.toggle('ready', canExchange);
+        statusTag.textContent = canExchange ? '✓ Đủ điểm đổi' : 'Ưu đãi đơn hàng';
+      }
+
+      const headSpans = card.querySelectorAll('.loyalty-pkg-progress-head span');
+      if (headSpans.length >= 2) {
+        headSpans[0].textContent = `Điểm của bạn: ${Math.min(points, cost).toLocaleString('vi-VN')}/${cost.toLocaleString('vi-VN')}`;
+        headSpans[1].textContent = canExchange ? 'Sẵn sàng 100%' : `Còn thiếu ${missingPts.toLocaleString('vi-VN')} điểm`;
+      }
+
+      const fillEl = card.querySelector('.loyalty-pkg-progress-fill');
+      if (fillEl) {
+        fillEl.classList.toggle('is-full', canExchange);
+        fillEl.style.width = `${progressPct}%`;
+      }
+
+      const footerEl = card.querySelector('.loyalty-pkg-footer');
+      if (footerEl) {
+        if (canExchange) {
+          footerEl.innerHTML = `<button type="button" class="loyalty-pkg-btn loyalty-pkg-btn-exchange js-exchange-voucher-btn" data-pkg-id="${pkgId}" data-cost="${cost}" data-name="${escapeHtml(pkgName)}">🪙 Đổi Ngay (-${cost.toLocaleString('vi-VN')} điểm)</button>`;
+        } else {
+          footerEl.innerHTML = `<button type="button" class="loyalty-pkg-btn loyalty-pkg-btn-disabled" disabled>Cần thêm ${missingPts.toLocaleString('vi-VN')} điểm để đổi</button>`;
+        }
+      }
+    });
+  }
+
+  function applyVoucherStateSnapshot(state) {
+    if (!state || typeof state !== 'object') return;
+
+    if (typeof state.hunt_available_count === 'number') {
+      const huntBadge = document.getElementById('tab-hunt-badge');
+      if (huntBadge) huntBadge.textContent = state.hunt_available_count;
+    }
+
+    if (typeof state.wallet_count === 'number') {
+      const walletBadge = document.getElementById('tab-wallet-badge');
+      if (walletBadge) walletBadge.textContent = state.wallet_count;
+      const statBadge = document.getElementById('stat-wallet-count');
+      if (statBadge) statBadge.textContent = state.wallet_count;
+    }
+
+    if (Array.isArray(state.public_vouchers)) {
+      const huntAllBtn = document.getElementById('hunt-filter-all-btn');
+      if (huntAllBtn) huntAllBtn.textContent = `Tất Cả (${state.public_vouchers.length})`;
+      const huntGrid = document.getElementById('public-vouchers-grid');
+      if (huntGrid) {
+        huntGrid.innerHTML = state.public_vouchers.length
+          ? state.public_vouchers.map(renderPublicVoucherCardHtml).join('')
+          : '<div style="grid-column: 1 / -1; text-align:center; padding:3.5rem 2rem; background:#fff; border-radius:20px; border:1px dashed #fed7aa;"><div style="font-size:3.5rem; margin-bottom:1rem;">🎟️</div><h3 style="font-size:1.3rem; font-weight:800; color:#1e293b;">Hiện tại chưa có mã giảm giá công khai nào</h3><p style="color:var(--text-muted);">Hãy quay lại sau để săn các mã ưu đãi độc quyền từ FASTFOOD nhé!</p></div>';
+        filterHuntCards();
+      }
+    }
+
+    if (IS_LOGGED_IN && Array.isArray(state.wallet_vouchers)) {
+      const walletAllBtn = document.getElementById('wallet-filter-all-btn');
+      if (walletAllBtn) walletAllBtn.textContent = `Tất Cả (${state.wallet_vouchers.length})`;
+      const walletGrid = document.getElementById('wallet-vouchers-container');
+      if (walletGrid) {
+        walletGrid.innerHTML = state.wallet_vouchers.length
+          ? state.wallet_vouchers.map(renderWalletVoucherCardHtml).join('')
+          : '<div style="grid-column: 1 / -1; text-align:center; padding:3.5rem 2rem; background:#fff; border-radius:20px; border:1px dashed #fed7aa;"><div style="font-size:3.5rem; margin-bottom:1rem;">📭</div><h3 style="font-size:1.3rem; font-weight:800; color:#1e293b;">Ví voucher của bạn đang trống</h3><p style="color:var(--text-muted); margin-bottom:1.5rem;">Hãy qua tab "Săn Voucher Hot" để lưu các mã ưu đãi hấp dẫn vào ví nhé!</p><button type="button" class="btn btn-primary" onclick="document.querySelector(\'.voucher-tab-btn[data-target=\\\'tab-hunt\\\']\').click()" style="padding:0.75rem 1.75rem; font-weight:750; border-radius:12px;">🎁 Khám Phá Sàn Voucher</button></div>';
+        filterWalletCards();
+      }
+    }
+
+    if (typeof state.user_points === 'number') {
+      updateLoyaltyCardsUi(state.user_points);
+    }
+  }
+
+  let syncInFlight = null;
+  window.syncVouchersLiveState = async function() {
+    if (syncInFlight) return syncInFlight;
+    syncInFlight = (async () => {
+      try {
+        const res = await fetch(`${API_VOUCHERS_URL}?action=sync_state&_t=${Date.now()}`, {
+          cache: 'no-store'
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          applyVoucherStateSnapshot(json.data);
+        }
+      } catch (_) {}
+      finally {
+        syncInFlight = null;
+      }
+    })();
+    return syncInFlight;
+  };
+
+  function broadcastVoucherSync() {
+    try {
+      new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'vouchers' });
+    } catch (_) {}
+    try {
+      localStorage.setItem('ff_vouchers_dirty', String(Date.now()));
+    } catch (_) {}
+  }
+
+  // Event delegation để toàn bộ nút Copy / Lưu mã / Đổi điểm hoạt động tức thì sau khi cập nhật DOM
+  document.addEventListener('click', async (e) => {
+    const copyBtn = e.target.closest('.js-copy-voucher-code');
+    if (copyBtn) {
+      if (copyBtn.disabled || copyBtn.closest('.voucher-ticket-card.is-used')) return;
+      const code = copyBtn.dataset.code;
       if (!code) return;
       try {
         await navigator.clipboard.writeText(code);
-        const originalText = btn.innerHTML;
-        btn.innerHTML = '✓ Đã chép';
-        btn.style.color = '#16a34a';
-        btn.style.borderColor = '#16a34a';
+        const originalText = copyBtn.innerHTML;
+        copyBtn.innerHTML = '✓ Đã chép';
+        copyBtn.style.color = '#16a34a';
+        copyBtn.style.borderColor = '#16a34a';
         showVoucherToast(`Đã sao chép mã ${code} vào bộ nhớ tạm!`, '📋');
         setTimeout(() => {
-          btn.innerHTML = originalText;
-          btn.style.color = '';
-          btn.style.borderColor = '';
+          copyBtn.innerHTML = originalText;
+          copyBtn.style.color = '';
+          copyBtn.style.borderColor = '';
         }, 2000);
       } catch (_) {
         prompt('Sao chép mã voucher:', code);
       }
-    });
-  });
+      return;
+    }
 
-  // 5. 1-Click Claim Voucher to Wallet
-  document.querySelectorAll('.js-claim-voucher-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const voucherId = btn.dataset.voucherId;
-      const code = btn.dataset.code;
-      if (!voucherId) return;
+    const claimBtn = e.target.closest('.js-claim-voucher-btn');
+    if (claimBtn) {
+      const voucherId = claimBtn.dataset.voucherId;
+      const code = claimBtn.dataset.code;
+      if (!voucherId || claimBtn.disabled) return;
 
-      btn.disabled = true;
-      btn.textContent = 'Đang lưu...';
+      claimBtn.disabled = true;
+      claimBtn.textContent = 'Đang lưu...';
 
       try {
-        const res = await fetch('api/vouchers.php', {
+        const res = await fetch(API_VOUCHERS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'claim', voucher_id: parseInt(voucherId, 10) })
@@ -609,46 +1034,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = await res.json();
 
         if (data.success) {
-          btn.className = 'ticket-btn-action ticket-btn-claimed';
-          btn.innerHTML = '✓ Đã trong ví';
-          
-          const badge = document.getElementById('tab-wallet-badge');
-          if (badge && typeof data.data?.wallet_count === 'number') {
-            badge.textContent = data.data.wallet_count;
-          }
-          const statBadge = document.getElementById('stat-wallet-count');
-          if (statBadge && typeof data.data?.wallet_count === 'number') {
-            statBadge.textContent = data.data.wallet_count;
-          }
-
-          showVoucherToast(data.message || `Đã lưu voucher ${code} vào ví của bạn thành công!`, '🎉');
+          applyVoucherStateSnapshot(data.data);
+          broadcastVoucherSync();
+          showVoucherToast(data.message || `Đã lưu voucher ${code} vào Ví Voucher của bạn!`, '🎉');
         } else {
           showVoucherToast(data.message || data.error || 'Không thể lưu voucher.', '⚠️');
-          btn.disabled = false;
-          btn.innerHTML = '🎁 Lưu mã';
+          claimBtn.disabled = false;
+          claimBtn.innerHTML = '🎁 Lưu mã';
         }
       } catch (err) {
         showVoucherToast('Lỗi kết nối máy chủ: ' + err.message, '⚠️');
-        btn.disabled = false;
-        btn.innerHTML = '🎁 Lưu mã';
+        claimBtn.disabled = false;
+        claimBtn.innerHTML = '🎁 Lưu mã';
       }
-    });
-  });
+      return;
+    }
 
-  // 6. Exchange Points for Voucher
-  document.querySelectorAll('.js-exchange-voucher-btn').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      const pkgId = btn.dataset.pkgId;
-      const cost = btn.dataset.cost;
-      const name = btn.dataset.name;
+    const exchBtn = e.target.closest('.js-exchange-voucher-btn');
+    if (exchBtn) {
+      const pkgId = exchBtn.dataset.pkgId;
+      const cost = exchBtn.dataset.cost;
+      const name = exchBtn.dataset.name;
+      if (!pkgId || exchBtn.disabled) return;
 
       if (!confirm(`Bạn có chắc chắn muốn dùng ${cost} điểm để đổi ${name}?`)) return;
 
-      btn.disabled = true;
-      btn.textContent = 'Đang đổi...';
+      exchBtn.disabled = true;
+      exchBtn.textContent = 'Đang đổi...';
 
       try {
-        const res = await fetch('api/loyalty.php', {
+        const res = await fetch(API_LOYALTY_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action: 'exchange_voucher', package_id: parseInt(pkgId, 10) })
@@ -656,19 +1071,36 @@ document.addEventListener('DOMContentLoaded', function() {
         const data = await res.json();
 
         if (data.success) {
-          alert(`Đổi thành công! Mã ưu đãi của bạn là: ${data.data.coupon_code}. Mã đã được lưu vào Ví Voucher!`);
-          window.location.reload();
+          await window.syncVouchersLiveState();
+          broadcastVoucherSync();
+          showVoucherToast(`🎉 Đổi thành công mã ${data.data?.coupon_code || ''}! Đã tự động lưu vào Ví Voucher của bạn.`, '🎟️');
         } else {
-          alert(data.message || data.error || 'Đổi voucher thất bại.');
-          btn.disabled = false;
-          btn.textContent = '🪙 Đổi ngay';
+          showVoucherToast(data.message || data.error || 'Đổi voucher thất bại.', '⚠️');
+          exchBtn.disabled = false;
+          exchBtn.textContent = `🪙 Đổi Ngay (-${Number(cost).toLocaleString('vi-VN')} điểm)`;
         }
       } catch (err) {
-        alert('Lỗi kết nối máy chủ: ' + err.message);
-        btn.disabled = false;
-        btn.textContent = '🪙 Đổi ngay';
+        showVoucherToast('Lỗi kết nối máy chủ: ' + err.message, '⚠️');
+        exchBtn.disabled = false;
+        exchBtn.textContent = `🪙 Đổi Ngay (-${Number(cost).toLocaleString('vi-VN')} điểm)`;
       }
-    });
+    }
+  });
+
+  // Tự động đồng bộ khi quay lại từ thanh toán / đổi tab / tab khác đặt hàng xong
+  window.addEventListener('pageshow', () => {
+    window.syncVouchersLiveState();
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) window.syncVouchersLiveState();
+  });
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'ff_vouchers_dirty') {
+      window.syncVouchersLiveState();
+    }
+  });
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => window.syncVouchersLiveState());
   });
 });
 </script>

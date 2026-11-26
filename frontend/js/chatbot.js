@@ -1,9 +1,8 @@
 /**
- * FASTFOOD SUPPORT CHATBOX CONTROLLER ("Nhân viên hỗ trợ")
- * Hợp nhất Chat trực tiếp với Admin & Trợ lý AI tự động khi Admin bận:
- * - Đồng bộ realtime qua Socket.IO + dự phòng polling HTTP
- * - Kết nối API /api/v1/chat (hỗ trợ cả port 5000, Live Server và dự phòng offline FASTFOOD_DATA)
- * - Thêm nhanh món vào giỏ hàng chuẩn CartController
+ * FASTFOOD SUPPORT CHATBOX CONTROLLER
+ * Tách biệt 2 kênh rõ ràng trong cùng 1 khung chat tiện lợi:
+ * 1. Trợ lý AI 24/7: Tư vấn món ăn, combo, voucher, tra cứu đơn hàng tức thì
+ * 2. Chat trực tiếp với Admin: Tin nhắn gửi thẳng tới cửa hàng (100% Admin phản hồi trực tiếp)
  */
 
 (function (window, document) {
@@ -22,14 +21,15 @@
   }
 
   const FRONTEND_BASE = detectFrontendBaseUrl();
-  const API_BASE = (window.location.port === '5000' || window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost')
-    ? (window.location.port === '5000' ? `${window.location.origin}/api/v1/chat` : 'http://127.0.0.1:5000/api/v1/chat')
-    : `${window.location.origin}/api/v1/chat`;
+  const IS_STATIC_DEV_SERVER = ['5500', '5173', '3000', '8080'].includes(window.location.port) || window.location.protocol === 'file:';
+  const API_BASE = IS_STATIC_DEV_SERVER
+    ? 'http://127.0.0.1:5000/api/v1/chat'
+    : `${FRONTEND_BASE}api/v1/chat`;
 
   const FASTFOODChatbot = {
     isOpen: false,
     isExpanded: false,
-    currentChannel: 'ai', // 'ai' (Trợ lý AI 24/7) hoặc 'admin' (Chat tay với Admin)
+    currentChannel: 'ai',
     aiSessionId: null,
     adminSessionId: null,
     isSubmitting: false,
@@ -105,19 +105,18 @@
       wrapper.id = 'ff-chatbot-wrapper';
       wrapper.className = 'ff-chatbot-wrapper';
       wrapper.innerHTML = `
-        <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat hỗ trợ" title="Hỗ trợ & Tư vấn FASTFOOD">
+        <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat hỗ trợ" title="Trợ lý AI & Chat trực tiếp với Admin">
           <div class="ff-trigger-glow"></div>
           <div class="ff-trigger-icon-wrap">
             <svg class="ff-icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
-              <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+              <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
             </svg>
             <svg class="ff-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
           </div>
           <span class="ff-trigger-badge">24/7</span>
-          <span class="ff-trigger-tooltip">Hỏi AI & Liên hệ với cửa hàng!</span>
+          <span class="ff-trigger-tooltip">Trợ lý AI & Chat với Admin FASTFOOD</span>
         </button>
-        <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện hỗ trợ" hidden>
+        <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện hỗ trợ khách hàng" hidden>
           <header class="ff-chat-header">
             <div class="ff-header-identity">
               <div class="ff-avatar-wrap">
@@ -127,8 +126,9 @@
               <div class="ff-header-info">
                 <div class="ff-header-title-row">
                   <h3 class="ff-chat-name" id="ff-chat-title">Trợ lý AI FASTFOOD</h3>
+                  <span class="ff-verified-badge" title="Kênh hỗ trợ chính thức">✓</span>
                 </div>
-                <p class="ff-chat-status" id="ff-chat-status-text">Hỏi AI món ngon, giá cả & khuyến mãi 24/7</p>
+                <p class="ff-chat-status" id="ff-chat-status-text"><span class="ff-status-live-pill">AI 24/7</span><span class="ff-status-subtext">Hỗ trợ tức thì</span></p>
               </div>
             </div>
             <div class="ff-header-actions">
@@ -146,32 +146,42 @@
             </button>
             <button type="button" class="ff-chat-tab" id="ff-tab-admin" data-channel="admin" role="tab" aria-selected="false">
               <span class="ff-tab-emoji">👨‍💼</span>
-              <span class="ff-tab-title">Liên hệ với cửa hàng</span>
+              <span class="ff-tab-title">Chat với Admin</span>
               <span class="ff-tab-unread-dot" id="ff-tab-admin-dot" style="display: none;"></span>
             </button>
           </div>
 
           <div class="ff-chat-body" id="ff-chat-body-ai" aria-live="polite"></div>
+
           <div class="ff-chat-body" id="ff-chat-body-admin" aria-live="polite" style="display: none;">
             <div class="ff-direct-notice">
-              <span class="ff-direct-notice-icon">👨‍💼</span>
-              <div class="ff-direct-notice-text">
-                <strong>Kênh Liên Hệ Với Cửa Hàng</strong>
-                <p>Tin nhắn tại đây được gửi trực tiếp đến Cửa hàng FASTFOOD (Chat tay 100%, không qua AI).</p>
+              <div class="ff-direct-notice-top">
+                <span class="ff-direct-notice-icon">👨‍💼</span>
+                <div class="ff-direct-notice-text">
+                  <strong>Kết nối trực tiếp với Admin FASTFOOD</strong>
+                  <p>Tin nhắn tại đây được gửi thẳng tới Admin cửa hàng để hỗ trợ trực tiếp (không có AI tự động trả lời).</p>
+                </div>
+              </div>
+              <div class="ff-direct-notice-tags">
+                <span>⚡ Nhắn trực tiếp</span>
+                <span>📷 Gửi ảnh dễ dàng</span>
+                <span>🍔 Nhận thẻ món ăn</span>
               </div>
             </div>
           </div>
 
           <div class="ff-quick-chips-wrap" id="ff-quick-chips-wrap">
-            <div class="ff-quick-chips" id="ff-quick-chips">
-              <button type="button" class="ff-chip-item" data-query="Hôm nay ăn gì?">🍜 Hôm nay ăn gì?</button>
-              <button type="button" class="ff-chip-item" data-query="Món nào dưới 50.000đ?">💰 Món nào dưới 50.000đ?</button>
-              <button type="button" class="ff-chip-item" data-query="Có combo nào tiết kiệm không?">🎁 Có combo nào tiết kiệm không?</button>
-              <button type="button" class="ff-chip-item" data-query="Món nào bán chạy nhất?">🔥 Món nào bán chạy nhất?</button>
-              <button type="button" class="ff-chip-item" data-query="Tôi muốn đặt đồ ăn">🛒 Tôi muốn đặt đồ ăn</button>
-              <button type="button" class="ff-chip-item" data-query="Kiểm tra đơn hàng của tôi">📦 Kiểm tra đơn hàng của tôi</button>
+            <div class="ff-quick-chips-label"><span id="ff-quick-chips-label-text">💡 Câu hỏi ví dụ cho Trợ lý AI</span></div>
+            <div class="ff-quick-chips" id="ff-quick-chips" role="list" aria-label="Câu hỏi ví dụ">
+              <button type="button" class="ff-chip-item" role="listitem" data-prompt="Hôm nay ăn gì? Món nào bán chạy nhất?">🍔 Món bán chạy</button>
+              <button type="button" class="ff-chip-item" role="listitem" data-prompt="Món nào dưới 50.000đ?">💰 Món dưới 50K</button>
+              <button type="button" class="ff-chip-item" role="listitem" data-prompt="Có combo nào tiết kiệm không?">🔥 Gợi ý combo</button>
+              <button type="button" class="ff-chip-item" role="listitem" data-prompt="Shop đang có voucher hay mã giảm giá nào không?">🎁 Hỏi voucher</button>
+              <button type="button" class="ff-chip-item" role="listitem" data-prompt="Kiểm tra đơn hàng của tôi">📦 Kiểm tra đơn hàng</button>
+              <button type="button" class="ff-chip-item" role="listitem" data-prompt="Quán mở cửa từ mấy giờ và phí ship bao nhiêu?">⏰ Giờ mở &amp; ship</button>
             </div>
           </div>
+
           <footer class="ff-chat-footer">
             <div class="ff-chat-upload-preview" id="ff-chat-upload-preview" style="display: none;">
               <div class="ff-preview-thumb-wrap">
@@ -187,17 +197,17 @@
             <form class="ff-chat-form" id="ff-chat-form" autocomplete="off">
               <input type="file" id="ff-chat-file-input" accept="image/jpeg,image/png,image/webp" style="display: none;" />
               <button type="button" class="ff-chat-attach-btn" id="ff-chat-attach-btn" title="Gửi ảnh (JPG, PNG, WEBP tối đa 5MB)" aria-label="Đính kèm ảnh">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
                   <circle cx="12" cy="13" r="4"></circle>
                 </svg>
               </button>
-              <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Hỏi AI món ngon, gửi ảnh hoặc liên hệ cửa hàng..." maxlength="1000" />
+              <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Hỏi Trợ lý AI món ngon, giá cả, voucher..." maxlength="1000" />
               <button type="submit" class="ff-chat-send-btn" id="ff-chat-send-btn" aria-label="Gửi tin nhắn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
               </button>
             </form>
-            <div class="ff-chat-disclaimer" id="ff-chat-disclaimer"><span>⚡ Trợ lý AI FASTFOOD phản hồi tự động tức thì</span></div>
+            <div class="ff-chat-disclaimer" id="ff-chat-disclaimer"><span>⚡ Trợ lý AI hỗ trợ 24/7 • Cần gặp cửa hàng hãy chuyển tab <strong>Chat với Admin</strong></span></div>
           </footer>
         </section>
 
@@ -226,9 +236,10 @@
         avatar: document.getElementById('ff-header-avatar'),
         statusText: document.getElementById('ff-chat-status-text'),
         statusDot: document.getElementById('ff-header-status-dot'),
-        quickChipsWrap: document.getElementById('ff-quick-chips-wrap'),
-        quickChips: document.getElementById('ff-quick-chips'),
         disclaimer: document.getElementById('ff-chat-disclaimer'),
+        quickChipsWrap: document.getElementById('ff-quick-chips-wrap'),
+        quickChipsLabel: document.getElementById('ff-quick-chips-label-text'),
+        quickChips: document.getElementById('ff-quick-chips'),
         form: document.getElementById('ff-chat-form'),
         input: document.getElementById('ff-chat-input'),
         btnSend: document.getElementById('ff-chat-send-btn'),
@@ -251,7 +262,7 @@
     },
 
     initSession() {
-      // 1. Khởi tạo phiên cho kênh AI
+      // 1. Khởi tạo phiên riêng cho Trợ lý AI
       let aiSaved = localStorage.getItem('fastfood_ai_session_id');
       if (!aiSaved || !aiSaved.startsWith('ai_sess_')) {
         aiSaved = 'ai_sess_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36);
@@ -259,7 +270,7 @@
       }
       this.aiSessionId = aiSaved;
 
-      // 2. Khởi tạo phiên cho kênh Admin chat tay
+      // 2. Khởi tạo phiên Chat trực tiếp với Admin
       let adminSaved = localStorage.getItem('fastfood_admin_session_id');
       const userId = this.getCurrentUserId();
       if (userId) {
@@ -270,14 +281,14 @@
       localStorage.setItem('fastfood_admin_session_id', adminSaved);
       this.adminSessionId = adminSaved;
 
-      // Kênh đang chọn (mặc định là 'ai')
-      this.currentChannel = localStorage.getItem('fastfood_chat_active_channel') || 'ai';
+      const savedTab = localStorage.getItem('fastfood_chat_v2_channel');
+      this.currentChannel = (savedTab === 'admin' || savedTab === 'ai') ? savedTab : 'ai';
     },
 
     switchChannel(channel) {
-      if (channel !== 'ai' && channel !== 'admin') return;
+      if (channel !== 'ai' && channel !== 'admin') channel = 'ai';
       this.currentChannel = channel;
-      localStorage.setItem('fastfood_chat_active_channel', channel);
+      localStorage.setItem('fastfood_chat_v2_channel', channel);
 
       const isAi = (channel === 'ai');
 
@@ -289,41 +300,40 @@
         this.elements.tabAdmin.classList.toggle('active', !isAi);
         this.elements.tabAdmin.setAttribute('aria-selected', !isAi ? 'true' : 'false');
       }
-
       if (this.elements.bodyAi) {
         this.elements.bodyAi.style.display = isAi ? 'flex' : 'none';
       }
       if (this.elements.bodyAdmin) {
         this.elements.bodyAdmin.style.display = isAi ? 'none' : 'flex';
       }
-
       if (!isAi && this.elements.adminDot) {
         this.elements.adminDot.style.display = 'none';
       }
-
       if (this.elements.avatar) {
         this.elements.avatar.textContent = isAi ? '🤖' : '👨‍💼';
       }
       if (this.elements.title) {
-        this.elements.title.textContent = isAi ? 'Trợ lý AI FASTFOOD' : 'Liên hệ với cửa hàng';
+        this.elements.title.textContent = isAi ? 'Trợ lý AI FASTFOOD' : 'Chat với Admin FASTFOOD';
       }
       if (this.elements.statusText) {
-        this.elements.statusText.textContent = isAi
-          ? 'Hỏi AI món ngon, giá cả & khuyến mãi 24/7'
-          : 'Trò chuyện trực tiếp với Cửa hàng FASTFOOD';
+        this.elements.statusText.innerHTML = isAi
+          ? '<span class="ff-status-live-pill">AI 24/7</span><span class="ff-status-subtext">Hỗ trợ tức thì</span>'
+          : '<span class="ff-status-live-pill">Trực tiếp</span><span class="ff-status-subtext">Hỗ trợ từ cửa hàng</span>';
       }
       if (this.elements.input) {
         this.elements.input.placeholder = isAi
-          ? 'Hỏi AI món ngon, giá cả, khuyến mãi hôm nay...'
-          : 'Nhắn tin trực tiếp cho cửa hàng...';
+          ? 'Hỏi Trợ lý AI món ngon, giá cả, voucher...'
+          : 'Nhắn tin trực tiếp cho Admin FASTFOOD...';
       }
-      if (this.elements.quickChipsWrap) {
-        this.elements.quickChipsWrap.style.display = isAi ? 'block' : 'none';
+      if (this.elements.quickChipsLabel) {
+        this.elements.quickChipsLabel.textContent = isAi
+          ? '💡 Câu hỏi ví dụ cho Trợ lý AI'
+          : '💡 Câu hỏi gợi ý gửi cho Admin';
       }
       if (this.elements.disclaimer) {
         this.elements.disclaimer.innerHTML = isAi
-          ? '<span>⚡ Trợ lý AI FASTFOOD phản hồi tự động tức thì</span>'
-          : '<span>👨‍💼 Liên hệ trực tiếp với Cửa hàng • Không có AI tự động</span>';
+          ? '<span>⚡ Trợ lý AI hỗ trợ 24/7 • Cần gặp cửa hàng hãy chuyển tab <strong>Chat với Admin</strong></span>'
+          : '<span>👨‍💼 Chat trực tiếp với Admin • Không có AI tự động trả lời</span>';
       }
 
       this.scrollToBottom();
@@ -449,9 +459,21 @@
       btnExpand?.addEventListener('click', () => this.toggleExpand());
       btnNewChat?.addEventListener('click', () => this.startNewSession());
 
-      // Chuyển đổi giữa 2 kênh: Trợ lý AI và Chat với Admin
+      // Chuyển đổi giữa Trợ lý AI và Chat trực tiếp với Admin
       tabAi?.addEventListener('click', () => this.switchChannel('ai'));
       tabAdmin?.addEventListener('click', () => this.switchChannel('admin'));
+
+      // Bấm câu hỏi ví dụ gửi nhanh theo kênh đang mở
+      quickChips?.addEventListener('click', (e) => {
+        const chip = e.target.closest('.ff-chip-item');
+        if (!chip || this.isSubmitting || chip.disabled) return;
+        const prompt = chip.dataset.prompt || chip.dataset.query || chip.textContent.trim();
+        if (prompt) {
+          chip.disabled = true;
+          setTimeout(() => { chip.disabled = false; }, 1200);
+          this.sendMessage(prompt);
+        }
+      });
 
       // Nút đính kèm ảnh và chọn file
       this.elements.attachBtn?.addEventListener('click', () => {
@@ -516,20 +538,6 @@
         }
       });
 
-      quickChips?.addEventListener('click', (e) => {
-        const btn = e.target.closest('.ff-chip-item');
-        if (btn && !this.isSubmitting && !btn.disabled) {
-          btn.disabled = true;
-          setTimeout(() => { btn.disabled = false; }, 2000);
-          const query = btn.dataset.query || btn.textContent.trim();
-          // Khi khách bấm câu hỏi gợi ý, tự động chuyển sang kênh AI để nhận phân tích món ngon tức thời
-          if (this.currentChannel !== 'ai') {
-            this.switchChannel('ai');
-          }
-          this.sendMessage(query);
-        }
-      });
-
       document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
           if (this.elements.lightbox && this.elements.lightbox.style.display === 'flex') {
@@ -567,8 +575,11 @@
         if (msg.sender === 'user' || msg.senderRole === 'customer') return;
         if (msg.sender === 'admin' || payload.sessionId === this.adminSessionId) {
           this.renderMessage(msg, 'admin');
+          if (this.currentChannel !== 'admin' && this.elements.adminDot) {
+            this.elements.adminDot.style.display = 'inline-block';
+          }
           if (!this.isOpen && msg.sender === 'admin') {
-            window.UIComponents?.showToast?.('Cửa hàng vừa phản hồi tin nhắn của bạn!', 'info');
+            window.UIComponents?.showToast?.('Admin FASTFOOD vừa phản hồi tin nhắn của bạn!', 'info');
           }
         }
       });
@@ -583,6 +594,9 @@
               if (!data.sessionId || data.sessionId === this.adminSessionId) {
                 if (data.message && typeof data.message === 'object') {
                   this.renderMessage(data.message, 'admin');
+                }
+                if (this.currentChannel !== 'admin' && this.elements.adminDot) {
+                  this.elements.adminDot.style.display = 'inline-block';
                 }
                 this.syncLatestMessages();
               }
@@ -599,6 +613,9 @@
               if (!data.sessionId || data.sessionId === this.adminSessionId) {
                 if (data.message && typeof data.message === 'object') {
                   this.renderMessage(data.message, 'admin');
+                }
+                if (this.currentChannel !== 'admin' && this.elements.adminDot) {
+                  this.elements.adminDot.style.display = 'inline-block';
                 }
                 this.syncLatestMessages();
               }
@@ -619,10 +636,11 @@
     updateSupportStatusUI(status) {
       if (!status) return;
       this.supportStatus = { ...this.supportStatus, ...status };
-      if (this.currentChannel === 'admin') {
-        if (this.elements.statusText) {
-          this.elements.statusText.textContent = 'Trò chuyện trực tiếp với Cửa hàng FASTFOOD';
-        }
+      if (this.elements.statusText) {
+        const isAi = (this.currentChannel !== 'admin');
+        this.elements.statusText.innerHTML = isAi
+          ? '<span class="ff-status-live-pill">AI 24/7</span><span class="ff-status-subtext">Hỗ trợ tức thì</span>'
+          : '<span class="ff-status-live-pill">Trực tiếp</span><span class="ff-status-subtext">Hỗ trợ từ cửa hàng</span>';
       }
     },
 
@@ -648,22 +666,27 @@
         const headers = {};
         if (token) headers['Authorization'] = `Bearer ${token}`;
 
-        // 1. Luôn đồng bộ tin nhắn từ Kênh Admin
+        // 1. Đồng bộ tin nhắn từ Kênh Admin trực tiếp
         if (this.adminSessionId) {
           const resAdmin = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.adminSessionId)}`, { headers });
           if (resAdmin.ok) {
             const resultAdmin = await resAdmin.json();
             if (resultAdmin.success && Array.isArray(resultAdmin.data?.messages)) {
+              let hasNewAdminReply = false;
               resultAdmin.data.messages.forEach(m => {
                 if (m.id && !this.renderedMessageIds.has(String(m.id))) {
                   this.renderMessage(m, 'admin');
+                  if (m.sender === 'admin') hasNewAdminReply = true;
                 }
               });
+              if (hasNewAdminReply && this.currentChannel !== 'admin' && this.elements.adminDot) {
+                this.elements.adminDot.style.display = 'inline-block';
+              }
             }
           }
         }
 
-        // 2. Đồng bộ Kênh AI khi người dùng đang xem tab AI
+        // 2. Đồng bộ Kênh AI khi đang xem tab AI
         if (this.aiSessionId && this.currentChannel === 'ai') {
           const resAi = await fetch(`${API_BASE}/history?sessionId=${encodeURIComponent(this.aiSessionId)}`, { headers });
           if (resAi.ok) {
@@ -724,7 +747,7 @@
       if (this.isSubmitting) return;
 
       const isAi = (this.currentChannel === 'ai');
-      const channelName = isAi ? 'Trợ lý AI' : 'Cửa hàng';
+      const channelName = isAi ? 'Trợ lý AI' : 'Admin';
       const confirmed = window.confirm(`Bắt đầu cuộc trò chuyện mới với ${channelName}?`);
       if (!confirmed) return;
 
@@ -737,10 +760,17 @@
         if (this.elements.bodyAdmin) {
           this.elements.bodyAdmin.innerHTML = `
             <div class="ff-direct-notice">
-              <span class="ff-direct-notice-icon">👨‍💼</span>
-              <div class="ff-direct-notice-text">
-                <strong>Kênh Liên Hệ Với Cửa Hàng</strong>
-                <p>Tin nhắn tại đây được gửi trực tiếp đến Cửa hàng FASTFOOD (Chat tay 100%, không qua AI).</p>
+              <div class="ff-direct-notice-top">
+                <span class="ff-direct-notice-icon">👨‍💼</span>
+                <div class="ff-direct-notice-text">
+                  <strong>Kết nối trực tiếp với Admin FASTFOOD</strong>
+                  <p>Tin nhắn tại đây được gửi thẳng tới Admin cửa hàng để hỗ trợ trực tiếp (không có AI tự động trả lời).</p>
+                </div>
+              </div>
+              <div class="ff-direct-notice-tags">
+                <span>⚡ Nhắn trực tiếp</span>
+                <span>📷 Gửi ảnh dễ dàng</span>
+                <span>🍔 Nhận thẻ món ăn</span>
               </div>
             </div>
           `;
@@ -749,19 +779,20 @@
         this.adminSessionId = userId ? `admin_sess_u_${userId}` : ('admin_sess_' + Math.random().toString(36).substring(2, 10) + Date.now().toString(36));
         localStorage.setItem('fastfood_admin_session_id', this.adminSessionId);
       }
+      this.renderedMessageIds.clear();
     },
 
     async loadHistory() {
-      // 1. Nạp lịch sử Kênh AI
       await this.loadChannelHistory(this.aiSessionId, 'ai');
-      // 2. Nạp lịch sử Kênh Admin
       await this.loadChannelHistory(this.adminSessionId, 'admin');
-      // 3. Hiển thị tab đang chọn
       this.switchChannel(this.currentChannel || 'ai');
     },
 
     async loadChannelHistory(sessionId, channel) {
-      if (!sessionId) return;
+      if (!sessionId) {
+        if (channel === 'ai') this.renderDefaultWelcome();
+        return;
+      }
       try {
         const token = this.getAuthToken();
         const headers = {};
@@ -772,10 +803,8 @@
 
         if (result.success && Array.isArray(result.data?.messages) && result.data.messages.length > 0) {
           result.data.messages.forEach(m => this.renderMessage(m, channel));
-        } else {
-          if (channel === 'ai') {
-            this.renderDefaultWelcome();
-          }
+        } else if (channel === 'ai') {
+          this.renderDefaultWelcome();
         }
       } catch (_) {
         if (channel === 'ai') this.renderDefaultWelcome();
@@ -786,13 +815,13 @@
       if (this.elements.bodyAi) {
         this.elements.bodyAi.innerHTML = '';
       }
-      const welcomeText = `Xin chào bạn! Tôi là **Trợ lý AI** của nền tảng đặt đồ ăn FASTFOOD Buôn Ma Thuột 💖\n\n`
+      const welcomeText = `Xin chào bạn! Tôi là **Trợ lý AI FASTFOOD** 24/7 💖\n\n`
         + `Mình có thể hỗ trợ bạn ngay lập tức:\n`
-        + `• Gợi ý món ăn ngon, bán chạy hôm nay 🔥\n`
+        + `• Gợi ý món ngon, bán chạy hôm nay 🔥\n`
         + `• Tìm món giá sinh viên, combo tiết kiệm (dưới 50K) 💰\n`
-        + `• Hướng dẫn đặt hàng, phí ship & mã giảm giá 🎁\n`
+        + `• Tư vấn voucher & mã giảm giá hiện có 🎁\n`
         + `• Tra cứu thực đơn & tình trạng đơn hàng 📦\n\n`
-        + `*Cần trò chuyện trực tiếp với nhân viên, bạn chỉ cần bấm tab **"Liên hệ với cửa hàng"** ở phía trên nhé!*`;
+        + `*Cần trao đổi trực tiếp với cửa hàng, hãy chuyển sang tab **"Chat với Admin"** ở trên nhé!*`;
 
       this.renderMessage({
         sender: 'assistant',
@@ -800,9 +829,6 @@
       }, 'ai');
     },
 
-    /**
-     * Dự phòng thông minh ngay tại trình duyệt nếu máy chủ tạm thời gián đoạn
-     */
     buildLocalOfflineReply(userText) {
       const data = window.FASTFOOD_DATA;
       let products = Array.isArray(data?.products) && data.products.length > 0 ? data.products : [
@@ -811,66 +837,68 @@
         { id: '43', name: 'Trà Sữa Oolong Nướng Trân Châu Hoàng Kim (Size L)', price: 50000, oldPrice: 50000, isBestSeller: true, image: 'https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=600&auto=format&fit=crop&q=80', restaurantName: 'FASTFOOD Buôn Ma Thuột' },
         { id: '254', name: 'Bắp Xào Bơ Tép Khô Mỡ Hành Thơm Lừng', price: 25000, oldPrice: 25000, isBestSeller: true, image: '/assets/images/foods/bap-xao.jpg', restaurantName: 'FASTFOOD Buôn Ma Thuột' }
       ];
-      const norm = userText
+      const norm = String(userText || '')
         .normalize('NFD')
         .replace(/[\u0300-\u036f]/g, '')
         .replace(/[đĐ]/g, 'd')
         .toLowerCase();
-
-      if (products.length === 0) {
-        return {
-          reply: 'Dạ Trợ lý AI đã ghi nhận câu hỏi của bạn. Hiện kết nối tới máy chủ đang tạm gián đoạn, bạn duyệt thực đơn trên trang nhé!',
-          products: [],
-        };
-      }
 
       let matched = [];
       let reply = '';
       const cleanNoDots = norm.replace(/\./g, '');
       const budgetMatch = cleanNoDots.match(/duoi\s*(\d+)\s*(k|000)?/);
 
-      if (/(combo|set|khuyen mai|uu dai)/.test(norm)) {
-        matched = products
-          .filter(p => /combo|set/i.test(p.name) || p.isFlashDeal || (p.oldPrice && p.oldPrice > p.price))
-          .slice(0, 4);
-        reply = '🎁 Dưới đây là các **Combo & Món ưu đãi tiết kiệm** nổi bật tại FASTFOOD:\n\n';
-      } else if (budgetMatch || /(duoi 50|gia re|tiet kiem)/.test(norm)) {
+      if (/^(?:xin chao|hello|hi|hey|alo|chao(?: ban| shop| ad| admin)?)\b/.test(norm.trim())) {
+        return {
+          reply: 'Dạ FASTFOOD xin chào bạn! Rất vui được hỗ trợ bạn hôm nay 💖\nBạn đang cần tìm món ăn ngon, xem khuyến mãi hay tra cứu đơn hàng nào ạ?',
+          products: [],
+        };
+      }
+
+      if (/\b(combo|set|khuyen mai|uu dai|voucher|ma giam gia)\b/.test(norm)) {
+        matched = products.filter(p => /combo|set/i.test(p.name)).slice(0, 4);
+        if (matched.length === 0) matched = products.slice(0, 4);
+        reply = '🎁 Dưới đây là các **Combo & Món ưu đãi** nổi bật tại FASTFOOD:\n\n';
+      } else if (budgetMatch || /\b(duoi 50|gia re|tiet kiem|sinh vien)\b/.test(norm)) {
         let maxPrice = 50000;
         if (budgetMatch) {
           const val = Number(budgetMatch[1]);
           maxPrice = budgetMatch[2] === 'k' ? val * 1000 : (val < 1000 ? val * 1000 : val);
         }
         matched = products.filter(p => Number(p.price) <= maxPrice).slice(0, 5);
-        reply = `🎉 Gợi ý các món ngon giá **dưới ${new Intl.NumberFormat('vi-VN').format(maxPrice)}đ** dành cho bạn:\n\n`;
-      } else if (/(hom nay an gi|ban chay|best seller|mon hot|goi y)/.test(norm)) {
+        reply = `🎉 Gợi ý món ngon giá **dưới ${new Intl.NumberFormat('vi-VN').format(maxPrice)}đ**:\n\n`;
+      } else if (/\b(hom nay an gi|ban chay|best seller|mon hot|goi y|thuc don|menu)\b/.test(norm)) {
         matched = products.filter(p => p.isBestSeller).slice(0, 5);
-        reply = '🔥 Top món **bán chạy nhất** tại FASTFOOD Buôn Ma Thuột hôm nay:\n\n';
-      } else {
-        matched = products.filter(p => {
-          const pNorm = `${p.name} ${p.category} ${p.restaurantName}`
-            .normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
-          return norm.split(/\s+/).some(tok => tok.length >= 2 && pNorm.includes(tok));
-        }).slice(0, 5);
+        reply = '🔥 Top món **bán chạy nhất** tại FASTFOOD hôm nay:\n\n';
+      } else if (/\b(burger|ga ran|canh ga|dui ga|tra sua|tra dao|tra chanh|pizza|com tam|com suon|com ga|com|pho|bun|mi y|spaghetti|lasagna|khoai tay|pho mai|xuc xich|salad|sushi|ca phe|sinh to|sua chua|nuoc ep|nuoc ngot|banh mi|tiramisu|matcha|tau hu)\b/.test(norm)) {
+        const kwMatch = norm.match(/\b(burger|ga ran|canh ga|dui ga|tra sua|tra dao|tra chanh|pizza|com tam|com suon|com ga|com|pho|bun|mi y|spaghetti|lasagna|khoai tay|pho mai|xuc xich|salad|sushi|ca phe|sinh to|sua chua|nuoc ep|nuoc ngot|banh mi|tiramisu|matcha|tau hu)\b/);
+        matched = products.filter(p => p.name.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().includes(kwMatch[1])).slice(0, 4);
         if (matched.length === 0) matched = products.filter(p => p.isBestSeller).slice(0, 4);
-        reply = 'Dạ Trợ lý AI tìm thấy các món phù hợp với nhu cầu của bạn:\n\n';
+        reply = '🍽️ Một số món ngon phù hợp tại FASTFOOD dành cho bạn:\n\n';
+      } else {
+        return {
+          reply: 'Xin lỗi, tôi không thể biết hoặc trả lời thông tin này vì nằm ngoài phạm vi món ăn và đơn hàng của **FASTFOOD** 😔\n\nBạn có thể hỏi mình về thực đơn món ăn, món dưới 50K, combo/voucher hoặc chuyển sang tab **"Chat với Admin"** nhé!',
+          products: [],
+        };
       }
 
       matched.forEach((p, i) => {
-        reply += `${i + 1}. **${p.name}** – ${new Intl.NumberFormat('vi-VN').format(p.price)}đ (${p.restaurantName || 'FASTFOOD'})\n`;
+        reply += `${i + 1}. **${p.name}** – ${new Intl.NumberFormat('vi-VN').format(p.price)}đ\n`;
       });
 
-      const formattedProducts = matched.map(p => ({
-        id: p.id,
-        name: p.name,
-        price: Number(p.price),
-        originalPrice: Number(p.oldPrice || p.price),
-        discountPercent: p.oldPrice && p.oldPrice > p.price ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0,
-        restaurantName: p.restaurantName || 'FASTFOOD',
-        image: p.image,
-        imageCredit: p.imageCredit,
-      }));
-
-      return { reply, products: formattedProducts };
+      return {
+        reply,
+        products: matched.map(p => ({
+          id: p.id,
+          name: p.name,
+          price: Number(p.price),
+          originalPrice: Number(p.oldPrice || p.price),
+          discountPercent: p.oldPrice && p.oldPrice > p.price ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0,
+          restaurantName: p.restaurantName || 'FASTFOOD',
+          image: p.image,
+          imageCredit: p.imageCredit,
+        })),
+      };
     },
 
     async sendMessage(text) {
@@ -878,10 +906,9 @@
 
       const userText = (text || '').trim();
 
-      // Chống bấm liên tiếp gây trùng lặp tin nhắn
+      // Chống bấm đúp quá nhanh (< 600ms) gây gửi trùng
       const now = Date.now();
-      if (!this.selectedImageFile && this._lastSentText === userText && (now - (this._lastSentTime || 0)) < 2500) {
-        console.warn('[FASTFOOD Chat] Đang xử lý tin nhắn, vui lòng chờ trong giây lát...');
+      if (!this.selectedImageFile && this._lastSentText === userText && (now - (this._lastSentTime || 0)) < 600) {
         return;
       }
       this._lastSentText = userText;
@@ -890,7 +917,7 @@
       this.elements.input.value = '';
       this.isSubmitting = true;
 
-      const channel = this.currentChannel; // 'ai' hoặc 'admin'
+      const channel = (this.currentChannel === 'admin') ? 'admin' : 'ai';
       const activeSessionId = (channel === 'ai') ? this.aiSessionId : this.adminSessionId;
       const customerName = this.getCurrentCustomerName();
       const userId = this.getCurrentUserId();
@@ -903,7 +930,8 @@
       // Xóa preview trên input
       this.cancelImagePreview();
 
-      const tempId = 'tmp_' + Date.now();
+      this._tmpSeq = (this._tmpSeq || 0) + 1;
+      const tempId = 'tmp_' + Date.now() + '_' + this._tmpSeq;
       let pendingRow = null;
 
       if (imageFileToUpload) {
@@ -948,7 +976,7 @@
           const upHeaders = {};
           if (token) upHeaders['Authorization'] = `Bearer ${token}`;
 
-          const upRes = await fetch(`${API_BASE}/chat/upload-image`, {
+          const upRes = await fetch(`${API_BASE}/upload-image`, {
             method: 'POST',
             headers: upHeaders,
             body: formData
@@ -1033,18 +1061,18 @@
           }
         }
 
-        // 2. Kênh AI hoặc Trợ lý ảo tự động gợi ý phản hồi
+        // 2. Render câu trả lời của Trợ lý AI (chỉ ở kênh 'ai')
         if (res.ok && result.success && result.data) {
           const { reply, products, order, autoReplied } = result.data;
-          const botMessageId = result.data.assistantMessageId || (result.data.autoReplied ? result.data.messageId : null);
-          if (reply && (channel === 'ai' || autoReplied)) {
+          const botMessageId = result.data.assistantMessageId || (autoReplied ? result.data.messageId : null);
+          if (reply && channel === 'ai') {
             this.renderMessage({
               id: botMessageId,
               sender: 'assistant',
               message: reply,
               metadata: { products, order },
               time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-            }, channel);
+            }, 'ai');
           }
         } else if (channel === 'ai') {
           const fallback = this.buildLocalOfflineReply(userText);
@@ -1054,6 +1082,8 @@
             metadata: { products: fallback.products },
             time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
           }, 'ai');
+        } else {
+          window.UIComponents?.showToast?.(result?.message || 'Không thể gửi tin nhắn.', 'error');
         }
       } catch (err) {
         console.warn('[FASTFOOD Chat] Lỗi gửi tin nhắn:', err);
@@ -1074,7 +1104,7 @@
       }
     },
 
-    showTyping(show) {
+    showTyping() {
       if (this.elements.typing) {
         this.elements.typing.style.display = 'none';
         this.elements.typing.setAttribute('hidden', '');
@@ -1104,16 +1134,10 @@
         }
       }
 
-      // Xác định kênh đích
       let channel = targetChannel;
       if (!channel) {
-        if (msgData.sender === 'admin' || (msgData.sessionId && String(msgData.sessionId).startsWith('admin_sess_'))) {
-          channel = 'admin';
-        } else {
-          channel = 'ai';
-        }
+        channel = (msgData.sender === 'admin' || (msgData.sessionId && String(msgData.sessionId).startsWith('admin_sess_'))) ? 'admin' : 'ai';
       }
-
       const isUser = msgData.sender === 'user';
       const isAdmin = msgData.sender === 'admin';
       const targetBody = (channel === 'admin') ? this.elements.bodyAdmin : this.elements.bodyAi;
@@ -1128,24 +1152,23 @@
                             msgData.metadata?.type === 'product_card' ||
                             Boolean(msgData.metadata?.product);
 
-      // Chống trùng lặp tin nhắn người dùng (deduplication giữa optimistic render và sync history)
-      if (isUser && targetBody) {
+      // Chỉ ghép ID thật vào bong bóng đang chờ (tmp_*) để tránh trùng với syncLatestMessages;
+      // không bao giờ nuốt tin nhắn mới chỉ vì trùng chữ hoặc là chuỗi con của tin cũ
+      const isPendingTemp = msgIdStr.startsWith('tmp_');
+      if (isUser && targetBody && msgIdStr && !isPendingTemp) {
         const cleanText = (msgData.message || '').trim().replace(/\s+/g, ' ');
-        const normClean = cleanText.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
         const existingUserRows = targetBody.querySelectorAll('.ff-msg-row.user');
         for (let i = existingUserRows.length - 1; i >= 0; i--) {
           const r = existingUserRows[i];
-          const contentEl = r.querySelector('.ff-msg-content');
-          const existingText = contentEl ? contentEl.textContent.trim().replace(/\s+/g, ' ') : '';
-          const normExisting = (r.dataset.msgText || existingText).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
-          const textMatch = (cleanText && existingText === cleanText) || (normClean && normClean === normExisting) || (cleanText && existingText && (existingText.includes(cleanText) || cleanText.includes(existingText)));
-          const imgMatch = imageUrl && (r.dataset.imageUrl === imageUrl || (r.dataset.imageUrl && imageUrl.includes(r.dataset.imageUrl)));
+          const existingId = r.dataset.msgId || '';
+          if (!existingId.startsWith('tmp_')) continue;
+
+          const existingText = (r.dataset.msgText || '').trim().replace(/\s+/g, ' ');
+          const textMatch = Boolean(cleanText && existingText === cleanText);
+          const imgMatch = Boolean(imageUrl && (r.dataset.imageUrl === imageUrl || (r.dataset.imageUrl && imageUrl.includes(r.dataset.imageUrl))));
           if (textMatch || imgMatch) {
-            // NẾU ĐÃ CÓ BONG BÓNG TIN NHẮN TRÙNG NỘI DUNG: CẬP NHẬT ID VÀ TUYỆT ĐỐI KHÔNG TẠO BUBBLE MỚI!
-            if (msgIdStr) {
-              r.dataset.msgId = msgIdStr;
-              this.renderedMessageIds.add(msgIdStr);
-            }
+            r.dataset.msgId = msgIdStr;
+            this.renderedMessageIds.add(msgIdStr);
             if (imageUrl) r.dataset.imageUrl = imageUrl;
             return r;
           }
@@ -1202,10 +1225,10 @@
       let senderLabelHtml = '';
       if (!isUser) {
         avatarHtml = isAdmin
-          ? `<div class="ff-msg-avatar" title="Cửa hàng FASTFOOD">👨‍💼</div>`
+          ? `<div class="ff-msg-avatar" title="Admin FASTFOOD">👨‍💼</div>`
           : `<div class="ff-msg-avatar" title="Trợ lý AI FASTFOOD">🤖</div>`;
         senderLabelHtml = isAdmin
-          ? `<div class="ff-sender-tag is-admin">👨‍💼 ${this.escapeHtml(msgData.metadata?.adminName || 'Cửa hàng FASTFOOD')}</div>`
+          ? `<div class="ff-sender-tag is-admin">👨‍💼 ${this.escapeHtml(msgData.metadata?.adminName || 'Admin FASTFOOD')}</div>`
           : `<div class="ff-sender-tag">🤖 Trợ lý AI FASTFOOD</div>`;
       }
 
@@ -1277,15 +1300,9 @@
         });
       });
 
-      // Đưa vào đúng body của kênh
+      // Đưa vào đúng body của kênh Admin
       if (targetBody) {
         targetBody.appendChild(row);
-      }
-
-      // Thông báo có tin nhắn Admin nếu đang ở tab AI
-      if (channel === 'admin' && isAdmin && this.currentChannel !== 'admin' && this.elements.adminDot) {
-        this.elements.adminDot.style.display = 'inline-block';
-        window.UIComponents?.showToast?.('Cửa hàng vừa phản hồi trong mục "Liên hệ với cửa hàng"!', 'info');
       }
 
       this.scrollToBottom();

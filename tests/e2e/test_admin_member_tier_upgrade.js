@@ -52,6 +52,12 @@ describe('Admin Member Edit & Tier Promotion (Thăng hạng thành viên)', () =
       dbHelper.query('DELETE FROM orders WHERE id = ?', [testOrderId]);
     }
     if (testUserId) {
+      const gifted = dbHelper.query('SELECT voucher_id FROM user_vouchers WHERE user_id = ?', [testUserId]);
+      dbHelper.query('DELETE FROM user_vouchers WHERE user_id = ?', [testUserId]);
+      dbHelper.query('DELETE FROM coupons WHERE user_id = ?', [testUserId]);
+      for (const g of gifted) {
+        dbHelper.query('DELETE FROM vouchers WHERE id = ?', [Number(g.voucher_id)]);
+      }
       dbHelper.query('DELETE FROM point_transactions WHERE user_id = ?', [testUserId]);
       dbHelper.query('DELETE FROM users WHERE id = ?', [testUserId]);
     }

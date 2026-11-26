@@ -68,11 +68,15 @@ function getCartSummary() {
     $discount = 0;
     if ($appliedCoupon && $subtotal > 0) {
         require_once __DIR__ . '/../helpers/voucher.php';
-        $vRes = validateAndCalculateVoucher($appliedCoupon, $subtotal, $uid > 0 ? $uid : null, (float)$shippingFee);
+        $vRes = validateAndCalculateVoucher($appliedCoupon, $subtotal, $uid > 0 ? $uid : null, (float)$shippingFee, array_values($rawCart));
         if (!empty($vRes['valid'])) {
             $discount = (float)$vRes['discount_amount'];
         } else {
-            // Không đạt điều kiện đơn tối thiểu hoặc điều kiện khác
+            // Nếu không đạt do sai món / hết lượt / đã sử dụng / hết hạn / sai hạng -> tự động gỡ khỏi session
+            if (empty($vRes['missing_amount']) || !empty($vRes['scope_mismatch'])) {
+                unset($_SESSION['applied_coupon']);
+                $appliedCoupon = null;
+            }
             $discount = 0;
         }
     }
@@ -109,7 +113,7 @@ if ($method === 'POST') {
             }
 
             $db = getDB();
-            $stmt = $db->prepare("SELECT id, name, base_price, discount_price, image_url, is_available FROM products WHERE id = ? OR product_code = ? LIMIT 1");
+            $stmt = $db->prepare("SELECT id, category_id, name, base_price, discount_price, image_url, is_available FROM products WHERE id = ? OR product_code = ? LIMIT 1");
             $stmt->execute([$productId, $productId]);
             $product = $stmt->fetch();
 
@@ -117,7 +121,7 @@ if ($method === 'POST') {
                 // Thử tìm theo id số
                 $numericId = (int)preg_replace('/\D/', '', $productId);
                 if ($numericId > 0) {
-                    $stmt = $db->prepare("SELECT id, name, base_price, discount_price, image_url, is_available FROM products WHERE id = ? LIMIT 1");
+                    $stmt = $db->prepare("SELECT id, category_id, name, base_price, discount_price, image_url, is_available FROM products WHERE id = ? LIMIT 1");
                     $stmt->execute([$numericId]);
                     $product = $stmt->fetch();
                 }
@@ -197,6 +201,7 @@ if ($method === 'POST') {
                 $_SESSION['cart'][$cartKey] = [
                     'id'            => $cartKey,
                     'productId'     => $idKey,
+                    'category_id'   => (int)($product['category_id'] ?? 0),
                     'name'          => $product['name'],
                     'basePrice'     => $basePrice,
                     'size'          => $sizeName ? ['name' => $sizeName, 'price' => $sizePrice] : null,
@@ -302,8 +307,9 @@ if ($method === 'POST') {
                 jsonError('Giỏ hàng đang trống, vui lòng chọn món trước khi áp dụng voucher.');
             }
 
-            // Kiểm tra điều kiện & tính toán chiết khấu bằng helper voucher chung
-            $calc = validateAndCalculateVoucher($cp, $subtotal, $currentUserId, $shippingFee);
+            // Kiểm tra điều kiện & tính toán chiết khấu bằng helper voucher chung (kèm kiểm tra đúng món ăn)
+            $sessionCartItems = !empty($_SESSION['cart']) && is_array($_SESSION['cart']) ? array_values($_SESSION['cart']) : [];
+            $calc = validateAndCalculateVoucher($cp, $subtotal, $currentUserId, $shippingFee, $sessionCartItems);
             if (empty($calc['valid'])) {
                 jsonError($calc['reason'] ?? 'Voucher không thỏa mãn điều kiện áp dụng.');
             }
@@ -319,6 +325,8 @@ if ($method === 'POST') {
                 'min_order_value'     => (float)$cp['min_order_value'],
                 'max_discount_amount' => (float)$cp['max_discount_amount'],
                 'min_member_tier'     => $cp['min_member_tier'] ?? 'ALL',
+                'applicable_scope'    => $calc['applicable_scope'] ?? ($cp['applicable_scope'] ?? 'all'),
+                'applicable_label'    => $calc['applicable_label'] ?? ($cp['applicable_label'] ?? ''),
                 'discount_amount'     => (float)$calc['discount_amount']
             ];
 

@@ -70,18 +70,21 @@ const UIComponents = {
     };
   },
 
-  // Hiển thị Toast thông báo ở góc trên bên phải
+  // Hiển thị Toast thông báo ngay dưới Navbar ở góc trên bên phải
   showToast(message, type = 'info', duration = 4500) {
     if (!message) return;
+    const siteHeader = document.getElementById('site-header') || document.querySelector('.site-header');
+    const toastTop = siteHeader ? 'calc(var(--header-height, 80px) + 12px)' : '24px';
+
     let container = document.getElementById('toast-container');
     if (!container) {
       container = document.createElement('div');
       container.id = 'toast-container';
       container.setAttribute('aria-live', 'polite');
       container.setAttribute('aria-atomic', 'false');
-      // Đảm bảo container luôn cố định ở góc trên bên phải màn hình
+      // Đặt cố định ngay phía dưới Navbar để không che khuất thanh điều hướng
       container.style.position = 'fixed';
-      container.style.top = '24px';
+      container.style.top = toastTop;
       container.style.right = '24px';
       container.style.zIndex = '999999';
       container.style.display = 'flex';
@@ -91,6 +94,8 @@ const UIComponents = {
       container.style.maxWidth = '440px';
       container.style.width = 'calc(100vw - 48px)';
       document.body.appendChild(container);
+    } else {
+      container.style.top = toastTop;
     }
 
     // Tránh spam dồn dập các thông báo có nội dung giống hệt nhau

@@ -225,7 +225,7 @@
   #toast-container {
     left: auto;
     right: 1rem;
-    top: 1rem;
+    top: calc(var(--header-height, 70px) + 10px);
     width: min(420px, calc(100vw - 2rem));
     max-width: calc(100vw - 2rem);
     z-index: 999999;

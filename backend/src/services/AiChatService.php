@@ -142,17 +142,20 @@ class AiChatService {
     /**
      * Lấy lịch sử tin nhắn của một phiên
      */
-    public static function getHistory(string $sessionId, ?int $userId = null, int $limit = 50): array {
+    public static function getHistory(string $sessionId, ?int $userId = null, int $limit = 150): array {
         $db = Database::getConnection();
         try {
             $stmt = $db->prepare("
-                SELECT m.*, COALESCE(u.full_name, s.customer_name) AS customer_name
-                FROM ai_chat_messages m
-                LEFT JOIN ai_chat_sessions s ON m.session_id = s.session_id
-                LEFT JOIN users u ON m.user_id = u.id
-                WHERE m.session_id = ?
-                ORDER BY m.id ASC
-                LIMIT ?
+                SELECT * FROM (
+                    SELECT m.*, COALESCE(u.full_name, s.customer_name) AS customer_name
+                    FROM ai_chat_messages m
+                    LEFT JOIN ai_chat_sessions s ON m.session_id = s.session_id
+                    LEFT JOIN users u ON m.user_id = u.id
+                    WHERE m.session_id = ?
+                    ORDER BY m.id DESC
+                    LIMIT ?
+                ) recent_msgs
+                ORDER BY recent_msgs.id ASC
             ");
             $stmt->bindValue(1, $sessionId, PDO::PARAM_STR);
             $stmt->bindValue(2, $limit, PDO::PARAM_INT);
@@ -164,13 +167,16 @@ class AiChatService {
                 $prefix = str_starts_with($sessionId, 'admin_sess_') ? 'admin_sess_%' : (str_starts_with($sessionId, 'ai_sess_') ? 'ai_sess_%' : null);
                 if ($prefix) {
                     $stmt = $db->prepare("
-                        SELECT m.*, COALESCE(u.full_name, s.customer_name) AS customer_name
-                        FROM ai_chat_messages m
-                        LEFT JOIN ai_chat_sessions s ON m.session_id = s.session_id
-                        LEFT JOIN users u ON m.user_id = u.id
-                        WHERE m.user_id = ? AND m.session_id LIKE ?
-                        ORDER BY m.id ASC
-                        LIMIT ?
+                        SELECT * FROM (
+                            SELECT m.*, COALESCE(u.full_name, s.customer_name) AS customer_name
+                            FROM ai_chat_messages m
+                            LEFT JOIN ai_chat_sessions s ON m.session_id = s.session_id
+                            LEFT JOIN users u ON m.user_id = u.id
+                            WHERE m.user_id = ? AND m.session_id LIKE ?
+                            ORDER BY m.id DESC
+                            LIMIT ?
+                        ) recent_msgs
+                        ORDER BY recent_msgs.id ASC
                     ");
                     $stmt->bindValue(1, $userId, PDO::PARAM_INT);
                     $stmt->bindValue(2, $prefix, PDO::PARAM_STR);
@@ -211,30 +217,9 @@ class AiChatService {
     }
 
     /**
-     * Lấy cài đặt chế độ chat toàn cục (AI Tự Chat vs Admin Trực Tiếp Chat)
+     * Cài đặt chế độ chat toàn cục: luôn chạy chế độ Admin Trực Tiếp Chat (không bật AI tự động)
      */
     public static function getChatSettings(): array {
-        $db = Database::getConnection();
-        try {
-            $stmt = $db->prepare("SELECT content FROM website_content WHERE collection_name = 'chat_settings' LIMIT 1");
-            $stmt->execute();
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            if ($row && !empty($row['content'])) {
-                $data = json_decode($row['content'], true);
-                if (is_array($data)) {
-                    $mode = $data['mode'] ?? 'admin';
-                    return [
-                        'mode'            => $mode,
-                        'adminOnline'     => true,
-                        'adminManualBusy' => ($mode === 'auto'),
-                        'effectiveBusy'   => ($mode === 'auto'),
-                        'updatedAt'       => $data['updatedAt'] ?? null
-                    ];
-                }
-            }
-        } catch (\Exception $e) {}
-
-        // Mặc định: Chế độ Admin Trực Tiếp Chat (admin)
         return [
             'mode'            => 'admin',
             'adminOnline'     => true,
@@ -245,17 +230,17 @@ class AiChatService {
     }
 
     /**
-     * Cập nhật cài đặt chế độ chat toàn cục
+     * Cập nhật cài đặt chế độ chat toàn cục (luôn giữ chế độ Admin trực tiếp)
      */
     public static function updateChatSettings(array $settings): array {
         $db = Database::getConnection();
-        $current = self::getChatSettings();
-        $merged = array_merge($current, $settings);
-        $mode = $merged['mode'] ?? 'admin';
-        $merged['effectiveBusy'] = ($mode === 'auto');
-        $merged['adminManualBusy'] = ($mode === 'auto');
-        $merged['updatedAt'] = date('Y-m-d H:i:s');
-
+        $merged = [
+            'mode'            => 'admin',
+            'adminOnline'     => true,
+            'adminManualBusy' => false,
+            'effectiveBusy'   => false,
+            'updatedAt'       => date('Y-m-d H:i:s')
+        ];
         $json = json_encode($merged, JSON_UNESCAPED_UNICODE);
 
         try {
@@ -265,11 +250,7 @@ class AiChatService {
                 ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = NOW()
             ");
             $stmt->execute([$json]);
-
-            // Khi bật lại chế độ AI Tự Chat ('auto'), xóa tạm dừng trên các phiên để AI hoạt động ngay
-            if ($mode === 'auto') {
-                $db->query("UPDATE ai_chat_sessions SET ai_paused_until = NULL WHERE ai_paused_until IS NOT NULL");
-            }
+            $db->query("UPDATE ai_chat_sessions SET ai_force_auto = 0");
         } catch (\Exception $e) {
             error_log('[AiChatService::updateChatSettings] Error: ' . $e->getMessage());
         }
@@ -278,39 +259,10 @@ class AiChatService {
     }
 
     /**
-     * Kiểm tra xem AI có được phép tự động trả lời cho phiên này hay không
+     * AI tự động trả lời đã tắt hoàn toàn — chỉ giữ chat trực tiếp với Admin
      */
     public static function shouldAiAutoReply(string $sessionId): bool {
-        $db = Database::getConnection();
-        try {
-            $settings = self::getChatSettings();
-            $globalMode = $settings['mode'] ?? 'admin';
-
-            $stmt = $db->prepare("SELECT ai_paused_until, ai_force_auto FROM ai_chat_sessions WHERE session_id = ? LIMIT 1");
-            $stmt->execute([$sessionId]);
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-            // 1. Nếu toàn cục đang là Admin trực tiếp chat:
-            // Tuyệt đối KHÔNG để AI tự trả lời, trừ phi phiên này được Admin chủ động bật riêng (ai_force_auto = 1)
-            if ($globalMode === 'admin' || $globalMode === 'manual') {
-                return !empty($row['ai_force_auto']);
-            }
-
-            // 2. Nếu toàn cục là AI Tự Chat (auto):
-            // Tự động trả lời khách hàng, trừ phi phiên này đang tạm dừng do Admin can thiệp
-            if ($row) {
-                if (!empty($row['ai_force_auto'])) {
-                    return true;
-                }
-                if (!empty($row['ai_paused_until']) && strtotime($row['ai_paused_until']) > time()) {
-                    return false;
-                }
-            }
-
-            return true;
-        } catch (\Exception $e) {
-            return false;
-        }
+        return false;
     }
 
     /**
@@ -362,7 +314,7 @@ class AiChatService {
                     WHERE sender = 'user' AND is_read = 0
                     GROUP BY session_id
                 ) unread ON unread.session_id = s.session_id
-                WHERE m.id IS NOT NULL
+                WHERE m.id IS NOT NULL AND s.session_id NOT LIKE 'ai_sess_%'
                 ORDER BY (CASE WHEN s.session_id LIKE 'admin_sess_%' THEN 0 ELSE 1 END), s.updated_at DESC
                 LIMIT 50
             ");
@@ -497,7 +449,7 @@ class AiChatService {
     public static function getTotalUnreadCount(): int {
         $db = Database::getConnection();
         try {
-            $stmt = $db->query("SELECT COUNT(*) FROM ai_chat_messages WHERE sender = 'user' AND is_read = 0");
+            $stmt = $db->query("SELECT COUNT(*) FROM ai_chat_messages WHERE sender = 'user' AND is_read = 0 AND session_id NOT LIKE 'ai_sess_%'");
             return (int)($stmt->fetchColumn() ?: 0);
         } catch (\Exception $e) {
             error_log('[AiChatService::getTotalUnreadCount] Error: ' . $e->getMessage());
@@ -553,17 +505,7 @@ class AiChatService {
      */
     public static function sendAdminReply(string $sessionId, string $message, int $adminId = 1, ?array $metadata = null, string $messageType = 'text'): array {
         $db = Database::getConnection();
-
-        // Nếu đang ở chế độ toàn cục AI Tự Chat ('auto'), tạm dừng AI cho khách này trong 15 phút khi Admin can thiệp
-        $settings = self::getChatSettings();
         $pauseUntil = null;
-        if (($settings['mode'] ?? 'admin') === 'auto') {
-            $pauseUntil = date('Y-m-d H:i:s', strtotime('+15 minutes'));
-            try {
-                $upSession = $db->prepare("UPDATE ai_chat_sessions SET ai_paused_until = ?, updated_at = NOW() WHERE session_id = ?");
-                $upSession->execute([$pauseUntil, $sessionId]);
-            } catch (\Exception $e) {}
-        }
 
         // Chuẩn hóa messageType
         $allowedTypes = ['text', 'image', 'product_card'];

@@ -36,13 +36,12 @@ window.FASTFOOD_DATA.products = <?= json_encode(array_map(function($p) {
 <!-- FASTFOOD UNIFIED SUPPORT CHATBOX COMPONENT -->
 <div class="ff-chatbot-wrapper" id="ff-chatbot-wrapper">
   <!-- 1. Floating Chat Trigger Button -->
-  <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat Nhân viên hỗ trợ" title="Chat với Nhân viên hỗ trợ FASTFOOD">
+  <button type="button" class="ff-chat-trigger" id="ff-chat-trigger" aria-label="Mở khung chat hỗ trợ" title="Trợ lý AI &amp; Chat trực tiếp với Admin">
     <span class="ff-trigger-glow"></span>
     <span class="ff-trigger-icon-wrap">
-      <!-- Support Headset / Chat Icon -->
+      <!-- Support Chat Icon -->
       <svg class="ff-icon-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 18v-6a9 9 0 0 1 18 0v6"></path>
-        <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path>
+        <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
       </svg>
       <!-- Close Icon (when chat is open) -->
       <svg class="ff-icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -51,23 +50,26 @@ window.FASTFOOD_DATA.products = <?= json_encode(array_map(function($p) {
       </svg>
     </span>
     <span class="ff-trigger-badge">24/7</span>
-    <span class="ff-trigger-tooltip">Nhắn với Nhân viên hỗ trợ FASTFOOD!</span>
+    <span class="ff-trigger-tooltip">Trợ lý AI &amp; Chat với Admin FASTFOOD</span>
   </button>
 
   <!-- 2. Chat Window Container -->
-  <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện với Nhân viên hỗ trợ" hidden>
+  <section class="ff-chat-window" id="ff-chat-window" role="dialog" aria-modal="true" aria-label="Khung trò chuyện hỗ trợ khách hàng" hidden>
     <!-- Chat Header -->
     <header class="ff-chat-header">
       <div class="ff-header-identity">
         <div class="ff-avatar-wrap">
           <span class="ff-avatar-icon" id="ff-header-avatar">🤖</span>
-          <span class="ff-status-dot online" id="ff-header-status-dot" title="Sẵn sàng hỗ trợ"></span>
+          <span class="ff-status-dot online" id="ff-header-status-dot" title="Sẵn sàng hỗ trợ 24/7"></span>
         </div>
         <div class="ff-header-info">
           <div class="ff-header-title-row">
             <h3 class="ff-chat-name" id="ff-chat-title">Trợ lý AI FASTFOOD</h3>
+            <span class="ff-verified-badge" title="Kênh hỗ trợ chính thức">✓</span>
           </div>
-          <p class="ff-chat-status" id="ff-chat-status-text">Hỏi AI món ngon, giá cả & khuyến mãi 24/7</p>
+          <p class="ff-chat-status" id="ff-chat-status-text">
+            <span class="ff-status-live-pill">AI 24/7</span><span class="ff-status-subtext">Hỗ trợ tức thì</span>
+          </p>
         </div>
       </div>
 
@@ -97,34 +99,44 @@ window.FASTFOOD_DATA.products = <?= json_encode(array_map(function($p) {
       </button>
       <button type="button" class="ff-chat-tab" id="ff-tab-admin" data-channel="admin" role="tab" aria-selected="false">
         <span class="ff-tab-emoji">👨‍💼</span>
-        <span class="ff-tab-title">Liên hệ với cửa hàng</span>
+        <span class="ff-tab-title">Chat với Admin</span>
         <span class="ff-tab-unread-dot" id="ff-tab-admin-dot" style="display: none;"></span>
       </button>
     </div>
 
-    <!-- Khung tin nhắn riêng cho Kênh AI -->
+    <!-- Khung tin nhắn riêng cho Kênh Trợ lý AI -->
     <div class="ff-chat-body" id="ff-chat-body-ai" aria-live="polite"></div>
 
-    <!-- Khung tin nhắn riêng cho Kênh Chat tay với Cửa hàng -->
+    <!-- Khung tin nhắn riêng cho Kênh Chat Trực Tiếp Với Admin -->
     <div class="ff-chat-body" id="ff-chat-body-admin" aria-live="polite" style="display: none;">
       <div class="ff-direct-notice">
-        <span class="ff-direct-notice-icon">👨‍💼</span>
-        <div class="ff-direct-notice-text">
-          <strong>Kênh Liên Hệ Với Cửa Hàng</strong>
-          <p>Tin nhắn tại đây được gửi trực tiếp đến Cửa hàng FASTFOOD (Chat tay 100%, không qua AI).</p>
+        <div class="ff-direct-notice-top">
+          <span class="ff-direct-notice-icon">👨‍💼</span>
+          <div class="ff-direct-notice-text">
+            <strong>Kết nối trực tiếp với Admin FASTFOOD</strong>
+            <p>Tin nhắn tại đây được gửi thẳng tới Admin cửa hàng để hỗ trợ trực tiếp (không có AI tự động trả lời).</p>
+          </div>
+        </div>
+        <div class="ff-direct-notice-tags">
+          <span>⚡ Nhắn trực tiếp</span>
+          <span>📷 Gửi ảnh dễ dàng</span>
+          <span>🍔 Nhận thẻ món ăn</span>
         </div>
       </div>
     </div>
 
-    <!-- Quick Question Suggestions Bar (Chips) -->
+    <!-- Câu hỏi ví dụ gửi nhanh -->
     <div class="ff-quick-chips-wrap" id="ff-quick-chips-wrap">
-      <div class="ff-quick-chips" id="ff-quick-chips">
-        <button type="button" class="ff-chip-item" data-query="Hôm nay ăn gì?">🍜 Hôm nay ăn gì?</button>
-        <button type="button" class="ff-chip-item" data-query="Món nào dưới 50.000đ?">💰 Món nào dưới 50.000đ?</button>
-        <button type="button" class="ff-chip-item" data-query="Có combo nào tiết kiệm không?">🎁 Có combo nào tiết kiệm không?</button>
-        <button type="button" class="ff-chip-item" data-query="Món nào bán chạy nhất?">🔥 Món nào bán chạy nhất?</button>
-        <button type="button" class="ff-chip-item" data-query="Tôi muốn đặt đồ ăn">🛒 Tôi muốn đặt đồ ăn</button>
-        <button type="button" class="ff-chip-item" data-query="Kiểm tra đơn hàng của tôi">📦 Kiểm tra đơn hàng của tôi</button>
+      <div class="ff-quick-chips-label">
+        <span id="ff-quick-chips-label-text">💡 Câu hỏi ví dụ cho Trợ lý AI</span>
+      </div>
+      <div class="ff-quick-chips" id="ff-quick-chips" role="list" aria-label="Câu hỏi ví dụ">
+        <button type="button" class="ff-chip-item" role="listitem" data-prompt="Hôm nay ăn gì? Món nào bán chạy nhất?">🍔 Món bán chạy</button>
+        <button type="button" class="ff-chip-item" role="listitem" data-prompt="Món nào dưới 50.000đ?">💰 Món dưới 50K</button>
+        <button type="button" class="ff-chip-item" role="listitem" data-prompt="Có combo nào tiết kiệm không?">🔥 Gợi ý combo</button>
+        <button type="button" class="ff-chip-item" role="listitem" data-prompt="Shop đang có voucher hay mã giảm giá nào không?">🎁 Hỏi voucher</button>
+        <button type="button" class="ff-chip-item" role="listitem" data-prompt="Kiểm tra đơn hàng của tôi">📦 Kiểm tra đơn hàng</button>
+        <button type="button" class="ff-chip-item" role="listitem" data-prompt="Quán mở cửa từ mấy giờ và phí ship bao nhiêu?">⏰ Giờ mở &amp; ship</button>
       </div>
     </div>
 
@@ -145,12 +157,12 @@ window.FASTFOOD_DATA.products = <?= json_encode(array_map(function($p) {
       <form class="ff-chat-form" id="ff-chat-form" autocomplete="off">
         <input type="file" id="ff-chat-file-input" accept="image/jpeg,image/png,image/webp" style="display: none;" />
         <button type="button" class="ff-chat-attach-btn" id="ff-chat-attach-btn" title="Gửi ảnh (JPG, PNG, WEBP tối đa 5MB)" aria-label="Đính kèm ảnh">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
             <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
             <circle cx="12" cy="13" r="4"></circle>
           </svg>
         </button>
-        <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Hỏi AI món ngon, gửi ảnh hoặc liên hệ cửa hàng..." maxlength="1000">
+        <input type="text" class="ff-chat-input" id="ff-chat-input" name="message" placeholder="Hỏi Trợ lý AI món ngon, giá cả, voucher..." maxlength="1000">
         <button type="submit" class="ff-chat-send-btn" id="ff-chat-send-btn" aria-label="Gửi tin nhắn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -159,7 +171,7 @@ window.FASTFOOD_DATA.products = <?= json_encode(array_map(function($p) {
         </button>
       </form>
       <div class="ff-chat-disclaimer" id="ff-chat-disclaimer">
-        <span>⚡ Trợ lý AI FASTFOOD phản hồi tự động tức thì</span>
+        <span>⚡ Trợ lý AI hỗ trợ 24/7 • Cần gặp cửa hàng hãy chuyển tab <strong>Chat với Admin</strong></span>
       </div>
     </footer>
   </section>

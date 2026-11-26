@@ -234,6 +234,118 @@ function getHigherMembershipTier(string $tierA, string $tierB): string {
 }
 
 /**
+ * Tự động tặng riêng 1 mã voucher dùng 1 lần duy nhất khi khách hàng được thăng hạng thành viên
+ * (Áp dụng cho cả thăng hạng tự động qua đơn hàng lẫn Admin nâng hạng thủ công).
+ * Mỗi hạng (SILVER, GOLD, DIAMOND) chỉ tặng tối đa 1 lần cho mỗi tài khoản.
+ */
+function giftTierUpgradeVoucher(int $userId, string $oldTier, string $newTier, ?PDO $db = null): ?array {
+    if ($userId <= 0) {
+        return null;
+    }
+
+    $rank = ['BRONZE' => 1, 'SILVER' => 2, 'GOLD' => 3, 'DIAMOND' => 4];
+    $oldCode = strtoupper(trim($oldTier ?: 'BRONZE'));
+    $newCode = strtoupper(trim($newTier ?: 'BRONZE'));
+
+    if (($rank[$newCode] ?? 1) <= ($rank[$oldCode] ?? 1)) {
+        return null; // Không phải thăng hạng
+    }
+
+    $rewardMap = [
+        'SILVER'  => ['label' => 'Bạc',       'discount' => 30000.0,  'min_order' => 80000.0],
+        'GOLD'    => ['label' => 'Vàng',      'discount' => 50000.0,  'min_order' => 120000.0],
+        'DIAMOND' => ['label' => 'Kim Cương', 'discount' => 100000.0, 'min_order' => 200000.0],
+    ];
+    if (!isset($rewardMap[$newCode])) {
+        return null;
+    }
+
+    $db = $db ?: getDB();
+    $codePrefix = "UP-{$newCode}-{$userId}-";
+
+    // Chống cấp trùng nếu khách từng nhận quà thăng hạng cho mốc này rồi
+    $chkC = $db->prepare("SELECT id FROM coupons WHERE user_id = ? AND code LIKE ? LIMIT 1");
+    $chkC->execute([$userId, $codePrefix . '%']);
+    if ($chkC->fetch()) {
+        return null;
+    }
+
+    try {
+        $chkUV = $db->prepare("SELECT uv.id FROM user_vouchers uv JOIN vouchers v ON uv.voucher_id = v.id WHERE uv.user_id = ? AND v.code LIKE ? LIMIT 1");
+        $chkUV->execute([$userId, $codePrefix . '%']);
+        if ($chkUV->fetch()) {
+            return null;
+        }
+    } catch (Exception $e) {}
+
+    $cfg = $rewardMap[$newCode];
+    $label = $cfg['label'];
+    $discount = (float)$cfg['discount'];
+    $minOrder = (float)$cfg['min_order'];
+
+    // Sinh mã độc nhất không trùng ở cả bảng coupons lẫn vouchers
+    $code = '';
+    while (true) {
+        $candidate = $codePrefix . strtoupper(bin2hex(random_bytes(2)));
+        $dupC = $db->prepare("SELECT id FROM coupons WHERE code = ? LIMIT 1");
+        $dupC->execute([$candidate]);
+        $dupV = $db->prepare("SELECT id FROM vouchers WHERE code = ? LIMIT 1");
+        $dupV->execute([$candidate]);
+        if (!$dupC->fetch() && !$dupV->fetch()) {
+            $code = $candidate;
+            break;
+        }
+    }
+
+    $title = "Quà Thăng Hạng {$label} - Giảm " . number_format($discount, 0, ',', '.') . "đ";
+    $desc  = "Chúc mừng bạn đã thăng hạng {$label}! Tặng riêng 1 mã voucher chỉ sử dụng 1 lần duy nhất cho tài khoản của bạn (đơn từ " . number_format($minOrder, 0, ',', '.') . "đ).";
+    $startDate = date('Y-m-d H:i:s');
+    $endDate   = date('Y-m-d 23:59:59', strtotime('+30 days'));
+
+    // 1. Tạo bản ghi trong bảng vouchers (usage_limit = 1, user_limit = 1, không công khai)
+    $insV = $db->prepare("INSERT INTO vouchers
+        (code, title, description, voucher_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, user_limit, min_member_tier, is_birthday_voucher, is_public, start_date, end_date, is_active)
+        VALUES (?, ?, ?, 'fixed', ?, ?, ?, 1, 0, 1, ?, 0, 0, ?, ?, 1)");
+    $insV->execute([$code, $title, $desc, $discount, $minOrder, $discount, $newCode, $startDate, $endDate]);
+    $voucherId = (int)$db->lastInsertId();
+
+    // 2. Tạo bản ghi tương thích bảng coupons gắn user_id
+    $insC = $db->prepare("INSERT INTO coupons
+        (user_id, code, title, discount_type, voucher_type, discount_value, min_order_value, max_discount_amount, min_member_tier, usage_limit, usage_count, start_date, end_date, is_active, created_at)
+        VALUES (?, ?, ?, 'fixed', 'fixed', ?, ?, ?, ?, 1, 0, ?, ?, 1, NOW())");
+    $insC->execute([$userId, $code, $title, $discount, $minOrder, $discount, $newCode, $startDate, $endDate]);
+    $couponId = (int)$db->lastInsertId();
+
+    // 3. Lưu thẳng vào Ví Voucher của khách hàng (user_vouchers)
+    $insUV = $db->prepare("INSERT INTO user_vouchers (user_id, voucher_id, source, is_used, assigned_at, expires_at)
+                           VALUES (?, ?, 'loyalty', 0, NOW(), ?)");
+    $insUV->execute([$userId, $voucherId, $endDate]);
+
+    // 4. Thông báo (nếu bảng notifications tồn tại)
+    try {
+        $db->prepare("INSERT INTO notifications (user_id, title, message, type, created_at) VALUES (?, ?, ?, 'loyalty', NOW())")
+           ->execute([
+               $userId,
+               "👑 Chúc mừng bạn thăng hạng {$label}!",
+               "FASTFOOD tặng riêng bạn mã voucher {$code} giảm " . number_format($discount, 0, ',', '.') . "đ (sử dụng 1 lần duy nhất, HSD 30 ngày). Hãy vào Ví Voucher để sử dụng nhé!"
+           ]);
+    } catch (Exception $e) {}
+
+    return [
+        'voucher_id'      => $voucherId,
+        'coupon_id'       => $couponId,
+        'code'            => $code,
+        'title'           => $title,
+        'tier'            => $newCode,
+        'discount_amount' => $discount,
+        'min_order_value' => $minOrder,
+        'usage_limit'     => 1,
+        'user_limit'      => 1,
+        'expires_at'      => $endDate,
+    ];
+}
+
+/**
  * 3. Calculate tier code from total spent amount
  */
 function calculateTier(float $totalSpent): string {
@@ -272,13 +384,16 @@ function syncUserTier(int $userId): array {
     $upStmt = $db->prepare("UPDATE users SET total_spent = ?, member_tier = ? WHERE id = ?");
     $upStmt->execute([$totalSpent, $newTier, $userId]);
 
+    $tierUpgradeVoucher = giftTierUpgradeVoucher($userId, (string)$prevTier, (string)$newTier, $db);
+
     return [
-        'success'       => true,
-        'user_id'       => $userId,
-        'total_spent'   => $totalSpent,
-        'tier'          => $newTier,
-        'previous_tier' => $prevTier,
-        'upgraded'      => ($newTier !== $prevTier)
+        'success'              => true,
+        'user_id'              => $userId,
+        'total_spent'          => $totalSpent,
+        'tier'                 => $newTier,
+        'previous_tier'        => $prevTier,
+        'upgraded'             => ($newTier !== $prevTier),
+        'tier_upgrade_voucher' => $tierUpgradeVoucher
     ];
 }
 
@@ -390,17 +505,21 @@ function processOrderEarnPoints(int $orderId): array {
             VALUES (?, ?, ?, ?, 'EARN', ?, NOW())");
         $insTx->execute([$userId, $orderId, $pointsEarned, $newBalance, $desc]);
 
+        // Tặng riêng 1 mã voucher dùng 1 lần nếu đơn hàng giúp khách thăng hạng
+        $tierUpgradeVoucher = giftTierUpgradeVoucher($userId, (string)$currentTier, (string)$newTier, $db);
+
         if ($ownsTx) {
             $db->commit();
         }
 
         return [
-            'success'        => true,
-            'points_earned'  => $pointsEarned,
-            'new_balance'    => $newBalance,
-            'new_tier'       => $newTier,
-            'previous_tier'  => $currentTier,
-            'total_spent'    => $newTotalSpent
+            'success'              => true,
+            'points_earned'        => $pointsEarned,
+            'new_balance'          => $newBalance,
+            'new_tier'             => $newTier,
+            'previous_tier'        => $currentTier,
+            'total_spent'          => $newTotalSpent,
+            'tier_upgrade_voucher' => $tierUpgradeVoucher
         ];
     } catch (Exception $e) {
         if ($ownsTx) $db->rollBack();
@@ -541,13 +660,15 @@ function exchangePointsForVoucher(int $userId, int $packageId): array {
         }
         $newBalance = $currentBalance - $pointsRequired;
 
-        // Generate collision-free coupon code
+        // Generate collision-free coupon code across coupons & vouchers
         $prefix = $pkg['prefix'] ?? 'REW';
         $couponCode = $prefix . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
         while (true) {
             $chk = $db->prepare("SELECT id FROM coupons WHERE code = ? LIMIT 1");
             $chk->execute([$couponCode]);
-            if (!$chk->fetch()) {
+            $chkV = $db->prepare("SELECT id FROM vouchers WHERE code = ? LIMIT 1");
+            $chkV->execute([$couponCode]);
+            if (!$chk->fetch() && !$chkV->fetch()) {
                 break;
             }
             $couponCode = $prefix . '-' . strtoupper(substr(bin2hex(random_bytes(4)), 0, 6));
@@ -566,6 +687,25 @@ function exchangePointsForVoucher(int $userId, int $packageId): array {
             $pkg['discount_amount']
         ]);
         $couponId = (int)$db->lastInsertId();
+
+        // Đồng bộ vào bảng vouchers & user_vouchers để hiển thị và cập nhật tức thì trong Ví Voucher Của Tôi
+        $insVoucher = $db->prepare("INSERT INTO vouchers
+            (code, title, description, voucher_type, discount_value, min_order_value, max_discount_amount, usage_limit, usage_count, user_limit, min_member_tier, is_birthday_voucher, is_public, start_date, end_date, is_active)
+            VALUES (?, ?, ?, 'fixed', ?, ?, ?, 1, 0, 1, 'ALL', 0, 0, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY), 1)");
+        $insVoucher->execute([
+            $couponCode,
+            $pkg['name'],
+            $pkg['description'] ?? ('Đổi điểm thưởng lấy ưu đãi giảm ' . number_format((float)$pkg['discount_amount'], 0, ',', '.') . 'đ'),
+            $pkg['discount_amount'],
+            $pkg['min_order_value'],
+            $pkg['discount_amount']
+        ]);
+        $newVoucherId = (int)$db->lastInsertId();
+
+        $insUserVoucher = $db->prepare("INSERT INTO user_vouchers
+            (user_id, voucher_id, source, is_used, assigned_at, expires_at)
+            VALUES (?, ?, 'loyalty', 0, NOW(), DATE_ADD(NOW(), INTERVAL 30 DAY))");
+        $insUserVoucher->execute([$userId, $newVoucherId]);
 
         // Record in ledger
         $desc = "Đổi {$pointsRequired} điểm lấy " . $pkg['name'] . " (Mã: {$couponCode})";
@@ -820,17 +960,26 @@ function adminUpdateMemberLoyalty(int $userId, array $input): array {
             $txStmt->execute([$userId, $pointsDelta, $newPoints, $desc]);
         }
 
+        // Tặng riêng 1 voucher dùng 1 lần duy nhất nếu Admin thăng hạng thành viên lên cao hơn
+        $tierUpgradeVoucher = $tierChanged ? giftTierUpgradeVoucher($userId, $oldTier, $newTier, $db) : null;
+
         if ($ownsTx) {
             $db->commit();
         }
 
         $tInfo = $tierMeta[$newTier] ?? [];
+        $msg = $tierChanged
+            ? "Đã cập nhật hạng thành viên {$user['full_name']} sang {$tInfo['badge_icon']} {$tInfo['tier_name']}!"
+            : "Đã cập nhật thông tin thành viên {$user['full_name']} thành công!";
+        if ($tierUpgradeVoucher) {
+            $msg .= " Đã tự động tặng riêng 1 voucher thăng hạng {$tierUpgradeVoucher['code']} (chỉ dùng 1 lần).";
+        }
+
         return [
-            'success' => true,
-            'message' => $tierChanged
-                ? "Đã cập nhật hạng thành viên {$user['full_name']} sang {$tInfo['badge_icon']} {$tInfo['tier_name']}!"
-                : "Đã cập nhật thông tin thành viên {$user['full_name']} thành công!",
-            'member'  => [
+            'success'              => true,
+            'message'              => $msg,
+            'tier_upgrade_voucher' => $tierUpgradeVoucher,
+            'member'               => [
                 'id'             => (int)$user['id'],
                 'full_name'      => $user['full_name'],
                 'email'          => $user['email'],

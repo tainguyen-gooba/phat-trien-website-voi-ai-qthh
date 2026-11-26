@@ -537,7 +537,11 @@ switch ($action) {
             jsonError($res['error'] ?? 'Không thể cập nhật thông tin thành viên.', (int)($res['status'] ?? 400));
         }
 
-        jsonSuccess($res['message'] ?? 'Cập nhật thành viên thành công!', $res['member'] ?? []);
+        $respData = $res['member'] ?? [];
+        if (!empty($res['tier_upgrade_voucher'])) {
+            $respData['tier_upgrade_voucher'] = $res['tier_upgrade_voucher'];
+        }
+        jsonSuccess($res['message'] ?? 'Cập nhật thành viên thành công!', $respData);
         break;
 
     case 'save_loyalty_config':
@@ -769,6 +773,31 @@ switch ($action) {
         require_once ROOT_PATH . '/helpers/voucher.php';
         $cronRes = runDailyBirthdayVouchers();
         jsonSuccess("Đã quét và tặng thành công {$cronRes['total_gifted']}/{$cronRes['total_candidates']} voucher sinh nhật.", $cronRes);
+        break;
+
+    case 'admin_ai_copilot':
+        // RBAC: Admin & Staff allowed (guarded by requireAdminOrStaff() at line 8)
+        $prompt = trim((string)($body['prompt'] ?? $body['message'] ?? $_POST['prompt'] ?? $_POST['message'] ?? ''));
+        if ($prompt === '') {
+            jsonError('Nội dung câu hỏi không được để trống.', 400);
+        }
+
+        spl_autoload_register(function ($class) {
+            $prefix = 'FastFood\\';
+            $baseDir = ROOT_PATH . '/backend/src/';
+            $len = strlen($prefix);
+            if (strncmp($prefix, $class, $len) !== 0) return;
+            $file = $baseDir . str_replace('\\', '/', substr($class, $len)) . '.php';
+            if (file_exists($file)) require_once $file;
+        });
+
+        $adminInfo = [
+            'id'   => $currentUser['id'] ?? null,
+            'name' => $currentUser['full_name'] ?? 'Quản trị viên',
+            'role' => $currentUser['role'] ?? 'admin',
+        ];
+        $aiRes = \FastFood\Services\AiService::processAdminPrompt($prompt, $adminInfo, $db);
+        jsonSuccess('Phản hồi thành công!', $aiRes);
         break;
 
     case 'get_conversations':

@@ -40,7 +40,7 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
   <link rel="stylesheet" href="<?= getAssetUrl('css/base.css') ?>">
   <link rel="stylesheet" href="<?= getAssetUrl('css/components.css') ?>">
   <link rel="stylesheet" href="<?= getAssetUrl('css/responsive.css') ?>">
-  <link rel="stylesheet" href="<?= getAssetUrl('css/chatbot.css') ?>">
+  <link rel="stylesheet" href="<?= getAssetUrl('css/chatbot.css') ?>?v=<?= @filemtime(__DIR__ . '/../css/chatbot.css') ?: '20261126' ?>">
   <?php if (!empty($extraCss)): ?>
     <?php foreach ((array)$extraCss as $css): ?>
       <link rel="stylesheet" href="<?= getAssetUrl($css) ?>">

@@ -340,7 +340,9 @@ require_once ROOT_PATH . '/includes/header.php';
         }
       };
       channel.postMessage({ type: 'order:new', data: orderPayload });
+      channel.postMessage({ type: 'content:updated', collection: 'vouchers' });
     }
+    try { localStorage.setItem('ff_vouchers_dirty', String(Date.now())); } catch (e) {}
     <?php endif; ?>
 
     <?php

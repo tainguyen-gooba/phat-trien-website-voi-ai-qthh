@@ -3,18 +3,137 @@
  */
 
 document.addEventListener('DOMContentLoaded', function () {
+  initAuthInteractions();
+  initSmoothAuthTabSwitch();
+  initWelcomeModal();
+});
+
+function initAuthInteractions() {
   // 1. Toggle Show / Hide Password
   initPasswordToggles();
 
   // 2. Password Strength Meter (cho form Register)
   initPasswordStrength();
 
+  // 2b. Confirm Password Match Feedback
+  initPasswordMatchHint();
+
   // 3. Demo Account Autofill (cho form Login)
   initDemoAccountFill();
+}
 
-  // 4. Welcome Modal & Confetti
-  initWelcomeModal();
-});
+/**
+ * Chuyển mượt giữa Đăng Nhập <-> Đăng Ký không chớp tải lại trang
+ */
+function initSmoothAuthTabSwitch() {
+  if (window.__ffAuthTabSwitchBound) return;
+  window.__ffAuthTabSwitchBound = true;
+
+  const prefetchedHtml = new Map();
+  let isTransitioning = false;
+
+  function canInterceptUrl(rawHref) {
+    if (!rawHref) return false;
+    try {
+      const targetUrl = new URL(rawHref, window.location.href);
+      if (targetUrl.origin !== window.location.origin) return false;
+      const isAuthTarget = /(?:^|\/)(?:login|register)\.php$/i.test(targetUrl.pathname);
+      if (!isAuthTarget) return false;
+      // Preserve full page load when special query params like ?for=admin or ?redirect=... are used
+      if (targetUrl.search && targetUrl.search !== '') return false;
+      return targetUrl.href !== window.location.href;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function fetchAuthDoc(urlStr) {
+    if (prefetchedHtml.has(urlStr)) {
+      return prefetchedHtml.get(urlStr);
+    }
+    const res = await fetch(urlStr, { credentials: 'same-origin' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const html = await res.text();
+    if (html.includes('class="auth-shell')) {
+      prefetchedHtml.set(urlStr, html);
+    }
+    return html;
+  }
+
+  async function swapAuthShell(targetUrl, pushToHistory) {
+    const shell = document.querySelector('.auth-shell');
+    if (!shell || isTransitioning) {
+      window.location.href = targetUrl;
+      return;
+    }
+    isTransitioning = true;
+    shell.classList.add('is-switching');
+
+    try {
+      const [html] = await Promise.all([
+        fetchAuthDoc(targetUrl),
+        new Promise(resolve => setTimeout(resolve, 140))
+      ]);
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const nextShell = doc.querySelector('.auth-shell');
+      if (!nextShell) {
+        window.location.href = targetUrl;
+        return;
+      }
+
+      shell.className = nextShell.className + ' is-switching';
+      shell.innerHTML = nextShell.innerHTML;
+      if (doc.title) document.title = doc.title;
+      if (pushToHistory) {
+        history.pushState({ authUrl: targetUrl }, '', targetUrl);
+      }
+
+      initAuthInteractions();
+
+      requestAnimationFrame(() => {
+        shell.classList.remove('is-switching');
+        const firstInput = shell.querySelector('.auth-card-box input.auth-input');
+        if (firstInput && typeof firstInput.focus === 'function') {
+          try { firstInput.focus({ preventScroll: true }); } catch (e) {}
+        }
+      });
+    } catch (err) {
+      window.location.href = targetUrl;
+    } finally {
+      setTimeout(() => { isTransitioning = false; }, 220);
+    }
+  }
+
+  document.addEventListener('pointerenter', function (e) {
+    const link = e.target && e.target.closest ? e.target.closest('.auth-tab-btn:not(.active), .auth-foot-link') : null;
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (canInterceptUrl(href)) {
+      const targetUrl = new URL(href, window.location.href).href;
+      fetchAuthDoc(targetUrl).catch(() => {});
+    }
+  }, true);
+
+  document.addEventListener('click', function (e) {
+    if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+    const link = e.target && e.target.closest ? e.target.closest('.auth-tab-btn:not(.active), .auth-foot-link') : null;
+    if (!link) return;
+    const href = link.getAttribute('href');
+    if (!canInterceptUrl(href)) return;
+
+    e.preventDefault();
+    const targetUrl = new URL(href, window.location.href).href;
+    swapAuthShell(targetUrl, true);
+  });
+
+  window.addEventListener('popstate', function () {
+    const cur = window.location.href;
+    if (/(?:^|\/)(?:login|register)\.php$/i.test(window.location.pathname) && document.querySelector('.auth-shell')) {
+      swapAuthShell(cur, false);
+    }
+  });
+}
 
 /**
  * Bật / tắt ẩn hiện mật khẩu
@@ -22,6 +141,8 @@ document.addEventListener('DOMContentLoaded', function () {
 function initPasswordToggles() {
   const toggleBtns = document.querySelectorAll('.auth-toggle-pass');
   toggleBtns.forEach(btn => {
+    if (btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
     btn.addEventListener('click', function (e) {
       e.preventDefault();
       const targetId = this.getAttribute('data-target');
@@ -47,7 +168,8 @@ function initPasswordStrength() {
   const passInput = document.getElementById('reg-pass');
   const bars = document.querySelectorAll('.auth-meter-bar');
   const textElem = document.getElementById('pass-strength-text');
-  if (!passInput || bars.length === 0 || !textElem) return;
+  if (!passInput || bars.length === 0 || !textElem || passInput.dataset.strengthBound === '1') return;
+  passInput.dataset.strengthBound = '1';
 
   passInput.addEventListener('input', function () {
     const val = this.value;
@@ -85,11 +207,44 @@ function initPasswordStrength() {
 }
 
 /**
+ * Hiển thị trạng thái khớp mật khẩu xác nhận trên trang đăng ký
+ */
+function initPasswordMatchHint() {
+  const passInput = document.getElementById('reg-pass');
+  const confirmInput = document.getElementById('reg-pass-confirm');
+  const hint = document.getElementById('pass-match-hint');
+  if (!passInput || !confirmInput || !hint || confirmInput.dataset.matchBound === '1') return;
+  confirmInput.dataset.matchBound = '1';
+
+  function syncMatch() {
+    const p1 = passInput.value;
+    const p2 = confirmInput.value;
+    if (!p2) {
+      hint.textContent = '';
+      hint.className = 'auth-pass-match';
+      return;
+    }
+    if (p1 === p2) {
+      hint.textContent = '✓ Mật khẩu trùng khớp';
+      hint.className = 'auth-pass-match is-match';
+    } else {
+      hint.textContent = '✕ Mật khẩu xác nhận chưa khớp';
+      hint.className = 'auth-pass-match is-mismatch';
+    }
+  }
+
+  passInput.addEventListener('input', syncMatch);
+  confirmInput.addEventListener('input', syncMatch);
+}
+
+/**
  * Điền nhanh tài khoản demo
  */
 function initDemoAccountFill() {
   const chips = document.querySelectorAll('[data-demo-email]');
   chips.forEach(chip => {
+    if (chip.dataset.bound === '1') return;
+    chip.dataset.bound = '1';
     chip.addEventListener('click', function () {
       const email = this.getAttribute('data-demo-email');
       const pass = this.getAttribute('data-demo-pass') || '123456';

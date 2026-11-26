@@ -9,7 +9,39 @@
     initTabs();
     initClipboardCopy();
     initVoucherExchange();
+    initVipCardTilt();
   });
+
+  // =========================================================================
+  // 0. Subtle 3D Metallic Tilt & Specular Spotlight for VIP Card
+  // =========================================================================
+  function initVipCardTilt() {
+    const card = document.getElementById('vipCard');
+    if (!card || (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches)) {
+      return;
+    }
+
+    card.addEventListener('mousemove', function(e) {
+      const rect = card.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      const px = (x / rect.width) * 100;
+      const py = (y / rect.height) * 100;
+      const rotateY = ((x / rect.width) - 0.5) * 8;
+      const rotateX = (0.5 - (y / rect.height)) * 8;
+
+      card.style.setProperty('--glare-x', px.toFixed(1) + '%');
+      card.style.setProperty('--glare-y', py.toFixed(1) + '%');
+      card.style.transform = 'perspective(1000px) rotateX(' + rotateX.toFixed(2) + 'deg) rotateY(' + rotateY.toFixed(2) + 'deg) translateY(-4px)';
+    });
+
+    card.addEventListener('mouseleave', function() {
+      card.style.removeProperty('transform');
+      card.style.setProperty('--glare-x', '78%');
+      card.style.setProperty('--glare-y', '20%');
+    });
+  }
 
   // =========================================================================
   // 1. Tab Switching Module

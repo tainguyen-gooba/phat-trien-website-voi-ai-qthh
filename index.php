@@ -144,11 +144,17 @@ if (empty($banners)) {
     ];
 }
 
-// 5. Lấy đánh giá khách hàng
+// 5. Lấy đánh giá khách hàng & thống kê điểm sao thực tế
 $reviews = $db->query("SELECT r.*, u.full_name, u.avatar_url 
                        FROM reviews r 
                        LEFT JOIN users u ON r.user_id = u.id 
                        ORDER BY r.id DESC LIMIT 3")->fetchAll();
+
+$reviewStats = $db->query("SELECT COUNT(*) AS total_reviews, COALESCE(AVG(rating), 5) AS avg_rating FROM reviews")->fetch();
+$totalReviewsCount = (int)($reviewStats['total_reviews'] ?? 0);
+$avgReviewRating = $totalReviewsCount > 0 ? round((float)$reviewStats['avg_rating'], 1) : 5.0;
+$avgReviewRatingFormatted = number_format($avgReviewRating, 1);
+$reviewSatisfactionPercent = (int)round(($avgReviewRating / 5) * 100);
 
 require_once ROOT_PATH . '/includes/header.php';
 ?>
@@ -399,35 +405,71 @@ require_once ROOT_PATH . '/includes/header.php';
 
   <!-- 6. ĐÁNH GIÁ CỦA KHÁCH HÀNG -->
   <?php if (!empty($reviews)): ?>
-  <section style="margin-bottom: 4rem;">
-    <div class="section-title-wrap">
+  <section class="reviews-showcase" style="margin-bottom: 4.5rem;">
+    <div class="section-title-wrap reviews-section-header">
       <div>
+        <span class="reviews-eyebrow">ĐÁNH GIÁ THỰC TẾ</span>
         <h2 class="section-title">Đánh Giá Từ Khách Hàng</h2>
         <p class="section-subtitle">Những trải nghiệm chân thực nhất từ thực khách đã tin dùng FASTFOOD</p>
+      </div>
+      <div class="reviews-summary-pill" aria-label="Đánh giá trung bình <?= escapeHtml($avgReviewRatingFormatted) ?> trên 5 sao (<?= $reviewSatisfactionPercent ?>%)">
+        <span class="reviews-summary-stars">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          <?= escapeHtml($avgReviewRatingFormatted) ?>
+        </span>
+        <span class="reviews-summary-divider"></span>
+        <span class="reviews-summary-label"><?= $reviewSatisfactionPercent ?>% Khách hàng hài lòng<?= $totalReviewsCount > 0 ? ' (' . $totalReviewsCount . ' đánh giá)' : '' ?></span>
       </div>
     </div>
 
     <div class="review-grid">
       <?php foreach ($reviews as $rev): 
         $avatar = getAvatarUrl($rev['avatar_url'] ?? '', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=160&auto=format&fit=crop&q=80');
-        $rating = (int)($rev['rating'] ?? 5);
+        $rating = max(1, min(5, (int)($rev['rating'] ?? 5)));
+        $comment = trim((string)($rev['comment'] ?? ''));
+        if ($comment === '') {
+            $comment = 'Món ăn rất ngon, nóng hổi và giao hàng siêu tốc!';
+        }
       ?>
-        <div class="review-card">
+        <article class="review-card">
+          <div class="review-quote-mark" aria-hidden="true">
+            <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M9.983 3v7.391c0 5.704-3.731 9.57-8.983 10.609l-.995-2.151c2.432-.917 3.995-3.638 3.995-5.849h-4v-10h9.983zm14.017 0v7.391c0 5.704-3.748 9.571-9 10.609l-.996-2.151c2.433-.917 3.996-3.638 3.996-5.849h-3.983v-10h9.983z"/></svg>
+          </div>
+
           <div class="review-header">
-            <img src="<?= escapeHtml($avatar) ?>" alt="<?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?>" class="review-avatar-img">
-            <div>
-              <h4 style="font-size:1rem; font-weight:700; margin:0 0 0.2rem;"><?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?></h4>
-              <span style="font-size:0.75rem; color:var(--primary-color); font-weight:600;">✓ Khách hàng đã đặt món</span>
+            <div class="review-avatar-ring">
+              <img src="<?= escapeHtml($avatar) ?>" alt="<?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?>" class="review-avatar-img">
+            </div>
+            <div class="review-author-meta">
+              <h4 class="review-author-name"><?= escapeHtml($rev['full_name'] ?: 'Khách hàng') ?></h4>
+              <span class="review-verified-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                Khách hàng đã đặt món
+              </span>
             </div>
           </div>
-          <div class="review-stars">
-            <?= str_repeat('★', $rating) . str_repeat('☆', 5 - $rating) ?>
+
+          <div class="review-rating-row">
+            <div class="review-stars" aria-label="<?= $rating ?> trên 5 sao">
+              <?php for ($i = 1; $i <= 5; $i++): ?>
+                <svg class="review-star-icon <?= $i <= $rating ? 'is-filled' : 'is-empty' ?>" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+              <?php endfor; ?>
+            </div>
+            <span class="review-score-chip"><?= number_format($rating, 1) ?></span>
           </div>
-          <p class="review-text">“<?= escapeHtml($rev['comment'] ?: 'Món ăn rất ngon, nóng hổi và giao hàng siêu tốc!') ?>”</p>
+
+          <p class="review-text"><?= escapeHtml($comment) ?></p>
+
           <div class="review-order-tag">
-            <span>📅 <?= formatDateTimeVN($rev['created_at']) ?></span>
+            <span class="review-date">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+              <?= formatDateTimeVN($rev['created_at']) ?>
+            </span>
+            <span class="review-status-pill">Đã xác thực</span>
           </div>
-        </div>
+        </article>
       <?php endforeach; ?>
     </div>
   </section>

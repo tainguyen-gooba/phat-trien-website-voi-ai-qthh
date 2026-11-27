@@ -171,6 +171,38 @@ switch ($action) {
             ];
         }
 
+        usort($list, static function (array $a, array $b): int {
+            $appliedCmp = ((int)!empty($b['is_applied'])) <=> ((int)!empty($a['is_applied']));
+            if ($appliedCmp !== 0) {
+                return $appliedCmp;
+            }
+
+            $eligibleCmp = ((int)!empty($b['is_eligible'])) <=> ((int)!empty($a['is_eligible']));
+            if ($eligibleCmp !== 0) {
+                return $eligibleCmp;
+            }
+
+            $aIsPct = (($a['voucher_type'] ?? '') === 'percentage') ? 1 : 0;
+            $bIsPct = (($b['voucher_type'] ?? '') === 'percentage') ? 1 : 0;
+            if ($bIsPct !== $aIsPct) {
+                return $bIsPct <=> $aIsPct;
+            }
+
+            if ($aIsPct === 1) {
+                $pctCmp = ((float)($b['discount_value'] ?? 0)) <=> ((float)($a['discount_value'] ?? 0));
+                if ($pctCmp !== 0) {
+                    return $pctCmp;
+                }
+            }
+
+            $estCmp = ((float)($b['estimated_discount'] ?? 0)) <=> ((float)($a['estimated_discount'] ?? 0));
+            if ($estCmp !== 0) {
+                return $estCmp;
+            }
+
+            return ((float)($b['discount_value'] ?? 0)) <=> ((float)($a['discount_value'] ?? 0));
+        });
+
         jsonSuccess('Lấy danh sách voucher áp dụng thành công!', [
             'vouchers'       => $list,
             'applied_coupon' => $_SESSION['applied_coupon'] ?? null,

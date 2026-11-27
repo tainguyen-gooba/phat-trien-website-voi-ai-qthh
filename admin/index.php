@@ -1518,105 +1518,148 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
 
     .toppings-editor-box {
       margin-top: 4px;
-      padding: 13px;
+      padding: 15px 16px;
       border: 1.5px solid #fed7aa;
-      border-radius: 10px;
+      border-radius: 14px;
       background: #fffaf5;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .toppings-editor-box:hover {
+      box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
     }
 
     .toppings-editor-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 4px;
+      gap: 10px;
+      margin-bottom: 5px;
     }
 
     .toppings-editor-header strong {
-      font-size: 12px;
+      font-size: 13px;
       color: #9a3412;
       font-weight: 800;
     }
 
     .toppings-editor-sub {
-      margin: 0 0 10px;
-      font-size: 11px;
-      color: #78716c;
+      margin: 0 0 11px;
+      font-size: 11.5px;
+      color: #64748b;
+      line-height: 1.45;
     }
 
     .btn-add-topping {
-      padding: 4px 10px;
+      padding: 5px 12px;
       border: 1px dashed #ea580c;
-      border-radius: 6px;
+      border-radius: 8px;
       background: #fff;
       color: #ea580c;
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 700;
       cursor: pointer;
-      transition: all .16s ease;
+      white-space: nowrap;
+      transition: all .18s ease;
     }
 
     .btn-add-topping:hover {
       background: #ea580c;
-      color: #fff;
+      color: #fff !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.2);
     }
 
     .toppings-rows-list {
       display: grid;
-      gap: 7px;
+      gap: 8px;
     }
 
+    .size-form-row,
     .topping-form-row {
-      display: grid;
-      grid-template-columns: 1fr 110px 32px;
-      gap: 6px;
-      align-items: center;
+      display: grid !important;
+      grid-template-columns: minmax(0, 1fr) 128px 34px !important;
+      gap: 8px !important;
+      align-items: center !important;
+      width: 100%;
     }
 
-    .topping-form-row input {
-      height: 34px !important;
-      padding: 0 9px !important;
-      font-size: 11px !important;
-      border: 1px solid #e7e5e4 !important;
-      border-radius: 6px !important;
+    .attr-form-row {
+      display: grid !important;
+      grid-template-columns: minmax(110px, 150px) minmax(0, 1fr) 34px !important;
+      gap: 8px !important;
+      align-items: center !important;
+      width: 100%;
+    }
+
+    .size-form-row input,
+    .topping-form-row input,
+    .attr-form-row input {
+      width: 100% !important;
+      min-width: 0 !important;
+      box-sizing: border-box !important;
+      height: 36px !important;
+      padding: 0 11px !important;
+      font-size: 12.5px !important;
+      color: #1e293b !important;
+      border: 1.5px solid #e2e8f0 !important;
+      border-radius: 8px !important;
       background: #fff !important;
+      outline: none !important;
+      transition: border-color .16s ease, box-shadow .16s ease !important;
+    }
+
+    .size-form-row input:focus,
+    .topping-form-row input:focus,
+    .attr-form-row input:focus {
+      border-color: #f97316 !important;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12) !important;
     }
 
     .topping-price-wrap {
       position: relative;
       display: flex;
       align-items: center;
+      width: 100%;
+      min-width: 0;
     }
 
     .topping-price-wrap input {
-      padding-right: 22px !important;
+      width: 100% !important;
+      min-width: 0 !important;
+      padding-right: 26px !important;
+      font-variant-numeric: tabular-nums;
     }
 
     .topping-price-wrap span {
       position: absolute;
-      right: 7px;
-      font-size: 11px;
+      right: 9px;
+      font-size: 11.5px;
       font-weight: 700;
-      color: #a8a29e;
+      color: #94a3b8;
       pointer-events: none;
     }
 
     .topping-del-btn {
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       border: 1px solid #fecdd3;
-      border-radius: 6px;
+      border-radius: 8px;
       background: #fff;
       color: #e11d48;
       cursor: pointer;
       display: grid;
       place-items: center;
       font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
       transition: all .16s ease;
     }
 
     .topping-del-btn:hover {
       background: #ffe4e6;
       border-color: #fda4af;
+      transform: translateY(-1px);
     }
 
     .modal-actions {
@@ -2452,12 +2495,107 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       animation: modal-enter .22s ease both;
     }
 
-    .modal-head {
-      padding: 23px 24px 17px;
+    #record-dialog {
+      width: min(680px, calc(100vw - 32px));
+      max-height: min(90vh, 840px);
+      border-radius: 20px;
+      border: 1px solid #fed7aa;
+      box-shadow: 0 25px 70px rgba(15, 23, 42, 0.24);
+      overflow: hidden;
     }
 
-    .modal-form {
-      padding: 19px 24px 23px;
+    #record-dialog[open] {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #record-dialog .modal-head {
+      padding: 18px 24px 15px;
+      background: linear-gradient(135deg, #fffaf5 0%, #ffffff 85%);
+      border-bottom: 1px solid #f1f5f9;
+      flex-shrink: 0;
+    }
+
+    #record-dialog .modal-head h2 {
+      font-size: 18px;
+      font-weight: 800;
+      color: #0f172a;
+    }
+
+    #record-dialog .modal-head p {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    #record-dialog .modal-form {
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
+    #record-dialog .form-fields {
+      padding: 20px 24px;
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex: 1;
+      gap: 14px;
+    }
+
+    #record-dialog .field label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #334155;
+      margin-bottom: 6px;
+    }
+
+    #record-dialog .field input,
+    #record-dialog .field select,
+    #record-dialog .field textarea {
+      border: 1.5px solid #e2e8f0;
+      border-radius: 10px;
+      font-size: 13px;
+      color: #0f172a;
+      transition: border-color .18s ease, box-shadow .18s ease;
+    }
+
+    #record-dialog .field input:hover,
+    #record-dialog .field select:hover,
+    #record-dialog .field textarea:hover {
+      border-color: #cbd5e1;
+    }
+
+    #record-dialog .field input:focus,
+    #record-dialog .field select:focus,
+    #record-dialog .field textarea:focus {
+      border-color: #f97316;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14);
+    }
+
+    #record-dialog .modal-actions {
+      padding: 14px 24px;
+      background: #f8fafc;
+      border-top: 1px solid #e2e8f0;
+      margin-top: 0;
+      flex-shrink: 0;
+      gap: 10px;
+    }
+
+    #record-dialog .modal-actions .secondary-button,
+    #record-dialog .modal-actions .primary-button {
+      height: 40px;
+      padding: 0 20px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 700;
+      transition: all .18s ease;
+    }
+
+    #record-dialog .modal-actions .primary-button:hover {
+      transform: translateY(-1.5px);
+      box-shadow: 0 8px 18px rgba(234, 88, 12, 0.3);
     }
 
     .modal-close,
@@ -2468,40 +2606,67 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .modal-close:hover {
       background: #fff1e5;
       color: var(--orange-dark);
+      transform: rotate(90deg);
     }
 
     .secondary-button:hover {
-      border-color: #f3d9c5;
+      border-color: #fdba74;
       background: #fffaf5;
-      color: var(--ink);
+      color: #c2410c;
+      transform: translateY(-1px);
     }
 
     .image-upload {
-      margin-top: 11px;
+      margin-top: 12px;
     }
 
-    .image-upload input {
+    .image-upload input[type="file"] {
       height: auto;
-      padding: 9px;
+      padding: 8px 10px;
       background: #fffaf5;
+      border: 1.5px dashed #fdba74;
+      border-radius: 10px;
+      font-size: 12.5px;
+      color: #475569;
+      cursor: pointer;
+    }
+
+    .image-upload input[type="file"]::file-selector-button {
+      margin-right: 12px;
+      padding: 6px 14px;
+      border: 1px solid #fed7aa;
+      border-radius: 8px;
+      background: #fff;
+      color: #ea580c;
+      font-weight: 700;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all .16s ease;
+    }
+
+    .image-upload input[type="file"]::file-selector-button:hover {
+      background: #ea580c;
+      border-color: #ea580c;
+      color: #fff;
     }
 
     .image-upload-hint {
       display: block;
-      margin-top: 5px;
-      color: #999;
-      font-size: 10px;
+      margin-top: 6px;
+      color: #64748b;
+      font-size: 11px;
       line-height: 1.5;
     }
 
     .image-preview {
       display: block;
       width: 100%;
-      max-height: 190px;
+      max-height: 175px;
       margin-top: 12px;
-      border: 1px solid #eee;
-      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
       object-fit: cover;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
     }
 
     .image-preview[hidden] {
@@ -5946,13 +6111,18 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
       border: 1px solid #fed7aa;
     }
+    .vouchers-section .bs-header {
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
+      margin-bottom: 18px !important;
+    }
 
     /* Voucher Admin Bento KPI Cards */
     .vc-kpi-grid {
       display: grid;
       grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: 14px;
-      margin: 18px 0 20px;
+      margin: 0 0 20px;
     }
     @media (max-width: 1260px) {
       .vc-kpi-grid {
@@ -5968,15 +6138,17 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       align-items: center;
       gap: 13px;
       box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
-      transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                  border-color 0.22s ease;
       position: relative;
       overflow: hidden;
       min-width: 0;
     }
     .vc-kpi-card:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 12px 24px rgba(234, 88, 12, 0.1);
-      border-color: #fdba74;
+      transform: translateY(-4px);
+      box-shadow: 0 14px 28px rgba(234, 88, 12, 0.12), 0 4px 12px rgba(15, 23, 42, 0.05);
+      border-color: #fb923c;
     }
     .vc-kpi-card::after {
       content: '';
@@ -6002,6 +6174,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       flex-shrink: 0;
       background: #fff7ed;
       border: 1px solid #fed7aa;
+      transition: transform 0.22s ease;
+    }
+    .vc-kpi-card:hover .vc-kpi-icon {
+      transform: scale(1.06);
     }
     .vc-kpi-card.kpi-active .vc-kpi-icon { background: #dcfce7; border-color: #bbf7d0; }
     .vc-kpi-card.kpi-usage .vc-kpi-icon { background: #e0f2fe; border-color: #bae6fd; }
@@ -6064,6 +6240,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       background: #fff7ed;
       border-color: #fdba74;
       color: #c2410c;
+      transform: translateY(-1.5px);
+      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.12);
     }
     .vc-quick-tab.active {
       background: linear-gradient(135deg, #f97316, #ea580c);
@@ -6137,6 +6315,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       transition: all 0.2s ease;
     }
     .vc-search-input::placeholder { color: #94a3b8; }
+    .vc-search-input:hover {
+      background: #ffffff;
+      border-color: #cbd5e1;
+    }
     .vc-search-input:focus {
       background: #ffffff;
       border-color: #f97316;
@@ -6196,7 +6378,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       white-space: nowrap;
       transition: all 0.18s ease;
     }
-    .vc-custom-select:hover { background: #fff; border-color: #cbd5e1; }
+    .vc-custom-select:hover {
+      background: #fffaf5;
+      border-color: #fdba74;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.08);
+    }
     .vc-custom-select:focus {
       background: #fff;
       border-color: #f97316;
@@ -6222,8 +6409,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       align-items: center;
       gap: 5px;
       cursor: pointer;
+      transition: all 0.18s ease;
     }
-    .vc-btn-reset-filters:hover { background: #e2e8f0; color: #0f172a; }
+    .vc-btn-reset-filters:hover {
+      background: #e2e8f0;
+      color: #0f172a;
+      transform: translateY(-1px);
+    }
 
     .vc-btn-bday {
       height: 38px;
@@ -6244,7 +6436,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .vc-btn-bday:hover {
       background: #ffedd5;
       border-color: #f97316;
-      transform: translateY(-1px);
+      transform: translateY(-1.5px);
+      box-shadow: 0 6px 14px rgba(234, 88, 12, 0.16);
     }
     .vc-btn-bday:disabled { opacity: 0.6; cursor: not-allowed; }
 
@@ -6266,8 +6459,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       transition: all 0.18s ease;
     }
     .vc-btn-create:hover {
-      transform: translateY(-1.5px);
-      box-shadow: 0 8px 20px rgba(234, 88, 12, 0.36);
+      transform: translateY(-2px);
+      box-shadow: 0 10px 22px rgba(234, 88, 12, 0.36);
     }
     .vc-btn-create .vc-plus-badge {
       width: 18px;
@@ -6323,9 +6516,21 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       border-top: 1px solid #f1f5f9;
       vertical-align: middle;
       white-space: normal;
+      font-variant-numeric: tabular-nums;
+    }
+    #vouchers-table tbody tr {
+      transition: background-color 0.16s ease;
     }
     #vouchers-table tbody tr:hover {
       background: #fffaf5;
+    }
+    #vouchers-table .action-button {
+      border-radius: 9px;
+      transition: all 0.16s ease;
+    }
+    #vouchers-table .action-button:hover {
+      transform: translateY(-1.5px);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
     }
     .vc-cell-title-wrap {
       min-width: 210px;
@@ -6388,7 +6593,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .vc-copy-pill:hover {
       background: #ffedd5;
       border-color: #f97316;
-      transform: translateY(-1px);
+      transform: translateY(-1.5px);
+      box-shadow: 0 4px 10px rgba(234, 88, 12, 0.14);
     }
     .vc-status-pill {
       display: inline-flex;
@@ -6628,89 +6834,148 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       min-width: 0;
     }
 
-    .mem-header-stats {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      flex-wrap: wrap;
+    /* --- MEMBERSHIP & LOYALTY SECTION (UI POLISH) --- */
+    .membership-section .bs-header {
+      margin-bottom: 18px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid #f1f5f9;
     }
 
-    .mem-stat-pill {
-      background: #f8fafc;
+    .mem-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+
+    .mem-kpi-card {
+      background: linear-gradient(180deg, #ffffff 0%, #fffcf7 100%);
       border: 1px solid #e2e8f0;
-      padding: 6px 14px;
-      border-radius: 10px;
+      border-radius: 16px;
+      padding: 15px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.03);
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .mem-kpi-card:hover {
+      transform: translateY(-2px);
+      border-color: rgba(249, 115, 22, 0.35);
+      box-shadow: 0 10px 24px rgba(249, 115, 22, 0.08);
+    }
+
+    .mem-kpi-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+
+    .mem-kpi-icon.is-orange { background: #fff7ed; color: #ea580c; border: 1px solid #fed7aa; }
+    .mem-kpi-icon.is-amber  { background: #fefce8; color: #d97706; border: 1px solid #fde68a; }
+    .mem-kpi-icon.is-purple { background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; }
+
+    .mem-kpi-body { min-width: 0; }
+    .mem-stat-label {
+      display: block;
+      color: #64748b;
+      font-size: 11.5px;
+      font-weight: 600;
+      margin-bottom: 3px;
+    }
+    .mem-stat-val {
+      display: block;
+      color: #0f172a;
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1.2;
+      font-variant-numeric: tabular-nums;
+    }
+    .mem-kpi-card.is-highlight .mem-stat-val { color: #ea580c; }
+
+    .membership-tab-bar {
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      font-size: 12px;
-    }
-
-    .mem-stat-label { color: #64748b; font-weight: 600; }
-    .mem-stat-val { color: #ea580c; font-weight: 800; }
-
-    .membership-tab-bar {
-      display: flex;
-      gap: 8px;
-      border-bottom: 2px solid #f1f5f9;
-      margin: 18px 0 20px;
-      padding-bottom: 2px;
+      background: #f1f5f9;
+      padding: 5px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      margin: 0 0 18px;
     }
 
     .membership-tab-btn {
       border: 0;
       background: transparent;
-      padding: 10px 18px;
+      padding: 9px 16px;
       font-size: 13px;
-      font-weight: 750;
+      font-weight: 600;
       color: #64748b;
       cursor: pointer;
-      border-radius: 8px 8px 0 0;
+      border-radius: 9px;
       display: inline-flex;
       align-items: center;
       gap: 8px;
       transition: all .18s ease;
-      position: relative;
     }
 
     .membership-tab-btn:hover {
-      color: #ea580c;
-      background: #fff7ed;
+      color: #0f172a;
+      background: rgba(255, 255, 255, 0.6);
     }
 
     .membership-tab-btn.active {
       color: #ea580c;
-      font-weight: 800;
-      background: #fff7ed;
-      border-bottom: 2px solid #ea580c;
-      margin-bottom: -2px;
+      font-weight: 700;
+      background: #ffffff;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.07);
     }
 
     .mem-controls-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
       flex-wrap: wrap;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 14px;
+      padding: 12px 14px;
+      box-shadow: 0 2px 10px rgba(15, 23, 42, 0.02);
     }
 
     .mem-search-box {
       display: flex;
       align-items: center;
-      gap: 8px;
-      background: #fff;
+      gap: 9px;
+      background: #f8fafc;
       border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 0 12px;
-      height: 38px;
-      width: min(340px, 100%);
+      border-radius: 10px;
+      padding: 0 13px;
+      height: 40px;
+      flex: 1 1 280px;
+      max-width: 460px;
+      color: #94a3b8;
+      transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    }
+
+    .mem-search-box:focus-within {
+      background: #ffffff;
+      border-color: #fb923c;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+      color: #ea580c;
     }
 
     .mem-search-box input {
       border: 0;
+      background: transparent;
       outline: 0;
       width: 100%;
-      font-size: 12px;
+      font-size: 13px;
       color: var(--ink);
     }
 
@@ -6718,6 +6983,71 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       display: flex;
       align-items: center;
       gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .mem-filter-group .filter-select {
+      height: 40px;
+      border-radius: 10px;
+      border: 1px solid #e2e8f0;
+      background-color: #f8fafc;
+      padding: 0 32px 0 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+      min-width: 190px;
+    }
+
+    .mem-filter-group .secondary-button {
+      height: 40px;
+      border-radius: 10px;
+      padding: 0 14px;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      border: 1px solid #e2e8f0;
+      background: #ffffff;
+      color: #334155;
+      transition: all 0.18s ease;
+    }
+
+    .mem-filter-group .secondary-button:hover {
+      border-color: #fb923c;
+      color: #ea580c;
+      background: #fff7ed;
+    }
+
+    .membership-section .table-panel {
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.03);
+      overflow: hidden;
+    }
+
+    .membership-table th {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      color: #64748b;
+      background: #f8fafc;
+      padding: 13px 16px;
+      white-space: nowrap;
+    }
+
+    .membership-table td {
+      padding: 13px 16px;
+      vertical-align: middle;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .membership-table tbody tr {
+      transition: background-color 0.16s ease;
+    }
+
+    .membership-table tbody tr:hover {
+      background: #fffaf5;
     }
 
     /* Tier Badges */
@@ -6725,11 +7055,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 3px 9px;
-      border-radius: 20px;
-      font-size: 10px;
-      font-weight: 800;
-      letter-spacing: .25px;
+      padding: 4px 11px;
+      border-radius: 999px;
+      font-size: 11.5px;
+      font-weight: 700;
+      letter-spacing: .15px;
+      white-space: nowrap;
     }
 
     .tier-badge-bronze { background: #fff7ed; border: 1px solid #fed7aa; color: #c2410c; }
@@ -6740,24 +7071,75 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     .mem-cell-user {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 11px;
+      min-width: 220px;
     }
 
     .mem-avatar {
-      width: 34px;
-      height: 34px;
+      width: 38px;
+      height: 38px;
       border-radius: 50%;
       background: linear-gradient(135deg, #fb923c, #ea580c);
       color: #fff;
       display: grid;
       place-items: center;
-      font-size: 12px;
+      font-size: 13px;
       font-weight: 800;
       flex-shrink: 0;
+      box-shadow: 0 3px 10px rgba(234, 88, 12, 0.22);
     }
 
-    .mem-details strong { display: block; font-size: 12px; color: #1e293b; }
-    .mem-details small { color: #64748b; font-size: 10px; }
+    .mem-details { min-width: 0; }
+    .mem-details strong {
+      display: block;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      line-height: 1.3;
+    }
+    .mem-details small {
+      display: block;
+      color: #64748b;
+      font-size: 11.5px;
+      margin-top: 2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 250px;
+    }
+
+    .membership-table .row-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .membership-table .action-button {
+      border-radius: 9px;
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      transition: all 0.16s ease;
+    }
+
+    .membership-table .action-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+    }
+
+    @media (max-width: 900px) {
+      .mem-kpi-grid {
+        grid-template-columns: 1fr;
+      }
+      .membership-tab-bar {
+        display: flex;
+        width: 100%;
+      }
+      .membership-tab-btn {
+        flex: 1;
+        justify-content: center;
+      }
+    }
 
     /* Points Modal Dialog */
     .points-modal-dialog {
@@ -7853,17 +8235,34 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
               </h2>
               <p class="bs-header-desc">Theo dõi sổ cái thành viên, lịch sử biến động điểm và cấu hình linh hoạt điều kiện nâng hạng / quy đổi điểm thưởng.</p>
             </div>
-            <div class="mem-header-stats">
-              <div class="mem-stat-pill">
-                <span class="mem-stat-label">Tổng thành viên:</span>
+          </div>
+
+          <!-- KPI Bento Cards -->
+          <div class="mem-kpi-grid">
+            <div class="mem-kpi-card">
+              <div class="mem-kpi-icon is-orange" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <div class="mem-kpi-body">
+                <span class="mem-stat-label">Tổng thành viên</span>
                 <strong class="mem-stat-val" id="mem-stat-total">0</strong>
               </div>
-              <div class="mem-stat-pill">
-                <span class="mem-stat-label">Điểm lưu hành:</span>
+            </div>
+            <div class="mem-kpi-card is-highlight">
+              <div class="mem-kpi-icon is-amber" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M14.8 9A2 2 0 0 0 13 8h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1-1.8-1"/><path d="M12 6v2m0 8v2"/></svg>
+              </div>
+              <div class="mem-kpi-body">
+                <span class="mem-stat-label">Điểm đang lưu hành</span>
                 <strong class="mem-stat-val" id="mem-stat-points">0 🪙</strong>
               </div>
-              <div class="mem-stat-pill">
-                <span class="mem-stat-label">Thành viên VIP:</span>
+            </div>
+            <div class="mem-kpi-card">
+              <div class="mem-kpi-icon is-purple" aria-hidden="true">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </div>
+              <div class="mem-kpi-body">
+                <span class="mem-stat-label">Thành viên VIP (Vàng / KC)</span>
                 <strong class="mem-stat-val" id="mem-stat-vip">0</strong>
               </div>
             </div>
@@ -7872,10 +8271,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           <!-- Sub-navigation Tabs -->
           <div class="membership-tab-bar" role="tablist">
             <button type="button" class="membership-tab-btn active" id="tab-btn-members" data-tab="members">
-              <span>👥</span> Danh Sách Thành Viên (Ledger)
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              Danh Sách Thành Viên (Ledger)
             </button>
             <button type="button" class="membership-tab-btn" id="tab-btn-config" data-tab="config">
-              <span>⚙️</span> Cấu Hình Điểm &amp; Hạng
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              Cấu Hình Điểm &amp; Hạng
             </button>
           </div>
 
@@ -7896,7 +8297,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                   <option value="DIAMOND">💎 Hạng Kim Cương (Diamond)</option>
                 </select>
                 <button type="button" class="secondary-button" id="btn-refresh-members" title="Tải lại danh sách">
-                  <span>🔄</span> Làm mới
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                  Làm mới
                 </button>
               </div>
             </div>
@@ -7906,13 +8308,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                 <table class="membership-table">
                   <thead>
                     <tr>
-                      <th style="width: 50px;">ID</th>
+                      <th style="width: 64px;">ID</th>
                       <th>Khách hàng</th>
-                      <th>Hạng TV</th>
-                      <th>Điểm khả dụng</th>
-                      <th>Tổng chi tiêu</th>
-                      <th>Ngày tham gia</th>
-                      <th style="text-align: right; min-width: 220px;">Thao tác</th>
+                      <th style="text-align: center;">Hạng TV</th>
+                      <th style="text-align: right;">Điểm khả dụng</th>
+                      <th style="text-align: right;">Tổng chi tiêu</th>
+                      <th style="text-align: center;">Ngày tham gia</th>
+                      <th style="text-align: right; min-width: 210px;">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody id="membership-table-body">
@@ -11720,10 +12122,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                   </div>
                 </div>
               </td>
-              <td>${getTierBadgeHtml(m.member_tier)}</td>
-              <td><strong style="color:#ea580c; font-size:12.5px;">${new Intl.NumberFormat('vi-VN').format(m.points_balance || 0)} 🪙</strong></td>
-              <td><strong>${money(m.total_spent || 0)}</strong></td>
-              <td style="color:#64748b; font-size:11px;">${m.created_at ? formatVietnamDateTime(m.created_at) : '—'}</td>
+              <td style="text-align: center;">${getTierBadgeHtml(m.member_tier)}</td>
+              <td style="text-align: right;"><strong style="color:#ea580c; font-size:13px;">${new Intl.NumberFormat('vi-VN').format(m.points_balance || 0)} 🪙</strong></td>
+              <td style="text-align: right;"><strong style="color:#0f172a; font-size:13px;">${money(m.total_spent || 0)}</strong></td>
+              <td style="text-align: center; color:#64748b; font-size:12px; white-space:nowrap;">${m.created_at ? formatVietnamDateTime(m.created_at) : '—'}</td>
               <td style="text-align: right;">
                 <div class="row-actions" style="justify-content: flex-end;">
                   ${isAdminUser ? `

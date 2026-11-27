@@ -108,15 +108,33 @@ require_once ROOT_PATH . '/includes/header.php';
   <!-- 2. TABS BAR -->
   <nav class="voucher-tabs-bar" role="tablist">
     <button type="button" class="voucher-tab-btn active" data-target="tab-hunt" role="tab" aria-selected="true">
-      <span>🎁</span> Săn Voucher Hot
+      <svg class="voucher-ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="20 12 20 22 4 22 4 12"></polyline>
+        <rect x="2" y="7" width="20" height="5"></rect>
+        <line x1="12" y1="22" x2="12" y2="7"></line>
+        <path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"></path>
+        <path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"></path>
+      </svg>
+      <span>Săn Voucher Hot</span>
       <span class="voucher-tab-badge" id="tab-hunt-badge"><?= $huntAvailableCount ?></span>
     </button>
     <button type="button" class="voucher-tab-btn" data-target="tab-wallet" role="tab" aria-selected="false">
-      <span>🎟️</span> Ví Voucher Của Tôi
+      <svg class="voucher-ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"></path>
+        <path d="M13 5v2"></path>
+        <path d="M13 17v2"></path>
+        <path d="M13 11v2"></path>
+      </svg>
+      <span>Ví Voucher Của Tôi</span>
       <span class="voucher-tab-badge" id="tab-wallet-badge"><?= $walletCount ?></span>
     </button>
     <button type="button" class="voucher-tab-btn" data-target="tab-loyalty" role="tab" aria-selected="false">
-      <span>🪙</span> Đổi Điểm Lấy Voucher
+      <svg class="voucher-ui-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="9"></circle>
+        <path d="M12 7v10"></path>
+        <path d="M15 9.5a2.5 2.5 0 0 0-5 0c0 1.5 5 1.5 5 3a2.5 2.5 0 0 1-5 0"></path>
+      </svg>
+      <span>Đổi Điểm Lấy Voucher</span>
       <span class="voucher-tab-badge"><?= count($voucherPackages) ?></span>
     </button>
   </nav>
@@ -129,10 +147,22 @@ require_once ROOT_PATH . '/includes/header.php';
       <div class="voucher-filter-group">
         <span style="font-size: 0.86rem; font-weight: 850; color: #334155; margin-right: 0.25rem;">Phân loại:</span>
         <button type="button" class="voucher-filter-pill active" id="hunt-filter-all-btn" data-type="all">Tất Cả (<?= count($publicVouchers) ?>)</button>
-        <button type="button" class="voucher-filter-pill" data-type="percentage">🔥 Giảm %</button>
-        <button type="button" class="voucher-filter-pill" data-type="fixed">💰 Giảm Tiền Mặt</button>
-        <button type="button" class="voucher-filter-pill" data-type="free_shipping">🚚 Freeship 0đ</button>
-        <button type="button" class="voucher-filter-pill" data-type="bogo">🍔 Mua 1 Tặng 1</button>
+        <button type="button" class="voucher-filter-pill" data-type="percentage">
+          <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
+          <span>Giảm %</span>
+        </button>
+        <button type="button" class="voucher-filter-pill" data-type="fixed">
+          <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+          <span>Giảm Tiền Mặt</span>
+        </button>
+        <button type="button" class="voucher-filter-pill" data-type="free_shipping">
+          <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="3" width="15" height="13" rx="1"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+          <span>Freeship 0đ</span>
+        </button>
+        <button type="button" class="voucher-filter-pill" data-type="bogo">
+          <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+          <span>Mua 1 Tặng 1</span>
+        </button>
       </div>
 
       <div class="voucher-search-box">
@@ -313,10 +343,22 @@ require_once ROOT_PATH . '/includes/header.php';
         <div class="voucher-filter-group">
           <span style="font-size: 0.86rem; font-weight: 850; color: #334155; margin-right: 0.25rem;">Lọc ví:</span>
           <button type="button" class="wallet-filter-pill active" id="wallet-filter-all-btn" data-type="all">Tất Cả (<?= count($walletVouchers) ?>)</button>
-          <button type="button" class="wallet-filter-pill" data-type="percentage">🔥 Giảm %</button>
-          <button type="button" class="wallet-filter-pill" data-type="fixed">💰 Giảm Tiền</button>
-          <button type="button" class="wallet-filter-pill" data-type="free_shipping">🚚 Freeship</button>
-          <button type="button" class="wallet-filter-pill" data-type="bogo">🍔 Mua 1 Tặng 1</button>
+          <button type="button" class="wallet-filter-pill" data-type="percentage">
+            <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="19" y1="5" x2="5" y2="19"></line><circle cx="6.5" cy="6.5" r="2.5"></circle><circle cx="17.5" cy="17.5" r="2.5"></circle></svg>
+            <span>Giảm %</span>
+          </button>
+          <button type="button" class="wallet-filter-pill" data-type="fixed">
+            <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="6" width="20" height="12" rx="2"></rect><circle cx="12" cy="12" r="2"></circle><path d="M6 12h.01M18 12h.01"></path></svg>
+            <span>Giảm Tiền</span>
+          </button>
+          <button type="button" class="wallet-filter-pill" data-type="free_shipping">
+            <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1" y="3" width="15" height="13" rx="1"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+            <span>Freeship</span>
+          </button>
+          <button type="button" class="wallet-filter-pill" data-type="bogo">
+            <svg class="voucher-ui-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>
+            <span>Mua 1 Tặng 1</span>
+          </button>
         </div>
 
         <div class="voucher-search-box">

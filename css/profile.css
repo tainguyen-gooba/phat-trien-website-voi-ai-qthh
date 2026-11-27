@@ -1898,4 +1898,11 @@
     justify-content: space-between;
     align-items: center;
   }
+  .profile-avatar-row {
+    flex-direction: column;
+    text-align: center;
+  }
+  .profile-avatar-actions {
+    justify-content: center;
+  }
 }

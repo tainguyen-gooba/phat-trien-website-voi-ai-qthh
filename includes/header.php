@@ -38,7 +38,7 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
   <link rel="stylesheet" href="<?= getAssetUrl('css/variables.css') ?>">
   <link rel="stylesheet" href="<?= getAssetUrl('css/reset.css') ?>">
   <link rel="stylesheet" href="<?= getAssetUrl('css/base.css') ?>">
-  <link rel="stylesheet" href="<?= getAssetUrl('css/components.css') ?>">
+  <link rel="stylesheet" href="<?= getAssetUrl('css/components.css') ?>?v=<?= @filemtime(__DIR__ . '/../css/components.css') ?: '20261126' ?>">
   <link rel="stylesheet" href="<?= getAssetUrl('css/responsive.css') ?>">
   <link rel="stylesheet" href="<?= getAssetUrl('css/chatbot.css') ?>?v=<?= @filemtime(__DIR__ . '/../css/chatbot.css') ?: '20261126' ?>">
   <?php if (!empty($extraCss)): ?>
@@ -126,19 +126,9 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
                   <!-- Dành cho Admin / Quản trị viên -->
                   <li>
                     <a href="<?= getUrl('admin/index.php') ?>" class="user-dropdown-item item-highlight">
-                      <span class="dropdown-item-icon">📊</span>
                       <div class="dropdown-item-text">
                         <strong>Dashboard</strong>
-                        <small>Bảng điều khiển & doanh số</small>
-                      </div>
-                    </a>
-                  </li>
-                  <li>
-                    <a href="<?= getUrl('profile.php') ?>" class="user-dropdown-item">
-                      <span class="dropdown-item-icon">👤</span>
-                      <div class="dropdown-item-text">
-                        <strong>Hồ sơ tài khoản</strong>
-                        <small>Xem và sửa thông tin cá nhân</small>
+                        <small>Bảng điều khiển &amp; doanh số</small>
                       </div>
                     </a>
                   </li>
@@ -146,7 +136,6 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
                   <!-- Dành cho Người dùng / Khách hàng (bỏ trang quản trị) -->
                   <li>
                     <a href="<?= getUrl('profile.php') ?>" class="user-dropdown-item">
-                      <span class="dropdown-item-icon">👤</span>
                       <div class="dropdown-item-text">
                         <strong>Hồ sơ tài khoản</strong>
                         <small>Xem và sửa thông tin cá nhân</small>
@@ -155,16 +144,14 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
                   </li>
                   <li>
                     <a href="<?= getUrl('vouchers.php#tab-wallet') ?>" class="user-dropdown-item">
-                      <span class="dropdown-item-icon">🎟️</span>
                       <div class="dropdown-item-text">
                         <strong>Ví Voucher</strong>
-                        <small>Kho voucher & ưu đãi của bạn</small>
+                        <small>Kho voucher &amp; ưu đãi của bạn</small>
                       </div>
                     </a>
                   </li>
                   <li>
                     <a href="<?= getUrl('order-history.php') ?>" class="user-dropdown-item">
-                      <span class="dropdown-item-icon">📦</span>
                       <div class="dropdown-item-text">
                         <strong>Lịch sử đơn hàng</strong>
                         <small>Theo dõi tình trạng đơn đặt món</small>
@@ -173,7 +160,6 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
                   </li>
                   <li>
                     <a href="<?= getUrl('favorites.php') ?>" class="user-dropdown-item">
-                      <span class="dropdown-item-icon">💖</span>
                       <div class="dropdown-item-text">
                         <strong>Món ăn yêu thích</strong>
                         <small>Danh sách các món đã lưu</small>
@@ -187,7 +173,6 @@ if (!empty($_SESSION['user_favorites']) && is_array($_SESSION['user_favorites'])
 
               <div class="user-dropdown-footer">
                 <a href="<?= getUrl('logout.php') ?>" class="user-dropdown-logout-btn">
-                  <span class="dropdown-item-icon">🚪</span>
                   <strong>Đăng Xuất</strong>
                 </a>
               </div>

@@ -213,6 +213,18 @@
   color: #ffffff;
 }
 
+.voucher-ui-icon {
+  flex-shrink: 0;
+  opacity: 0.92;
+  transition: transform 0.18s ease;
+}
+
+.voucher-tab-btn:hover .voucher-ui-icon,
+.voucher-filter-pill:hover .voucher-ui-icon,
+.wallet-filter-pill:hover .voucher-ui-icon {
+  transform: scale(1.08);
+}
+
 /* Interactive Filter & Search Strip */
 .voucher-toolbar-wrap {
   display: flex;

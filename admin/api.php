@@ -787,7 +787,6 @@ switch ($action) {
         jsonSuccess("Đã quét và tặng thành công {$cronRes['total_gifted']}/{$cronRes['total_candidates']} voucher sinh nhật.", $cronRes);
         break;
 
-<<<<<<< HEAD
     case 'admin_ai_copilot':
         // RBAC: Admin & Staff allowed (guarded by requireAdminOrStaff() at line 8)
         $prompt = trim((string)($body['prompt'] ?? $body['message'] ?? $_POST['prompt'] ?? $_POST['message'] ?? ''));
@@ -811,7 +810,8 @@ switch ($action) {
         ];
         $aiRes = \FastFood\Services\AiService::processAdminPrompt($prompt, $adminInfo, $db);
         jsonSuccess('Phản hồi thành công!', $aiRes);
-=======
+        break;
+
     // =========================================================================
     // PRODUCT REVIEWS MANAGEMENT ACTIONS (ADMIN & STAFF)
     // =========================================================================
@@ -864,7 +864,6 @@ switch ($action) {
         $db->prepare("DELETE FROM product_reviews WHERE id = ?")->execute([$revId]);
         if ($prodId > 0) recalculateProductRating($db, $prodId);
         jsonSuccess('Đã xóa đánh giá sản phẩm!');
->>>>>>> 9d0c36e223edf98c8b6f8be361ff3f9147344c10
         break;
 
     case 'get_conversations':

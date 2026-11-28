@@ -7309,6 +7309,130 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
     @media (max-width: 600px) {
       .tier-selector-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
+
+    /* === MODERN SOFT UI POLISH & BADGE VISIBILITY FIX === */
+    [hidden],
+    .nav-badge[hidden],
+    .notif-badge[hidden] {
+      display: none !important;
+    }
+
+    body {
+      background: #f6f8fb !important;
+      color: #1e293b;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .sidebar {
+      background: #ffffff !important;
+      border-right: 1px solid #edf2f7 !important;
+      box-shadow: 4px 0 24px rgba(15, 23, 42, 0.03) !important;
+    }
+
+    .nav-item {
+      border-radius: 12px !important;
+      padding: 10px 12px !important;
+      margin: 2px 0 !important;
+      font-weight: 600 !important;
+      color: #475569 !important;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+
+    .nav-item:hover {
+      background: #fff7ed !important;
+      color: #ea580c !important;
+      transform: translateX(2px);
+    }
+
+    .nav-item.active {
+      background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%) !important;
+      color: #ea580c !important;
+      font-weight: 700 !important;
+      box-shadow: 0 2px 10px rgba(249, 115, 22, 0.1) !important;
+    }
+
+    .nav-badge {
+      animation: none !important;
+      box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25) !important;
+      font-size: 11px !important;
+      min-width: 20px !important;
+      height: 20px !important;
+      line-height: 20px !important;
+      padding: 0 6px !important;
+    }
+
+    .topbar {
+      background: rgba(255, 255, 255, 0.9) !important;
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid #edf2f7 !important;
+      box-shadow: 0 2px 12px rgba(15, 23, 42, 0.02) !important;
+    }
+
+    .table-panel,
+    .stat-card,
+    .chart-card,
+    .bs-panel-card,
+    .welcome-banner,
+    .purpose-card,
+    .bestseller-section > div[style*="background:#fff"] {
+      border-radius: 16px !important;
+      border-color: #edf2f7 !important;
+      box-shadow: 0 4px 20px rgba(15, 23, 42, 0.035) !important;
+    }
+
+    .primary-button {
+      border-radius: 10px !important;
+      transition: all 0.2s ease !important;
+      box-shadow: 0 4px 12px rgba(234, 88, 12, 0.18);
+    }
+    .primary-button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 16px rgba(234, 88, 12, 0.25);
+    }
+
+    .secondary-button,
+    .action-button {
+      border-radius: 10px !important;
+      transition: all 0.18s ease !important;
+    }
+    .secondary-button:hover,
+    .action-button:hover {
+      transform: translateY(-1px);
+    }
+
+    .bs-input,
+    input[type="text"],
+    input[type="number"],
+    input[type="date"],
+    input[type="datetime-local"],
+    input[type="email"],
+    select,
+    textarea {
+      border-radius: 10px !important;
+      border: 1.5px solid #e2e8f0 !important;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease !important;
+    }
+
+    .bs-input:focus,
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none !important;
+      border-color: #f97316 !important;
+      box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.14) !important;
+    }
+
+    table tbody tr {
+      transition: background-color 0.15s ease;
+    }
+    table tbody tr:hover {
+      background-color: #fafbfc;
+    }
+
+    dialog {
+      border-radius: 18px !important;
+      box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18) !important;
+    }
   </style>
 </head>
 
@@ -7374,14 +7498,12 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <circle cx="12" cy="8" r="6" />
             <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
           </svg><span>Hạng TV &amp; Điểm thưởng</span>
-          <span class="nav-badge" id="membership-nav-badge" style="background: linear-gradient(135deg, #f59e0b, #d97706); color: #fff; font-weight: 800; font-size: 10px; padding: 2px 6px;">LOYALTY</span>
         </button>
         <button class="nav-item" type="button" data-section="vouchers" id="nav-btn-vouchers">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
             <line x1="7" y1="7" x2="7.01" y2="7"></line>
           </svg><span>Quản lý Voucher</span>
-          <span class="nav-badge" id="vouchers-nav-badge" style="background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; font-weight: 800; font-size: 10px; padding: 2px 6px;">VOUCHER</span>
         </button>
         <button class="nav-item" type="button" data-section="messages">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -7398,7 +7520,6 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <circle cx="15" cy="13" r="1.5" />
             <path d="M10 17h4" />
           </svg><span>Trợ lý AI Chatbot</span>
-          <span class="nav-badge nav-badge-ai">AI</span>
         </button>
         <?php
           $totalReviewsCount = (int)($db->query("SELECT COUNT(*) FROM reviews")->fetchColumn() ?: 0)
@@ -7413,8 +7534,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         <button class="nav-item" type="button" data-section="bestseller">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-          </svg><span>Best Seller & Giờ Vàng</span>
-          <span class="nav-badge" style="background:#ea580c; color:#fff; font-weight:800; font-size:10px; padding:2px 6px;">HOT</span>
+          </svg><span>Best Seller &amp; Giờ Vàng</span>
         </button>
         <button class="nav-item" type="button" data-section="banners">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -7423,7 +7543,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             <line x1="12" y1="17" x2="12" y2="21"></line>
             <path d="m5 13 4-4 3 3 4-5 3 4"></path>
           </svg><span>Quản Lý Banner</span>
-          <span class="nav-badge" style="background:#2563eb; color:#fff; font-weight:800; font-size:10px; padding:2px 6px;">NEW</span>
+        </button>
+        <button class="nav-item" type="button" data-section="stats">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
+            <line x1="18" y1="20" x2="18" y2="10"></line>
+            <line x1="12" y1="20" x2="12" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="14"></line>
+          </svg><span>Thống Kê</span>
         </button>
         <button class="nav-item" type="button" data-section="footer-settings">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true">
@@ -8084,41 +8210,182 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
                 <span class="bs-header-icon" style="background: linear-gradient(135deg, #f97316, #ea580c);">🎨</span>
                 <span>Quản Lý Banner &amp; Slider Trang Chủ</span>
               </h2>
-              <p class="bs-header-desc">Tùy biến hình ảnh nổi bật, tiêu đề, nhãn ưu đãi và cài đặt tốc độ tự động chuyển ảnh (1-2s) cho Hero Banner.</p>
+              <p class="bs-header-desc">Mọi thay đổi (thêm, sửa, xóa, bật/tắt, chỉnh thời gian chuyển) đều tự động lưu và đồng bộ realtime ngay lập tức.</p>
             </div>
-            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <span style="background:#ecfdf5; color:#047857; border:1px solid #a7f3d0; font-size:12.5px; font-weight:700; padding:6px 12px; border-radius:999px;">⚡ Tự động lưu &amp; Realtime</span>
               <button type="button" class="primary-button" id="btn-add-banner" style="background:#2563eb; border-color:#2563eb; padding:9px 18px; font-size:14px; font-weight:700; border-radius:10px; display:inline-flex; align-items:center; gap:6px;">
                 <span>➕</span> Thêm Banner Mới
               </button>
-              <button type="button" class="primary-button" id="btn-save-banners" style="background:#ea580c; border-color:#ea580c; padding:9px 20px; font-size:14px; font-weight:700; border-radius:10px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 6px 16px rgba(234,88,12,.22);">
-                <span>💾</span> Lưu Tất Cả Thay Đổi
-              </button>
             </div>
           </div>
 
-          <!-- Tùy chỉnh tốc độ tự chuyển ảnh (1-2s) -->
-          <div class="bs-panel-card" style="margin-bottom:1.5rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+          <!-- Tùy chỉnh tốc độ tự chuyển ảnh (nhập số giây bất kỳ) -->
+          <div class="bs-panel-card" style="margin-bottom:1.25rem; background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1rem 1.25rem;">
             <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem;">
               <div>
-                <h4 style="font-weight:700; font-size:1rem; margin-bottom:0.25rem; color:#1e293b;">⚡ Thời Gian Tự Động Chuyển Slide (Auto-slide Interval)</h4>
-                <p style="font-size:0.875rem; color:#64748b; margin:0;">Tùy chỉnh khoảng thời gian slider tự động đổi ảnh (Yêu cầu 1-2s):</p>
+                <h4 style="font-weight:700; font-size:0.95rem; margin-bottom:0.2rem; color:#1e293b;">⚡ Thời Gian Tự Động Chuyển Slide (Giây)</h4>
+                <p style="font-size:0.84rem; color:#64748b; margin:0;">Nhập thời gian bất kỳ (0.5s – 60s), tự động lưu và áp dụng realtime ngay:</p>
               </div>
-              <div style="display:flex; align-items:center; gap:10px;">
-                <select id="banner-slide-interval" class="bs-input" style="width:auto; min-width:200px; font-weight:700; padding:9px 14px; border-radius:8px; border:2px solid #cbd5e1; background:#f8fafc;">
-                  <option value="1200">1.2 giây (Siêu nhanh)</option>
-                  <option value="1500">1.5 giây (Nhanh)</option>
-                  <option value="1800" selected>1.8 giây (Khuyên dùng - Mượt mà)</option>
-                  <option value="2000">2.0 giây (2 giây)</option>
-                  <option value="2500">2.5 giây</option>
-                  <option value="3000">3.0 giây</option>
-                </select>
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <input type="number" id="banner-slide-interval" class="bs-input" min="0.5" max="60" step="0.1" value="1.8" style="width:110px; font-weight:800; padding:8px 12px; border-radius:8px; border:2px solid #cbd5e1; background:#f8fafc; text-align:center;">
+                <span style="font-weight:700; color:#475569; font-size:13.5px;">giây</span>
+                <div style="display:flex; gap:5px; margin-left:6px;">
+                  <button type="button" class="secondary-button banner-interval-preset" data-sec="1" style="padding:5px 10px; font-size:12px; font-weight:700;">1s</button>
+                  <button type="button" class="secondary-button banner-interval-preset" data-sec="1.8" style="padding:5px 10px; font-size:12px; font-weight:700;">1.8s</button>
+                  <button type="button" class="secondary-button banner-interval-preset" data-sec="3" style="padding:5px 10px; font-size:12px; font-weight:700;">3s</button>
+                  <button type="button" class="secondary-button banner-interval-preset" data-sec="5" style="padding:5px 10px; font-size:12px; font-weight:700;">5s</button>
+                </div>
               </div>
             </div>
           </div>
 
-          <!-- Danh sách Banner hiển thị dạng Card Grid -->
-          <div id="admin-banners-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:1.25rem;">
-            <!-- JS sẽ nạp danh sách banner vào đây -->
+          <!-- Tabs Quản Lý Banner -->
+          <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1.25rem; border-bottom:2px solid #e2e8f0; padding-bottom:0.75rem;">
+            <button type="button" class="banner-tab-btn primary-button" data-banner-tab="list" style="background:#ea580c; border-color:#ea580c; padding:8px 16px; font-size:13px; font-weight:700; border-radius:8px;">
+              📋 Danh Sách Banner
+            </button>
+            <button type="button" class="banner-tab-btn secondary-button" data-banner-tab="grid" style="padding:8px 16px; font-size:13px; font-weight:700; border-radius:8px;">
+              🖼️ Giao Diện Thẻ
+            </button>
+          </div>
+
+          <!-- Thanh Tìm Kiếm & Lọc (dùng chung cho Danh Sách & Giao Diện Thẻ) -->
+          <div id="banner-filter-toolbar" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1rem; margin-bottom:1.25rem; display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end;">
+            <div style="flex:1; min-width:200px;">
+              <label for="banner-search-input" style="display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:4px;">Tìm kiếm</label>
+              <input type="text" id="banner-search-input" class="bs-input" placeholder="Tìm tiêu đề, mô tả, nhãn badge, link..." style="width:100%; padding:8px 12px;">
+            </div>
+            <div style="min-width:170px;">
+              <label for="banner-filter-status" style="display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:4px;">Trạng thái</label>
+              <select id="banner-filter-status" class="bs-input" style="width:100%; padding:8px 12px;">
+                <option value="all">Tất cả trạng thái</option>
+                <option value="showing">Đang hiển thị</option>
+                <option value="scheduled">Chờ hiển thị (Lên lịch)</option>
+                <option value="expired">Đã hết hạn</option>
+                <option value="hidden">Đang tắt / Ẩn</option>
+              </select>
+            </div>
+            <div style="min-width:150px;">
+              <label for="banner-filter-from" style="display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:4px;">Từ ngày</label>
+              <input type="date" id="banner-filter-from" class="bs-input" style="width:100%; padding:7px 10px;">
+            </div>
+            <div style="min-width:150px;">
+              <label for="banner-filter-to" style="display:block; font-size:12px; font-weight:700; color:#475569; margin-bottom:4px;">Đến ngày</label>
+              <input type="date" id="banner-filter-to" class="bs-input" style="width:100%; padding:7px 10px;">
+            </div>
+            <button type="button" id="btn-reset-banner-filter" class="secondary-button" style="padding:8px 14px; font-size:13px; font-weight:700; border-radius:8px;">
+              Đặt lại
+            </button>
+            <span id="banner-filter-count" style="font-size:12px; font-weight:700; color:#64748b; margin-left:auto; padding-bottom:6px;"></span>
+          </div>
+
+          <!-- TAB 1: DANH SÁCH BANNER (BẢNG) -->
+          <div id="banner-tab-list" style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; overflow:hidden;">
+            <div style="overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; font-size:13.5px;">
+                <thead>
+                  <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0; text-align:left; color:#475569; font-size:12px; text-transform:uppercase;">
+                    <th style="padding:12px 14px;">Thứ tự</th>
+                    <th style="padding:12px 14px;">Hình ảnh</th>
+                    <th style="padding:12px 14px;">Tiêu đề &amp; Mô tả</th>
+                    <th style="padding:12px 14px;">Thời gian hiển thị - ẩn</th>
+                    <th style="padding:12px 14px;">Trạng thái</th>
+                    <th style="padding:12px 14px; text-align:right;">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="admin-banners-tbody">
+                  <!-- JS sẽ nạp danh sách banner dạng bảng vào đây -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 2: GIAO DIỆN THẺ (GRID) -->
+          <div id="banner-tab-grid" hidden>
+            <div id="admin-banners-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:1.25rem;">
+              <!-- JS sẽ nạp danh sách banner dạng thẻ vào đây -->
+            </div>
+          </div>
+        </section>
+
+        <!-- WEBSITE STATISTICS SECTION (MÓN ĂN & DOANH THU - CHUYÊN SÂU) -->
+        <section class="bestseller-section" id="stats-section" hidden>
+          <div class="bs-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+            <div>
+              <h2 class="bs-header-title">
+                <span class="bs-header-icon" style="background: linear-gradient(135deg, #10b981, #059669);">📊</span>
+                <span>Báo Cáo &amp; Thống Kê Doanh Thu, Món Ăn</span>
+              </h2>
+              <p class="bs-header-desc">Phân tích chuyên sâu xu hướng doanh thu theo ngày, tỷ trọng danh mục, top món bán chạy, trạng thái đơn và khách hàng chi tiêu cao.</p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+              <select id="stats-range-filter" class="bs-input" style="padding:8px 12px; font-weight:700;">
+                <option value="all">Toàn thời gian</option>
+                <option value="today">Hôm nay</option>
+                <option value="7d">7 ngày gần nhất</option>
+                <option value="30d">30 ngày gần nhất</option>
+                <option value="month">Tháng này</option>
+              </select>
+              <input type="date" id="stats-date-from" class="bs-input" style="padding:7px 10px;" title="Từ ngày">
+              <input type="date" id="stats-date-to" class="bs-input" style="padding:7px 10px;" title="Đến ngày">
+              <button type="button" id="btn-stats-reset" class="secondary-button" style="padding:8px 12px; font-size:13px; font-weight:700; border-radius:8px;">Đặt lại</button>
+              <button type="button" id="btn-stats-export-csv" class="primary-button" style="background:#059669; border-color:#059669; padding:8px 14px; font-size:13px; font-weight:700; border-radius:8px;">📥 Xuất CSV</button>
+            </div>
+          </div>
+
+          <!-- KPI Tổng Quan -->
+          <div id="web-stats-kpis" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:1rem; margin-bottom:1.25rem;"></div>
+
+          <!-- Biểu đồ Xu Hướng Doanh Thu & Phân Bổ Trạng Thái Đơn -->
+          <div style="display:grid; grid-template-columns:2fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.85rem;">
+                <h4 style="margin:0; font-size:1rem; font-weight:800; color:#0f172a;">📈 Xu Hướng Doanh Thu Theo Ngày</h4>
+                <span id="stats-chart-subtitle" style="font-size:12px; color:#64748b; font-weight:600;"></span>
+              </div>
+              <div id="stats-daily-chart" style="min-height:200px; display:flex; align-items:flex-end; gap:8px; padding-top:16px; overflow-x:auto;"></div>
+            </div>
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <h4 style="margin:0 0 0.85rem; font-size:1rem; font-weight:800; color:#0f172a;">📦 Tỷ Lệ Trạng Thái Đơn Hàng</h4>
+              <div id="stats-order-status-breakdown"></div>
+            </div>
+          </div>
+
+          <!-- Bảng Top Món Ăn & Doanh Thu theo Danh Mục / Thanh Toán / Top Khách Hàng -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(380px, 1fr)); gap:1.25rem;">
+            <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <h4 style="margin:0 0 0.85rem; font-size:1rem; font-weight:800; color:#0f172a;">🍽️ Top Món Ăn Bán Chạy &amp; Doanh Thu</h4>
+              <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:13px;">
+                  <thead>
+                    <tr style="background:#f8fafc; border-bottom:1px solid #e2e8f0; text-align:left; color:#475569;">
+                      <th style="padding:8px 10px;">#</th>
+                      <th style="padding:8px 10px;">Món ăn</th>
+                      <th style="padding:8px 10px; text-align:right;">SL bán</th>
+                      <th style="padding:8px 10px; text-align:right;">Doanh thu</th>
+                      <th style="padding:8px 10px; text-align:right;">Tỷ trọng</th>
+                    </tr>
+                  </thead>
+                  <tbody id="stats-top-foods-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:1.25rem;">
+              <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+                <h4 style="margin:0 0 0.85rem; font-size:1rem; font-weight:800; color:#0f172a;">📂 Doanh Thu Theo Danh Mục</h4>
+                <div id="stats-categories-list"></div>
+              </div>
+              <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+                <h4 style="margin:0 0 0.85rem; font-size:1rem; font-weight:800; color:#0f172a;">💳 Theo Phương Thức Thanh Toán</h4>
+                <div id="stats-payment-methods"></div>
+              </div>
+              <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+                <h4 style="margin:0 0 0.85rem; font-size:1rem; font-weight:800; color:#0f172a;">🏆 Top Khách Hàng Chi Tiêu</h4>
+                <div id="stats-top-customers"></div>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -8853,10 +9120,27 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           </div>
         </div>
         <div class="bs-field">
-          <label class="bs-label" for="banner-image" style="font-weight:700;">Đường dẫn ảnh Banner (16:9 Landscape) <span style="color:#ef4444;">*</span></label>
-          <input type="text" id="banner-image" class="bs-input" required placeholder="https://... hoặc assets/images/foods/..." style="width:100%;">
+          <label class="bs-label" for="banner-image" style="font-weight:700;">Hình ảnh Banner (Upload từ máy hoặc dán URL) <span style="color:#ef4444;">*</span></label>
+          <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px; flex-wrap:wrap;">
+            <label for="banner-image-file" class="secondary-button" style="cursor:pointer; padding:7px 14px; font-size:13px; font-weight:700; border-radius:8px; display:inline-flex; align-items:center; gap:6px; background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe;">
+              <span>📤</span> Tải ảnh từ máy tính
+            </label>
+            <input type="file" id="banner-image-file" accept="image/jpeg,image/png,image/webp" style="display:none;">
+            <span id="banner-upload-status" style="font-size:12px; color:#64748b;">Hỗ trợ JPG, PNG, WebP (tối đa 5MB)</span>
+          </div>
+          <input type="text" id="banner-image" class="bs-input" placeholder="https://... hoặc chọn ảnh từ máy tính" style="width:100%;">
           <div id="banner-image-preview-box" style="margin-top:8px; border-radius:8px; overflow:hidden; max-height:160px; background:#f1f5f9; display:flex; align-items:center; justify-content:center;">
             <img id="banner-image-preview" src="" alt="Xem trước ảnh" style="width:100%; height:160px; object-fit:cover; display:none;">
+          </div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="bs-field">
+            <label class="bs-label" for="banner-start-at" style="font-weight:700;">Thời gian bắt đầu hiển thị</label>
+            <input type="datetime-local" id="banner-start-at" class="bs-input" style="width:100%;">
+          </div>
+          <div class="bs-field">
+            <label class="bs-label" for="banner-end-at" style="font-weight:700;">Thời gian kết thúc (Ẩn)</label>
+            <input type="datetime-local" id="banner-end-at" class="bs-input" style="width:100%;">
           </div>
         </div>
         <div class="bs-field">
@@ -9373,6 +9657,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       const reviewsSection = document.getElementById('reviews-section');
       const bestsellerSection = document.getElementById('bestseller-section');
       const bannersSection = document.getElementById('banners-section');
+      const statsSection = document.getElementById('stats-section');
       const footerSettingsSection = document.getElementById('footer-settings-section');
       const reviewsList = document.getElementById('reviews-list');
       const reviewsCount = document.getElementById('reviews-count');
@@ -10618,14 +10903,18 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       function renderSection() {
+        document.querySelectorAll('.nav-item').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.section === activeSection);
+        });
         const section = sections[activeSection];
         const addButton = document.getElementById('add-button');
-        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'footer-settings' || activeSection === 'membership' || activeSection === 'vouchers') {
+        if (activeSection === 'messages' || activeSection === 'reviews' || activeSection === 'ai-bot' || activeSection === 'bestseller' || activeSection === 'banners' || activeSection === 'stats' || activeSection === 'footer-settings' || activeSection === 'membership' || activeSection === 'vouchers') {
           const isMessages = activeSection === 'messages';
           const isReviews = activeSection === 'reviews';
           const isAiBot = activeSection === 'ai-bot';
           const isBestseller = activeSection === 'bestseller';
           const isBanners = activeSection === 'banners';
+          const isStats = activeSection === 'stats';
           const isFooterSettings = activeSection === 'footer-settings';
           const isMembership = activeSection === 'membership';
           const isVouchers = activeSection === 'vouchers';
@@ -10642,7 +10931,10 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             sectionDesc = 'Tùy chỉnh thời gian đếm ngược Flash Deal và chọn danh sách món ăn bán chạy nhất.';
           } else if (isBanners) {
             sectionTitle = 'Quản Lý Banner & Hero Slider';
-            sectionDesc = 'Tùy chỉnh các hình ảnh, nội dung banner và thời gian tự động chuyển slide (1-2s).';
+            sectionDesc = 'Tự động lưu & đồng bộ realtime hình ảnh, lịch hiển thị và tốc độ chuyển slide.';
+          } else if (isStats) {
+            sectionTitle = 'Thống Kê Món Ăn & Doanh Thu';
+            sectionDesc = 'Phân tích doanh thu, đơn hàng, món ăn bán chạy và danh mục trên toàn hệ thống.';
           } else if (isFooterSettings) {
             sectionTitle = 'Cài Đặt Chân Trang (Footer)';
             sectionDesc = 'Chỉnh sửa thông tin liên hệ, hotline, email, địa chỉ và các liên kết hiển thị ở chân trang.';
@@ -10667,6 +10959,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (aiBotSection) aiBotSection.hidden = !isAiBot;
           if (bestsellerSection) bestsellerSection.hidden = !isBestseller;
           if (bannersSection) bannersSection.hidden = !isBanners;
+          if (statsSection) statsSection.hidden = !isStats;
           if (footerSettingsSection) footerSettingsSection.hidden = !isFooterSettings;
           if (membershipSection) membershipSection.hidden = !isMembership;
           const vouchersSection = document.getElementById('vouchers-section');
@@ -10679,6 +10972,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           }
           if (isBanners) {
             loadAdminBanners();
+          }
+          if (isStats) {
+            renderWebStats();
           }
           if (isMembership && !membershipLoaded) {
             loadMembershipData();
@@ -10693,6 +10989,7 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         if (aiBotSection) aiBotSection.hidden = true;
         if (bestsellerSection) bestsellerSection.hidden = true;
         if (bannersSection) bannersSection.hidden = true;
+        if (statsSection) statsSection.hidden = true;
         if (footerSettingsSection) footerSettingsSection.hidden = true;
         if (membershipSection) membershipSection.hidden = true;
         const vouchersSection = document.getElementById('vouchers-section');
@@ -10720,6 +11017,9 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         renderStats();
         renderSection();
         renderSalesCharts();
+        if (activeSection === 'stats' && typeof renderWebStats === 'function') {
+          renderWebStats();
+        }
       }
 
       function openForm(record) {
@@ -11818,6 +12118,97 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       // === QUẢN LÝ BANNER & HERO SLIDER LOGIC ===
       let adminBanners = [];
       let adminBannerInterval = 1800;
+      let activeBannerTab = 'list';
+
+      function getBannerRuntimeStatus(b) {
+        if (b.active === false) return 'hidden';
+        const now = Date.now();
+        const startMs = b.startAt ? new Date(b.startAt).getTime() : NaN;
+        const endMs = b.endAt ? new Date(b.endAt).getTime() : NaN;
+        if (!Number.isNaN(startMs) && startMs > now) return 'scheduled';
+        if (!Number.isNaN(endMs) && endMs < now) return 'expired';
+        return 'showing';
+      }
+
+      function getBannerStatusMeta(statusKey) {
+        const map = {
+          showing:   { label: 'Đang hiển thị', bg: '#10b981', text: '#fff', softBg: '#ecfdf5', softText: '#065f46' },
+          scheduled: { label: 'Chờ hiển thị',  bg: '#3b82f6', text: '#fff', softBg: '#eff6ff', softText: '#1e40af' },
+          expired:   { label: 'Đã hết hạn',    bg: '#f59e0b', text: '#fff', softBg: '#fffbeb', softText: '#92400e' },
+          hidden:    { label: 'Đang tắt / Ẩn', bg: '#64748b', text: '#fff', softBg: '#f1f5f9', softText: '#475569' }
+        };
+        return map[statusKey] || map.hidden;
+      }
+
+      function formatBannerDateTime(val) {
+        if (!val) return 'Không giới hạn';
+        const d = new Date(val);
+        if (Number.isNaN(d.getTime())) return escapeHtml(val);
+        return d.toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      }
+
+      function getFilteredBanners() {
+        const kw = (document.getElementById('banner-search-input')?.value || '').trim().toLocaleLowerCase('vi');
+        const stFilter = document.getElementById('banner-filter-status')?.value || 'all';
+        const fromVal = document.getElementById('banner-filter-from')?.value || '';
+        const toVal = document.getElementById('banner-filter-to')?.value || '';
+        const fromMs = fromVal ? new Date(fromVal + 'T00:00:00').getTime() : NaN;
+        const toMs = toVal ? new Date(toVal + 'T23:59:59').getTime() : NaN;
+
+        return adminBanners.filter((b) => {
+          const st = getBannerRuntimeStatus(b);
+          if (stFilter !== 'all' && st !== stFilter) return false;
+          if (kw) {
+            const hay = `${b.title || ''} ${b.subtitle || ''} ${b.badge || ''} ${b.link || ''}`.toLocaleLowerCase('vi');
+            if (!hay.includes(kw)) return false;
+          }
+          if (!Number.isNaN(fromMs) || !Number.isNaN(toMs)) {
+            const bStart = b.startAt ? new Date(b.startAt).getTime() : -Infinity;
+            const bEnd = b.endAt ? new Date(b.endAt).getTime() : Infinity;
+            if (!Number.isNaN(fromMs) && bEnd < fromMs) return false;
+            if (!Number.isNaN(toMs) && bStart > toMs) return false;
+          }
+          return true;
+        });
+      }
+
+      function getBannerIntervalMs() {
+        const rawSec = parseFloat(document.getElementById('banner-slide-interval')?.value || '1.8');
+        if (Number.isNaN(rawSec)) return 1800;
+        const ms = Math.round(rawSec * 1000);
+        return Math.max(500, Math.min(60000, ms));
+      }
+
+      async function persistBannersRealtime(silentToast = false) {
+        const interval = getBannerIntervalMs();
+        adminBannerInterval = interval;
+        try {
+          const res = await fetch('api.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'save_banners',
+              interval: interval,
+              banners: adminBanners
+            })
+          });
+          const result = await res.json();
+          if (result.success) {
+            try {
+              new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'banners' });
+            } catch (e) {}
+            if (!silentToast) {
+              showToast('✅ Đã tự động lưu & đồng bộ Banner realtime!');
+            }
+            return true;
+          }
+          showToast(result.message || 'Lỗi khi lưu banners.', true);
+          return false;
+        } catch (err) {
+          showToast('Lỗi kết nối: ' + err.message, true);
+          return false;
+        }
+      }
 
       async function loadAdminBanners() {
         try {
@@ -11826,8 +12217,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
           if (result.success && result.data) {
             adminBanners = Array.isArray(result.data.banners) ? result.data.banners : [];
             adminBannerInterval = result.data.interval || 1800;
-            const intervalSel = document.getElementById('banner-slide-interval');
-            if (intervalSel) intervalSel.value = String(adminBannerInterval);
+            const intervalInp = document.getElementById('banner-slide-interval');
+            if (intervalInp) intervalInp.value = String((adminBannerInterval / 1000).toFixed(1)).replace(/\.0$/, '');
             renderAdminBanners();
           }
         } catch (err) {
@@ -11836,63 +12227,157 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
       }
 
       function renderAdminBanners() {
-        const container = document.getElementById('admin-banners-grid');
-        if (!container) return;
+        adminBanners.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+        const filtered = getFilteredBanners();
 
-        if (adminBanners.length === 0) {
-          container.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:3rem; background:#fff; border-radius:12px; color:#64748b;">Chưa có banner nào. Bấm "+ Thêm Banner Mới" để tạo slide đầu tiên.</div>';
-          return;
+        const countEl = document.getElementById('banner-filter-count');
+        if (countEl) {
+          countEl.textContent = `Hiển thị ${filtered.length} / ${adminBanners.length} banner`;
         }
 
-        // Sắp xếp theo thứ tự hiển thị
-        adminBanners.sort((a, b) => (Number(a.order) || 0) - (Number(b.order) || 0));
+        // 1. Render Tab Danh Sách (Bảng)
+        const tbody = document.getElementById('admin-banners-tbody');
+        if (tbody) {
+          if (filtered.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:2.5rem; color:#64748b;">Không có banner nào khớp với bộ lọc hiện tại.</td></tr>';
+          } else {
+            tbody.innerHTML = filtered.map((b, idx) => {
+              const st = getBannerRuntimeStatus(b);
+              const meta = getBannerStatusMeta(st);
+              const isActive = b.active !== false;
+              return `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:12px 14px; font-weight:800; color:#334155;">#${b.order || (idx + 1)}</td>
+                  <td style="padding:12px 14px;">
+                    <img src="${escapeHtml(b.image || '')}" alt="${escapeHtml(b.title || '')}" style="width:96px; height:54px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=300&auto=format&fit=crop&q=80';">
+                  </td>
+                  <td style="padding:12px 14px;">
+                    <div style="font-weight:700; color:#0f172a; margin-bottom:2px;">${escapeHtml(b.title || 'Chưa đặt tiêu đề')}</div>
+                    <div style="font-size:12px; color:#64748b; margin-bottom:4px;">${escapeHtml(b.subtitle || '')}</div>
+                    ${b.badge ? `<span style="display:inline-block; background:#fff7ed; color:#ea580c; border:1px solid #fed7aa; font-size:11px; font-weight:700; padding:1px 7px; border-radius:4px;">${escapeHtml(b.badge)}</span>` : ''}
+                  </td>
+                  <td style="padding:12px 14px; font-size:12px; color:#475569;">
+                    <div><strong>Hiện:</strong> ${b.startAt ? formatBannerDateTime(b.startAt) : 'Ngay lập tức'}</div>
+                    <div><strong>Ẩn:</strong> ${b.endAt ? formatBannerDateTime(b.endAt) : 'Không giới hạn'}</div>
+                  </td>
+                  <td style="padding:12px 14px;">
+                    <span style="background:${meta.softBg}; color:${meta.softText}; font-size:12px; font-weight:700; padding:4px 10px; border-radius:999px; white-space:nowrap;">${meta.label}</span>
+                  </td>
+                  <td style="padding:12px 14px; text-align:right; white-space:nowrap;">
+                    <button type="button" class="secondary-button" onclick="window.toggleAdminBannerStatus('${b.id}')" style="padding:5px 10px; font-size:12px; font-weight:700; margin-right:4px;">
+                      ${isActive ? 'Tắt' : 'Bật'}
+                    </button>
+                    <button type="button" class="secondary-button" onclick="window.openEditAdminBanner('${b.id}')" style="padding:5px 10px; font-size:12px; font-weight:700; background:#eff6ff; color:#2563eb; border-color:#bfdbfe; margin-right:4px;">
+                      ✏️ Sửa
+                    </button>
+                    <button type="button" class="secondary-button" onclick="window.deleteAdminBanner('${b.id}')" style="padding:5px 10px; font-size:12px; font-weight:700; background:#fef2f2; color:#ef4444; border-color:#fecaca;">
+                      🗑️ Xóa
+                    </button>
+                  </td>
+                </tr>
+              `;
+            }).join('');
+          }
+        }
 
-        container.innerHTML = adminBanners.map((b, idx) => {
-          const isActive = b.active !== false;
-          return `
-            <div class="bs-panel-card" style="background:#fff; border:1px solid ${isActive ? '#e2e8f0' : '#cbd5e1'}; border-radius:12px; overflow:hidden; opacity:${isActive ? '1' : '0.65'}; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
-              <div>
-                <div style="position:relative; height:160px; overflow:hidden; background:#0f172a;">
-                  <img src="${escapeHtml(b.image || '')}" alt="${escapeHtml(b.title || '')}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80';">
-                  <div style="position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">
-                    #${b.order || (idx + 1)}
-                  </div>
-                  <div style="position:absolute; top:8px; right:8px;">
-                    <span style="background:${isActive ? '#10b981' : '#64748b'}; color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">
-                      ${isActive ? '● Đang hiển thị' : '○ Tắt'}
-                    </span>
-                  </div>
-                  ${b.badge ? `
-                    <div style="position:absolute; bottom:8px; left:8px; background:#ea580c; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:4px;">
-                      ${escapeHtml(b.badge)}
+        // 2. Render Tab Giao Diện Thẻ (Grid)
+        const container = document.getElementById('admin-banners-grid');
+        if (container) {
+          if (filtered.length === 0) {
+            container.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:3rem; background:#fff; border-radius:12px; color:#64748b;">Không có banner nào khớp với bộ lọc hiện tại.</div>';
+          } else {
+            container.innerHTML = filtered.map((b, idx) => {
+              const st = getBannerRuntimeStatus(b);
+              const meta = getBannerStatusMeta(st);
+              const isActive = b.active !== false;
+              return `
+                <div class="bs-panel-card" style="background:#fff; border:1px solid ${st === 'showing' ? '#e2e8f0' : '#cbd5e1'}; border-radius:12px; overflow:hidden; opacity:${isActive ? '1' : '0.68'}; display:flex; flex-direction:column; justify-content:space-between; box-shadow:0 4px 6px -1px rgba(0,0,0,0.05);">
+                  <div>
+                    <div style="position:relative; height:160px; overflow:hidden; background:#0f172a;">
+                      <img src="${escapeHtml(b.image || '')}" alt="${escapeHtml(b.title || '')}" style="width:100%; height:100%; object-fit:cover;" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&auto=format&fit=crop&q=80';">
+                      <div style="position:absolute; top:8px; left:8px; background:rgba(0,0,0,0.75); color:#fff; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">
+                        #${b.order || (idx + 1)}
+                      </div>
+                      <div style="position:absolute; top:8px; right:8px;">
+                        <span style="background:${meta.bg}; color:${meta.text}; font-size:11px; font-weight:700; padding:3px 8px; border-radius:6px;">
+                          ● ${meta.label}
+                        </span>
+                      </div>
+                      ${b.badge ? `
+                        <div style="position:absolute; bottom:8px; left:8px; background:#ea580c; color:#fff; font-size:11px; font-weight:800; padding:2px 8px; border-radius:4px;">
+                          ${escapeHtml(b.badge)}
+                        </div>
+                      ` : ''}
                     </div>
-                  ` : ''}
-                </div>
-                <div style="padding:1rem;">
-                  <h4 style="font-weight:800; font-size:1.05rem; color:#0f172a; margin-bottom:0.25rem;">${escapeHtml(b.title || 'Chưa đặt tiêu đề')}</h4>
-                  <p style="font-size:0.85rem; color:#64748b; margin-bottom:0.75rem; line-height:1.4;">${escapeHtml(b.subtitle || 'Không có mô tả phụ')}</p>
-                  <div style="font-size:0.8rem; color:#94a3b8; display:flex; align-items:center; gap:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                    <span>🔗</span> <span>${escapeHtml(b.link || 'foods.php')}</span>
+                    <div style="padding:1rem;">
+                      <h4 style="font-weight:800; font-size:1.05rem; color:#0f172a; margin-bottom:0.25rem;">${escapeHtml(b.title || 'Chưa đặt tiêu đề')}</h4>
+                      <p style="font-size:0.85rem; color:#64748b; margin-bottom:0.65rem; line-height:1.4;">${escapeHtml(b.subtitle || 'Không có mô tả phụ')}</p>
+                      <div style="font-size:0.78rem; color:#475569; background:#f8fafc; padding:6px 8px; border-radius:6px; margin-bottom:0.5rem;">
+                        🕒 ${b.startAt ? formatBannerDateTime(b.startAt) : 'Ngay lập tức'} → ${b.endAt ? formatBannerDateTime(b.endAt) : 'Không giới hạn'}
+                      </div>
+                      <div style="font-size:0.8rem; color:#94a3b8; display:flex; align-items:center; gap:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                        <span>🔗</span> <span>${escapeHtml(b.link || 'foods.php')}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div style="padding:0.75rem 1rem; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
+                    <button type="button" class="secondary-button" onclick="window.toggleAdminBannerStatus('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700;">
+                      ${isActive ? 'Tắt hiển thị' : 'Bật hiển thị'}
+                    </button>
+                    <div style="display:flex; gap:6px;">
+                      <button type="button" class="secondary-button" onclick="window.openEditAdminBanner('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700; background:#eff6ff; color:#2563eb; border-color:#bfdbfe;">
+                        ✏️ Sửa
+                      </button>
+                      <button type="button" class="secondary-button" onclick="window.deleteAdminBanner('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700; background:#fef2f2; color:#ef4444; border-color:#fecaca;">
+                        🗑️ Xóa
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div style="padding:0.75rem 1rem; background:#f8fafc; border-top:1px solid #f1f5f9; display:flex; justify-content:space-between; align-items:center;">
-                <button type="button" class="secondary-button" onclick="window.toggleAdminBannerStatus('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700;">
-                  ${isActive ? 'Tắt hiển thị' : 'Bật hiển thị'}
-                </button>
-                <div style="display:flex; gap:6px;">
-                  <button type="button" class="secondary-button" onclick="window.openEditAdminBanner('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700; background:#eff6ff; color:#2563eb; border-color:#bfdbfe;">
-                    ✏️ Sửa
-                  </button>
-                  <button type="button" class="secondary-button" onclick="window.deleteAdminBanner('${b.id}')" style="padding:5px 12px; font-size:12px; font-weight:700; background:#fef2f2; color:#ef4444; border-color:#fecaca;">
-                    🗑️ Xóa
-                  </button>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
+              `;
+            }).join('');
+          }
+        }
       }
+
+      // Chuyển tab trong Quản lý Banner (Danh Sách / Giao Diện Thẻ)
+      document.querySelectorAll('.banner-tab-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          activeBannerTab = btn.dataset.bannerTab || 'list';
+          document.querySelectorAll('.banner-tab-btn').forEach((b) => {
+            const isSel = b === btn;
+            b.className = `banner-tab-btn ${isSel ? 'primary-button' : 'secondary-button'}`;
+            b.style.background = isSel ? '#ea580c' : '';
+            b.style.borderColor = isSel ? '#ea580c' : '';
+          });
+          document.getElementById('banner-tab-list').hidden = activeBannerTab !== 'list';
+          document.getElementById('banner-tab-grid').hidden = activeBannerTab !== 'grid';
+        });
+      });
+
+      // Tự động lưu khi chỉnh thời gian chuyển slide bất kỳ
+      document.getElementById('banner-slide-interval')?.addEventListener('change', async () => {
+        await persistBannersRealtime(false);
+      });
+      document.querySelectorAll('.banner-interval-preset').forEach((chip) => {
+        chip.addEventListener('click', async () => {
+          const inp = document.getElementById('banner-slide-interval');
+          if (inp) inp.value = chip.dataset.sec || '1.8';
+          await persistBannersRealtime(false);
+        });
+      });
+
+      ['banner-search-input', 'banner-filter-status', 'banner-filter-from', 'banner-filter-to'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('input', renderAdminBanners);
+        document.getElementById(id)?.addEventListener('change', renderAdminBanners);
+      });
+      document.getElementById('btn-reset-banner-filter')?.addEventListener('click', () => {
+        document.getElementById('banner-search-input').value = '';
+        document.getElementById('banner-filter-status').value = 'all';
+        document.getElementById('banner-filter-from').value = '';
+        document.getElementById('banner-filter-to').value = '';
+        renderAdminBanners();
+      });
 
       window.openEditAdminBanner = function(id) {
         const banner = adminBanners.find(b => b.id === id);
@@ -11905,7 +12390,13 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         document.getElementById('banner-order').value = banner.order || 1;
         document.getElementById('banner-image').value = banner.image || '';
         document.getElementById('banner-link').value = banner.link || 'foods.php';
+        document.getElementById('banner-start-at').value = banner.startAt || '';
+        document.getElementById('banner-end-at').value = banner.endAt || '';
         document.getElementById('banner-active').checked = banner.active !== false;
+        const fileInp = document.getElementById('banner-image-file');
+        if (fileInp) fileInp.value = '';
+        const upStatus = document.getElementById('banner-upload-status');
+        if (upStatus) upStatus.textContent = 'Hỗ trợ JPG, PNG, WebP (tối đa 5MB)';
 
         const previewImg = document.getElementById('banner-image-preview');
         if (banner.image) {
@@ -11918,18 +12409,21 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         document.getElementById('banner-dialog').showModal();
       };
 
-      window.deleteAdminBanner = function(id) {
+      window.deleteAdminBanner = async function(id) {
         if (!confirm('Bạn có chắc muốn xóa banner này khỏi slider không?')) return;
         adminBanners = adminBanners.filter(b => b.id !== id);
         renderAdminBanners();
-        showToast('Đã xóa banner khỏi danh sách tạm. Bấm "Lưu Tất Cả Thay Đổi" để cập nhật!');
+        await persistBannersRealtime(true);
+        showToast('🗑️ Đã xóa banner và đồng bộ realtime!');
       };
 
-      window.toggleAdminBannerStatus = function(id) {
+      window.toggleAdminBannerStatus = async function(id) {
         const banner = adminBanners.find(b => b.id === id);
         if (!banner) return;
         banner.active = banner.active === false ? true : false;
         renderAdminBanners();
+        await persistBannersRealtime(true);
+        showToast(banner.active ? '✅ Đã bật hiển thị banner (Realtime)!' : '⏸️ Đã tắt banner (Realtime)!');
       };
 
       document.getElementById('btn-add-banner')?.addEventListener('click', () => {
@@ -11937,7 +12431,11 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         document.getElementById('banner-edit-id').value = '';
         document.getElementById('banner-form').reset();
         document.getElementById('banner-order').value = adminBanners.length + 1;
+        document.getElementById('banner-start-at').value = '';
+        document.getElementById('banner-end-at').value = '';
         document.getElementById('banner-image-preview').style.display = 'none';
+        const upStatus = document.getElementById('banner-upload-status');
+        if (upStatus) upStatus.textContent = 'Hỗ trợ JPG, PNG, WebP (tối đa 5MB)';
         document.getElementById('banner-dialog').showModal();
       });
 
@@ -11959,7 +12457,42 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         }
       });
 
-      document.getElementById('banner-form')?.addEventListener('submit', (e) => {
+      document.getElementById('banner-image-file')?.addEventListener('change', async (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const upStatus = document.getElementById('banner-upload-status');
+        if (file.size > 5 * 1024 * 1024) {
+          alert('Ảnh vượt quá dung lượng tối đa 5 MB.');
+          e.target.value = '';
+          return;
+        }
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+          alert('Vui lòng chọn ảnh JPG, PNG hoặc WebP.');
+          e.target.value = '';
+          return;
+        }
+        if (upStatus) upStatus.textContent = '⏳ Đang tải ảnh lên...';
+        try {
+          const fd = new FormData();
+          fd.append('action', 'upload_image');
+          fd.append('image', file);
+          const upRes = await fetch('api.php', { method: 'POST', body: fd });
+          const upJson = await upRes.json();
+          if (!upRes.ok || !upJson.success || !upJson.data?.url) {
+            throw new Error(upJson.message || 'Tải ảnh thất bại.');
+          }
+          document.getElementById('banner-image').value = upJson.data.url;
+          const preview = document.getElementById('banner-image-preview');
+          preview.src = upJson.data.url;
+          preview.style.display = 'block';
+          if (upStatus) upStatus.textContent = '✅ Đã tải ảnh lên thành công!';
+        } catch (err) {
+          if (upStatus) upStatus.textContent = '❌ Lỗi: ' + err.message;
+          alert('Không thể tải ảnh lên: ' + err.message);
+        }
+      });
+
+      document.getElementById('banner-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const editId = document.getElementById('banner-edit-id').value.trim();
         const title = document.getElementById('banner-title').value.trim();
@@ -11968,10 +12501,16 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
         const order = parseInt(document.getElementById('banner-order').value, 10) || 1;
         const image = document.getElementById('banner-image').value.trim();
         const link = document.getElementById('banner-link').value.trim() || 'foods.php';
+        const startAt = document.getElementById('banner-start-at').value.trim();
+        const endAt = document.getElementById('banner-end-at').value.trim();
         const active = document.getElementById('banner-active').checked;
 
         if (!title || !image) {
-          alert('Vui lòng nhập tiêu đề và đường dẫn hình ảnh cho banner.');
+          alert('Vui lòng nhập tiêu đề và tải lên hoặc dán đường dẫn hình ảnh cho banner.');
+          return;
+        }
+        if (startAt && endAt && new Date(startAt).getTime() >= new Date(endAt).getTime()) {
+          alert('Thời gian kết thúc (ẩn) phải sau thời gian bắt đầu hiển thị.');
           return;
         }
 
@@ -11984,6 +12523,8 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             banner.order = order;
             banner.image = image;
             banner.link = link;
+            banner.startAt = startAt;
+            banner.endAt = endAt;
             banner.active = active;
           }
         } else {
@@ -11995,47 +12536,304 @@ $adminToken = \FastFood\Config\JwtConfig::encode([
             order,
             image,
             link,
+            startAt,
+            endAt,
             active
           });
         }
 
         renderAdminBanners();
         document.getElementById('banner-dialog').close();
-        showToast('Đã cập nhật banner! Vui lòng bấm "Lưu Tất Cả Thay Đổi" để áp dụng lên trang chủ.');
+        await persistBannersRealtime(false);
       });
 
-      document.getElementById('btn-save-banners')?.addEventListener('click', async () => {
-        const saveBtn = document.getElementById('btn-save-banners');
-        const interval = parseInt(document.getElementById('banner-slide-interval')?.value, 10) || 1800;
+      // === THỐNG KÊ WEBSITE (MÓN ĂN & DOANH THU / TIỀN) ===
+      let lastStatsExportRows = [];
+      function renderWebStats() {
+        const kpiWrap = document.getElementById('web-stats-kpis');
+        const topFoodsTbody = document.getElementById('stats-top-foods-tbody');
+        const catListWrap = document.getElementById('stats-categories-list');
+        const payWrap = document.getElementById('stats-payment-methods');
+        const dailyChartWrap = document.getElementById('stats-daily-chart');
+        const statusBreakWrap = document.getElementById('stats-order-status-breakdown');
+        const topCustWrap = document.getElementById('stats-top-customers');
+        if (!kpiWrap) return;
 
-        saveBtn.disabled = true;
-        saveBtn.innerHTML = '<span>⏳</span> Đang lưu...';
-
-        try {
-          const res = await fetch('api.php', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'save_banners',
-              interval: interval,
-              banners: adminBanners
-            })
-          });
-          const result = await res.json();
-          if (result.success) {
-            showToast('✅ Đã lưu cấu hình Banner & Tốc độ chuyển ảnh 1-2s thành công!');
-            try {
-              new BroadcastChannel('fastfood_realtime').postMessage({ type: 'content:updated', collection: 'banners' });
-            } catch (e) {}
-          } else {
-            showToast(result.message || 'Lỗi khi lưu banners.', true);
-          }
-        } catch (err) {
-          showToast('Lỗi kết nối: ' + err.message, true);
-        } finally {
-          saveBtn.disabled = false;
-          saveBtn.innerHTML = '<span>💾</span> Lưu Tất Cả Thay Đổi';
+        const range = document.getElementById('stats-range-filter')?.value || 'all';
+        const fromDate = document.getElementById('stats-date-from')?.value || '';
+        const toDate = document.getElementById('stats-date-to')?.value || '';
+        const now = new Date();
+        let minMs = -Infinity;
+        let maxMs = Infinity;
+        if (range === 'today') {
+          minMs = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        } else if (range === '7d') {
+          minMs = now.getTime() - 7 * 86400000;
+        } else if (range === '30d') {
+          minMs = now.getTime() - 30 * 86400000;
+        } else if (range === 'month') {
+          minMs = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
         }
+        if (fromDate) minMs = new Date(fromDate + 'T00:00:00').getTime();
+        if (toDate) maxMs = new Date(toDate + 'T23:59:59').getTime();
+
+        const filteredOrders = (data.orders || []).filter((o) => {
+          const ts = new Date(o.createdAt || o.date || Date.now()).getTime();
+          if (Number.isNaN(ts)) return true;
+          return ts >= minMs && ts <= maxMs;
+        });
+
+        const validOrders = filteredOrders.filter((o) => !isCancelledOrder(o));
+        const cancelledOrders = filteredOrders.filter((o) => isCancelledOrder(o));
+        const completedOrders = validOrders.filter((o) => {
+          const s = String(o.status || '').toLowerCase();
+          return s.includes('đã giao') || s === 'delivered' || s === 'completed';
+        });
+        const totalRevenue = validOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+        const completedRevenue = completedOrders.reduce((s, o) => s + (Number(o.total) || 0), 0);
+        const avgOrderVal = validOrders.length > 0 ? Math.round(totalRevenue / validOrders.length) : 0;
+        const cancelRate = filteredOrders.length > 0 ? Math.round((cancelledOrders.length / filteredOrders.length) * 100) : 0;
+        const completeRate = filteredOrders.length > 0 ? Math.round((completedOrders.length / filteredOrders.length) * 100) : 0;
+
+        const foodStatsMap = new Map();
+        const catStatsMap = new Map();
+        const dailyRevMap = new Map();
+        const custStatsMap = new Map();
+        const productLookup = new Map();
+        (data.products || []).forEach((p) => {
+          productLookup.set(String(p.id), p);
+          productLookup.set(String(p.name || '').toLowerCase(), p);
+        });
+
+        let totalItemsSold = 0;
+        validOrders.forEach((o) => {
+          const dk = orderDateKey(o) || new Date(o.createdAt || Date.now()).toISOString().slice(0, 10);
+          const dPrev = dailyRevMap.get(dk) || { date: dk, revenue: 0, count: 0 };
+          dPrev.revenue += Number(o.total) || 0;
+          dPrev.count += 1;
+          dailyRevMap.set(dk, dPrev);
+
+          const custName = o.customer || o.recipient?.name || 'Khách vãng lai';
+          const cUser = custStatsMap.get(custName) || { name: custName, orders: 0, spent: 0 };
+          cUser.orders += 1;
+          cUser.spent += Number(o.total) || 0;
+          custStatsMap.set(custName, cUser);
+
+          const items = Array.isArray(o.items) ? o.items : [];
+          items.forEach((it) => {
+            const qty = Number(it.qty || it.quantity || 1);
+            const name = it.name || it.product_name || 'Món ăn';
+            const price = Number(it.price || it.unit_price || 0);
+            const lineTotal = Number(it.subtotal || (price * qty)) || 0;
+            totalItemsSold += qty;
+
+            const prev = foodStatsMap.get(name) || { name, qty: 0, revenue: 0, category: 'Khác' };
+            const prod = productLookup.get(String(it.id || it.product_id || '')) || productLookup.get(name.toLowerCase());
+            if (prod && prod.category) prev.category = prod.category;
+            prev.qty += qty;
+            prev.revenue += lineTotal;
+            foodStatsMap.set(name, prev);
+
+            const catName = prev.category || 'Khác';
+            const cPrev = catStatsMap.get(catName) || { name: catName, qty: 0, revenue: 0 };
+            cPrev.qty += qty;
+            cPrev.revenue += lineTotal;
+            catStatsMap.set(catName, cPrev);
+          });
+        });
+
+        const activeFoodsCount = (data.products || []).filter((p) => p.status === 'Đang bán').length;
+        const totalFoodsCount = (data.products || []).length;
+
+        kpiWrap.innerHTML = `
+          <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:12px; padding:1rem;">
+            <div style="font-size:12px; font-weight:700; color:#047857;">TỔNG DOANH THU (ĐƠN HỢP LỆ)</div>
+            <div style="font-size:1.55rem; font-weight:800; color:#065f46; margin-top:4px;">${money(totalRevenue)}</div>
+            <div style="font-size:12px; color:#047857; margin-top:2px;">${validOrders.length} đơn hợp lệ / ${filteredOrders.length} tổng đơn</div>
+          </div>
+          <div style="background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:1rem;">
+            <div style="font-size:12px; font-weight:700; color:#1d4ed8;">TIỀN ĐÃ HOÀN THÀNH GIAO</div>
+            <div style="font-size:1.55rem; font-weight:800; color:#1e40af; margin-top:4px;">${money(completedRevenue)}</div>
+            <div style="font-size:12px; color:#1d4ed8; margin-top:2px;">Tỷ lệ hoàn thành: <strong>${completeRate}%</strong> (${completedOrders.length} đơn)</div>
+          </div>
+          <div style="background:#fff7ed; border:1px solid #fed7aa; border-radius:12px; padding:1rem;">
+            <div style="font-size:12px; font-weight:700; color:#c2410c;">TỔNG MÓN ĂN ĐÃ BÁN</div>
+            <div style="font-size:1.55rem; font-weight:800; color:#9a3412; margin-top:4px;">${new Intl.NumberFormat('vi-VN').format(totalItemsSold)} phần</div>
+            <div style="font-size:12px; color:#c2410c; margin-top:2px;">${activeFoodsCount}/${totalFoodsCount} món đang bán trên menu</div>
+          </div>
+          <div style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:12px; padding:1rem;">
+            <div style="font-size:12px; font-weight:700; color:#475569;">GIÁ TRỊ ĐƠN TRUNG BÌNH (AOV)</div>
+            <div style="font-size:1.55rem; font-weight:800; color:#0f172a; margin-top:4px;">${money(avgOrderVal)}</div>
+            <div style="font-size:12px; color:#dc2626; margin-top:2px;">Tỷ lệ hủy đơn: <strong>${cancelRate}%</strong> (${cancelledOrders.length} đơn)</div>
+          </div>
+        `;
+
+        // Biểu đồ xu hướng doanh thu theo ngày
+        if (dailyChartWrap) {
+          const daysArr = [...dailyRevMap.values()].sort((a, b) => a.date.localeCompare(b.date)).slice(-14);
+          const subEl = document.getElementById('stats-chart-subtitle');
+          if (subEl) subEl.textContent = daysArr.length ? `${daysArr.length} ngày có phát sinh đơn` : '';
+          if (!daysArr.length) {
+            dailyChartWrap.innerHTML = '<p style="color:#64748b; font-size:13px; margin:auto;">Chưa có dữ liệu doanh thu theo ngày trong khoảng lọc.</p>';
+          } else {
+            const maxDayRev = Math.max(...daysArr.map((d) => d.revenue), 1);
+            dailyChartWrap.innerHTML = daysArr.map((d) => {
+              const h = Math.max(10, Math.round((d.revenue / maxDayRev) * 145));
+              const shortDate = d.date.slice(5).split('-').reverse().join('/');
+              return `
+                <div title="${d.date}: ${money(d.revenue)} (${d.count} đơn)" style="flex:1; min-width:36px; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                  <span style="font-size:10.5px; font-weight:700; color:#059669; white-space:nowrap;">${d.revenue >= 1000000 ? (d.revenue / 1000000).toFixed(1) + 'M' : Math.round(d.revenue / 1000) + 'k'}</span>
+                  <div style="width:100%; max-width:34px; height:${h}px; background:linear-gradient(180deg, #10b981, #059669); border-radius:6px 6px 2px 2px;"></div>
+                  <span style="font-size:11px; color:#64748b; font-weight:600;">${shortDate}</span>
+                </div>
+              `;
+            }).join('');
+          }
+        }
+
+        // Phân bổ trạng thái đơn hàng
+        if (statusBreakWrap) {
+          const stBuckets = [
+            { label: 'Chờ xác nhận / Thanh toán', color: '#f59e0b', count: 0 },
+            { label: 'Đang chuẩn bị', color: '#3b82f6', count: 0 },
+            { label: 'Đang giao hàng', color: '#8b5cf6', count: 0 },
+            { label: 'Giao thành công', color: '#10b981', count: 0 },
+            { label: 'Đã hủy', color: '#ef4444', count: 0 }
+          ];
+          filteredOrders.forEach((o) => {
+            const s = String(o.status || '').toLowerCase();
+            if (s.includes('hủy') || s === 'cancelled') stBuckets[4].count++;
+            else if (s.includes('đã giao') || s === 'delivered' || s === 'completed') stBuckets[3].count++;
+            else if (s.includes('đang giao') || s === 'delivering') stBuckets[2].count++;
+            else if (s.includes('chuẩn bị') || s === 'preparing') stBuckets[1].count++;
+            else stBuckets[0].count++;
+          });
+          const tot = Math.max(filteredOrders.length, 1);
+          statusBreakWrap.innerHTML = stBuckets.map((b) => {
+            const pct = Math.round((b.count / tot) * 100);
+            return `
+              <div style="margin-bottom:0.65rem;">
+                <div style="display:flex; justify-content:space-between; font-size:12.5px; margin-bottom:3px;">
+                  <span style="font-weight:600; color:#334155;">${b.label}</span>
+                  <strong style="color:#0f172a;">${b.count} (${pct}%)</strong>
+                </div>
+                <div style="height:7px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                  <div style="width:${pct}%; height:100%; background:${b.color}; border-radius:999px;"></div>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        const topFoods = [...foodStatsMap.values()].sort((a, b) => b.revenue - a.revenue || b.qty - a.qty).slice(0, 12);
+        lastStatsExportRows = topFoods;
+        const totalFoodRev = topFoods.reduce((s, f) => s + f.revenue, 0) || 1;
+        if (topFoodsTbody) {
+          topFoodsTbody.innerHTML = topFoods.length
+            ? topFoods.map((f, i) => {
+              const share = Math.round((f.revenue / totalFoodRev) * 100);
+              return `
+                <tr style="border-bottom:1px solid #f1f5f9;">
+                  <td style="padding:8px 10px; font-weight:800; color:#ea580c;">#${i + 1}</td>
+                  <td style="padding:8px 10px;">
+                    <div style="font-weight:700; color:#0f172a;">${escapeHtml(f.name)}</div>
+                    <div style="font-size:11.5px; color:#64748b;">${escapeHtml(f.category)}</div>
+                  </td>
+                  <td style="padding:8px 10px; text-align:right; font-weight:700;">${f.qty}</td>
+                  <td style="padding:8px 10px; text-align:right; font-weight:800; color:#059669;">${money(f.revenue)}</td>
+                  <td style="padding:8px 10px; text-align:right; font-weight:700; color:#475569;">${share}%</td>
+                </tr>
+              `;
+            }).join('')
+            : '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#64748b;">Chưa có dữ liệu món ăn trong khoảng thời gian này.</td></tr>';
+        }
+
+        const catArr = [...catStatsMap.values()].sort((a, b) => b.revenue - a.revenue);
+        const maxCatRev = catArr[0]?.revenue || 1;
+        if (catListWrap) {
+          catListWrap.innerHTML = catArr.length
+            ? catArr.map((c) => {
+              const w = Math.max(4, Math.round((c.revenue / maxCatRev) * 100));
+              return `
+                <div style="margin-bottom:0.75rem;">
+                  <div style="display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;">
+                    <strong>${escapeHtml(c.name)} <span style="color:#64748b; font-weight:500;">(${c.qty} phần)</span></strong>
+                    <strong style="color:#0f172a;">${money(c.revenue)}</strong>
+                  </div>
+                  <div style="height:8px; background:#f1f5f9; border-radius:999px; overflow:hidden;">
+                    <div style="width:${w}%; height:100%; background:linear-gradient(90deg, #f97316, #ea580c); border-radius:999px;"></div>
+                  </div>
+                </div>
+              `;
+            }).join('')
+            : '<p style="color:#64748b; font-size:13px; margin:0;">Chưa có dữ liệu danh mục.</p>';
+        }
+
+        if (payWrap) {
+          let codTotal = 0, codCount = 0, bankTotal = 0, bankCount = 0;
+          validOrders.forEach((o) => {
+            const m = String(o.paymentMethod || 'cod').toLowerCase();
+            if (m === 'banking' || m === 'momo' || m === 'qr') {
+              bankTotal += Number(o.total) || 0;
+              bankCount++;
+            } else {
+              codTotal += Number(o.total) || 0;
+              codCount++;
+            }
+          });
+          payWrap.innerHTML = `
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
+              <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:0.85rem;">
+                <div style="font-size:12px; font-weight:700; color:#475569;">💵 TIỀN MẶT (COD)</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#0f172a; margin-top:4px;">${money(codTotal)}</div>
+                <div style="font-size:12px; color:#64748b;">${codCount} đơn hàng</div>
+              </div>
+              <div style="background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:0.85rem;">
+                <div style="font-size:12px; font-weight:700; color:#15803d;">🏦 CHUYỂN KHOẢN / QR</div>
+                <div style="font-size:1.15rem; font-weight:800; color:#166534; margin-top:4px;">${money(bankTotal)}</div>
+                <div style="font-size:12px; color:#15803d;">${bankCount} đơn hàng</div>
+              </div>
+            </div>
+          `;
+        }
+
+        if (topCustWrap) {
+          const topCusts = [...custStatsMap.values()].sort((a, b) => b.spent - a.spent).slice(0, 5);
+          topCustWrap.innerHTML = topCusts.length
+            ? topCusts.map((c, idx) => `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px dashed #f1f5f9; font-size:13px;">
+                <div><strong>${idx + 1}. ${escapeHtml(c.name)}</strong> <span style="color:#64748b;">(${c.orders} đơn)</span></div>
+                <strong style="color:#059669;">${money(c.spent)}</strong>
+              </div>
+            `).join('')
+            : '<p style="color:#64748b; font-size:13px; margin:0;">Chưa có dữ liệu khách hàng.</p>';
+        }
+      }
+
+      document.getElementById('btn-stats-export-csv')?.addEventListener('click', () => {
+        const rows = [['STT', 'Mon An', 'Danh Muc', 'So Luong Ban', 'Doanh Thu (VND)']];
+        lastStatsExportRows.forEach((r, idx) => {
+          rows.push([idx + 1, `"${String(r.name).replace(/"/g, '""')}"`, `"${String(r.category).replace(/"/g, '""')}"`, r.qty, r.revenue]);
+        });
+        const csvContent = '\uFEFF' + rows.map((r) => r.join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `thong-ke-fastfood-${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('📥 Đã xuất báo cáo thống kê CSV!');
+      });
+
+      ['stats-range-filter', 'stats-date-from', 'stats-date-to'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('change', renderWebStats);
+      });
+      document.getElementById('btn-stats-reset')?.addEventListener('click', () => {
+        document.getElementById('stats-range-filter').value = 'all';
+        document.getElementById('stats-date-from').value = '';
+        document.getElementById('stats-date-to').value = '';
+        renderWebStats();
       });
 
       // === Milestone 4: Membership Management & Dynamic Configuration Logic ===

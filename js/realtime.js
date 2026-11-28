@@ -193,6 +193,7 @@
   let lastChatId = 0;
   let lastUserId = 0;
   let lastOrderUpdate = '';
+  let lastBannersUpdatedAt = '';
   let isPolling = false;
 
   async function pollServer() {
@@ -245,6 +246,17 @@
 
         if (d.serverTime) {
           lastOrderUpdate = d.serverTime;
+        }
+
+        if (d.bannersUpdatedAt) {
+          if (lastBannersUpdatedAt === '') {
+            lastBannersUpdatedAt = d.bannersUpdatedAt;
+          } else if (lastBannersUpdatedAt !== d.bannersUpdatedAt) {
+            lastBannersUpdatedAt = d.bannersUpdatedAt;
+            if (!isAdmin && (window.location.pathname.endsWith('index.php') || window.location.pathname === '/' || window.location.pathname === '')) {
+              setTimeout(() => window.location.reload(), 300);
+            }
+          }
         }
 
         // A. Có đơn hàng mới cho Admin

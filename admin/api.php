@@ -311,12 +311,13 @@ switch ($action) {
     case 'save_banners':
         $banners = $body['banners'] ?? [];
         $interval = (int)($body['interval'] ?? 1800);
-        if ($interval < 1000) $interval = 1000;
-        if ($interval > 10000) $interval = 10000;
+        if ($interval < 500) $interval = 500;
+        if ($interval > 60000) $interval = 60000;
 
         $saveData = [
-            'interval' => $interval,
-            'banners'  => $banners
+            'interval'   => $interval,
+            'banners'    => $banners,
+            'updated_at' => date('Y-m-d H:i:s')
         ];
         $jsonStr = json_encode($saveData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 
@@ -324,7 +325,7 @@ switch ($action) {
                              VALUES ('banners', ?, NOW()) 
                              ON DUPLICATE KEY UPDATE content = VALUES(content), updated_at = NOW()");
         $stmt->execute([$jsonStr]);
-        jsonSuccess('Đã lưu cấu hình banner và tốc độ chuyển slide thành công!');
+        jsonSuccess('Đã lưu cấu hình banner và tốc độ chuyển slide thành công!', $saveData);
         break;
 
     // =========================================================================

@@ -173,6 +173,11 @@ switch ($action) {
         $maxChatId  = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM chat_messages")->fetchColumn();
         $maxUserId  = 0;
         $newUsers   = [];
+        $bannersUpdatedAt = '';
+        try {
+            $bannersUpdatedAt = (string)($db->query("SELECT updated_at FROM website_content WHERE collection_name = 'banners' LIMIT 1")->fetchColumn() ?: '');
+        } catch (\Throwable $e) {}
+
         if ($isAdminUser) {
             $maxUserId = (int)$db->query("SELECT COALESCE(MAX(id), 0) FROM users")->fetchColumn();
             if ($lastUserId > 0) {
@@ -194,15 +199,16 @@ switch ($action) {
         }
 
         $pollData = [
-            'newOrders'     => $newOrders,
-            'updatedOrders' => $updatedOrders,
-            'newUsers'      => $newUsers,
-            'newMessages'   => $newMessages,
-            'trackedOrder'  => $trackedOrder,
-            'maxOrderId'    => $maxOrderId,
-            'maxChatId'     => $maxChatId,
-            'maxUserId'     => $maxUserId,
-            'serverTime'    => date('Y-m-d H:i:s')
+            'newOrders'        => $newOrders,
+            'updatedOrders'    => $updatedOrders,
+            'newUsers'         => $newUsers,
+            'newMessages'      => $newMessages,
+            'trackedOrder'     => $trackedOrder,
+            'maxOrderId'       => $maxOrderId,
+            'maxChatId'        => $maxChatId,
+            'maxUserId'        => $maxUserId,
+            'bannersUpdatedAt' => $bannersUpdatedAt,
+            'serverTime'       => date('Y-m-d H:i:s')
         ];
 
         if ($isAdminUser) {

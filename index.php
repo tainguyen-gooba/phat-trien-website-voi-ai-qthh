@@ -92,16 +92,24 @@ try {
     }
 } catch (Exception $e) {}
 
-$slideInterval = (int)($bannerData['interval'] ?? 1800); // Tốc độ 1.8s (trong khoảng 1-2s theo yêu cầu)
-if ($slideInterval < 1000) $slideInterval = 1000;
-if ($slideInterval > 5000) $slideInterval = 5000;
+$slideInterval = (int)($bannerData['interval'] ?? 1800);
+if ($slideInterval < 500) $slideInterval = 500;
+if ($slideInterval > 60000) $slideInterval = 60000;
 
 $rawBanners = !empty($bannerData['banners']) && is_array($bannerData['banners']) ? $bannerData['banners'] : [];
 $banners = [];
+$nowTs = time();
 foreach ($rawBanners as $b) {
     if (isset($b['active']) && !$b['active']) continue;
+    $startTs = !empty($b['startAt']) ? strtotime($b['startAt']) : false;
+    $endTs   = !empty($b['endAt'])   ? strtotime($b['endAt'])   : false;
+    if ($startTs !== false && $startTs > $nowTs) continue;
+    if ($endTs !== false && $endTs < $nowTs) continue;
     $banners[] = $b;
 }
+usort($banners, function($a, $b) {
+    return ((int)($a['order'] ?? 0)) <=> ((int)($b['order'] ?? 0));
+});
 
 if (empty($banners)) {
     $banners = [
@@ -187,14 +195,22 @@ require_once ROOT_PATH . '/includes/header.php';
           </div>
         <?php endforeach; ?>
       </div>
+    </div>
 
-      <button class="hero-slider-btn prev" id="slider-prev-btn" aria-label="Slide trước">‹</button>
-      <button class="hero-slider-btn next" id="slider-next-btn" aria-label="Slide tiếp">›</button>
-      <div class="hero-slider-dots" id="hero-slider-dots">
-        <?php foreach ($banners as $idx => $b): ?>
-          <span class="dot <?= $idx === 0 ? 'active' : '' ?>" data-index="<?= $idx ?>" aria-label="Slide <?= $idx + 1 ?>"></span>
-        <?php endforeach; ?>
-      </div>
+    <button type="button" class="hero-slider-btn prev" id="slider-prev-btn" aria-label="Slide trước">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+    <button type="button" class="hero-slider-btn next" id="slider-next-btn" aria-label="Slide tiếp">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <polyline points="9 18 15 12 9 6"></polyline>
+      </svg>
+    </button>
+    <div class="hero-slider-dots" id="hero-slider-dots">
+      <?php foreach ($banners as $idx => $b): ?>
+        <span class="dot <?= $idx === 0 ? 'active' : '' ?>" data-index="<?= $idx ?>" aria-label="Slide <?= $idx + 1 ?>"></span>
+      <?php endforeach; ?>
     </div>
 
     <div class="hero-grid">
@@ -571,10 +587,36 @@ function toggleFavorite(productId, btn) {
     }
   }
 
+  const heroSectionEl = track.closest('.hero-section');
+  let controlsHideTimer = null;
+  function revealSliderControls() {
+    if (!heroSectionEl) return;
+    heroSectionEl.classList.add('controls-visible');
+    if (controlsHideTimer) clearTimeout(controlsHideTimer);
+    controlsHideTimer = setTimeout(() => {
+      heroSectionEl.classList.remove('controls-visible');
+    }, 3500);
+  }
+  if (heroSectionEl) {
+    heroSectionEl.addEventListener('pointerdown', revealSliderControls);
+    heroSectionEl.addEventListener('touchstart', revealSliderControls, { passive: true });
+    heroSectionEl.addEventListener('mouseleave', () => {
+      heroSectionEl.classList.remove('controls-visible');
+      if (controlsHideTimer) {
+        clearTimeout(controlsHideTimer);
+        controlsHideTimer = null;
+      }
+      prevBtn?.blur();
+      nextBtn?.blur();
+    });
+  }
+
   // Sự kiện nút Tiếp / Lùi
   if (nextBtn) {
     nextBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
+      revealSliderControls();
       nextSlide();
       startAutoSlide();
     });
@@ -582,7 +624,9 @@ function toggleFavorite(productId, btn) {
 
   if (prevBtn) {
     prevBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       e.stopPropagation();
+      revealSliderControls();
       prevSlide();
       startAutoSlide();
     });

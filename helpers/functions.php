@@ -13,7 +13,14 @@ function escapeHtml($str) {
 
 function getAssetUrl($path) {
     $cleanPath = ltrim($path, '/');
-    return BASE_URL . '/' . $cleanPath;
+    $url = BASE_URL . '/' . $cleanPath;
+    if (preg_match('/\.(css|js)$/i', $cleanPath)) {
+        $fullPath = ROOT_PATH . '/' . $cleanPath;
+        if (file_exists($fullPath)) {
+            $url .= '?v=' . filemtime($fullPath);
+        }
+    }
+    return $url;
 }
 
 /**
